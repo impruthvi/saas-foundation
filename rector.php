@@ -6,6 +6,7 @@ use Pest\Rector\Set\PestSetList;
 use Rector\Caching\ValueObject\Storage\FileCacheStorage;
 use Rector\CodingStyle\Rector\ClassMethod\MakeInheritedMethodVisibilitySameAsParentRector;
 use Rector\Config\RectorConfig;
+use RectorLaravel\Rector\Class_\AddHasFactoryToModelsRector;
 use RectorLaravel\Set\LaravelSetList;
 use RectorLaravel\Set\LaravelSetProvider;
 
@@ -53,4 +54,9 @@ return RectorConfig::configure()
     ->withPhpSets(php84: true)
     ->withSkip([
         MakeInheritedMethodVisibilitySameAsParentRector::class,
+        // Test fixtures stand in for models that do not exist yet; a factory for
+        // one would be a factory for nothing.
+        AddHasFactoryToModelsRector::class => [
+            __DIR__.'/tests/Fixtures',
+        ],
     ]);
