@@ -6,10 +6,10 @@
     <a href="https://github.com/shipfastlabs/modern-vue-starter-kit-auth"><img src="https://img.shields.io/github/stars/shipfastlabs/modern-vue-starter-kit-auth" alt="GitHub Stars"></a>
 </p>
 
-
 This starter kit brings updates the base laravel starter kit with opinionated modern tooling setup.
 
 **What's Included:**
+
 - **Laravel Latest**: Built with the latest Laravel version (requires PHP 8.4+ and support 8.5)
 - **Essential Packages**: Pre-configured with Laravel Essentials and Laravel Boost
 - **Code Quality**: Integrated Pint, Rector, and PHPStan
@@ -32,7 +32,7 @@ composer run dev
 ### Using Git Clone
 
 ```bash
-# Clone the repository via github 
+# Clone the repository via github
 git clone git@github.com:shipfastlabs/modern-vue-starter-kit-auth.git
 cd modern-vue-starter-kit-auth
 
@@ -54,9 +54,11 @@ composer run dev
 ## 📦 Included Packages
 
 ### Production
+
 - `nunomaduro/essentials` - Essential Laravel packages
 
 ### Development
+
 - `larastan/larastan` - PHP static analysis
 - `rector/rector` - Code refactoring and upgrades
 - `barryvdh/laravel-ide-helper` - IDE autocompletion
@@ -82,6 +84,7 @@ php artisan test
 
 This project is open-sourced software licensed under the [MIT license](LICENSE.md).
 
-Credits: 
+Credits:
+
 - [Laravel Starter Kit](https://github.com/laravel/laravel-starter-kit)
 - [Nuno's Strict Laravel Starter Kit](https://github.com/nunomaduro/laravel-starter-kit)
