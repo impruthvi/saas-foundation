@@ -78,6 +78,13 @@ php artisan boost:install --skills
 php artisan boost:update      # refresh guidelines after a dependency change
 ```
 
+`boost.json` is not tracked, because it records which agent you personally use. If
+`boost:update` reports that Boost is not set up, that file is missing its `agents` key —
+re-run `boost:install` and answer the agent prompt.
+
+The orientation section at the top of `AGENTS.md` and `CLAUDE.md` sits outside Boost's
+`<laravel-boost-guidelines>` tags and survives `boost:update`; verified, not assumed.
+
 None of this is required to contribute. The gate is `composer ci:check`, not the
 tooling you used to get there.
 
