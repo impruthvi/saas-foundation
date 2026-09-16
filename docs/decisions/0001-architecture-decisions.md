@@ -1,6 +1,6 @@
 # 0001 — Architecture decisions
 
-- **Date:** 2026-09-08, amended 2026-09-16
+- **Date:** 2026-09-08, amended 2026-09-16 (D20-D26 added for M1)
 - **Status:** Accepted
 - **Scope:** the technical decisions that bind this codebase.
 
@@ -146,6 +146,89 @@ Upstream is MIT and its copyright is retained in `LICENSE.md`.
 
 **Accepted cost:** inherited choices nobody here made get one deliberate audit pass and
 are then kept with a reason or removed with one. That audit is `0002`.
+
+## D20 — The tenant boundary is proven by a runtime query guard, not only by an architecture test
+
+"No tenant-owned model is queried without an `organization_id` scope" is a property of
+queries, and `arch()` reads classes. The static rules stay (a `TenantOwned` model must
+use the trait; a model with an `organization_id` column must be `TenantOwned`), but the
+load-bearing proof is a `DB::listen` guard installed for the whole test suite: any
+select, update or delete against a tenant-owned table whose SQL carries no
+`organization_id` predicate fails the test that caused it.
+
+**Why:** every test in the suite becomes a boundary test, including the ones nobody
+wrote with tenancy in mind. A guard that only inspects declarations cannot fail for the
+case it exists to catch.
+
+## D21 — `Project` is written at M1, as the first genuinely tenant-owned model
+
+`Organization` is the tenant and `Membership` is a special case, so without it M1 would
+validate its tenancy abstraction against nothing. `Project` arrives minimal (id,
+organization, name) and is on the D8 journey already. M5 adds the limit, the usage meter
+and the upgrade prompt; it does not introduce the model.
+
+**Why:** an abstraction whose first consumer arrives four milestones later is a guess.
+
+## D22 — `Membership` is tenant-owned, with exactly one audited way around the scope
+
+The membership table carries `organization_id` and is scoped like every other
+tenant-owned table. The one query that cannot be scoped — "which organizations does this
+user belong to", which runs before any organization is known — lives in
+`App\Tenancy\MembershipRepository` and is the only permitted `withoutTenantScope()`
+caller in the product surface. A test asserts that.
+
+**Why:** the alternative leaves the member list unscoped by default, which is the same
+leak wearing a different hat. One named, tested door beats an unmarked one.
+
+## D23 — Ownership is `organizations.owner_id`; a membership's role is rank, not permission
+
+One writable fact for "who owns this organization". `MembershipRole` is `Admin` or
+`Member` only — there is no `Owner` role — and ownership is derived from `owner_id`.
+When `spatie/laravel-permission` arrives team-scoped at M3, it owns permissions
+exclusively; `memberships.role` keeps meaning rank and never becomes a second permission
+store.
+
+**Why:** two stores for one fact drift the first time a transfer half-fails, and M4 reads
+this to decide who is billed.
+
+## D24 — Tenant context propagates through `Illuminate\Log\Context`, and absence forgets
+
+The framework already dehydrates context into every queue payload and hydrates it on
+`JobProcessing`, before the payload is unserialized. The application adds
+`tenant.organization_id` on set, and restores `TenantContext` from it on hydration.
+
+Two framework behaviours bind the implementation:
+
+- `Context::hydrate()` runs on **every** job, including payloads carrying no context, so
+  the listener must **forget** the tenant when the key is absent. Otherwise a long-lived
+  worker carries one job's organization into the next.
+- `Model::newQueryForRestoration()` uses `newQueryWithoutScopes()`, so `SerializesModels`
+  restores tenant-owned models with the scope bypassed. A `retrieved` guard raises
+  `CrossTenantAccess` when a row's organization disagrees with the resolved tenant.
+
+Scheduled commands and webhook processing never rely on ambient state; they wrap work in
+`runFor()`.
+
+## D25 — Deleting a user who solely owns a shared organization is refused
+
+Account deletion transfers or refuses; it never orphans. A personal organization is
+deleted with its user. A non-personal organization with other members blocks the
+deletion until ownership is transferred, and `organizations.owner_id` is
+`restrictOnDelete` so the database is the backstop rather than the only line of defence.
+
+**Why:** from M4 the organization holds a live subscription, and silent orphaning is
+discovered by the person still being billed.
+
+## D26 — Keys are auto-incrementing integers; the current organization lives in the session
+
+Organizations are addressed by `slug` in forms and links, not in a URL prefix. There is
+no `/o/{slug}` segment: the current organization is held in the session and changed
+through an explicit switch endpoint.
+
+**Why:** once M4 writes Cashier rows keyed to organizations, the key shape is a migration
+against a payment provider, so it is decided before the first row exists. A URL segment
+built on globally unique slugs is also enumerable, which leaks other tenants' names for
+no benefit the session approach lacks.
 
 ---
 
