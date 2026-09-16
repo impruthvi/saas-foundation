@@ -13,6 +13,33 @@ jobs:
     ci:
         runs-on: ubuntu-latest
 
+        # PostgreSQL is the documented path (D3) and SQLite is what a contributor gets
+        # from `composer setup` with no database installed. Both are supported, so both
+        # are proven on every push. Running only SQLite would let a Postgres-only
+        # failure reach a deploy; running only Postgres would break the zero-config
+        # local setup the contributing guide promises.
+        strategy:
+            fail-fast: false
+            matrix:
+                database: [sqlite, pgsql]
+
+        name: ci (${{ matrix.database }})
+
+        services:
+            postgres:
+                image: postgres:18
+                env:
+                    POSTGRES_DB: saas_foundation
+                    POSTGRES_USER: saas_foundation
+                    POSTGRES_PASSWORD: password
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+
         steps:
             - name: Checkout code
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -23,6 +50,7 @@ jobs:
               uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
               with:
                   php-version: '8.4'
+                  extensions: pdo_pgsql, pgsql
                   tools: composer:v2
                   coverage: none
 
@@ -34,5 +62,15 @@ jobs:
             - name: Setup Application
               run: composer setup
 
+            # phpunit.xml declares DB_CONNECTION without force="true", so a real
+            # environment variable wins. That is what switches the suite onto Postgres
+            # here without editing the committed test configuration.
             - name: Run CI Checks
               run: composer ci:check
+              env:
+                  DB_CONNECTION: ${{ matrix.database }}
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 5432
+                  DB_DATABASE: ${{ matrix.database == 'pgsql' && 'saas_foundation' || ':memory:' }}
+                  DB_USERNAME: saas_foundation
+                  DB_PASSWORD: password
