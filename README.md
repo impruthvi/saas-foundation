@@ -1,90 +1,100 @@
-# Modern Vue Starter Kit with Auth
+# Laravel SaaS Foundation
 
-<p>
-    <a href="https://github.com/shipfastlabs/modern-vue-starter-kit-auth/actions"><img src="https://github.com/shipfastlabs/modern-vue-starter-kit-auth/actions/workflows/tests.yml/badge.svg" alt="Build Status"></a>
-    <a href="https://github.com/shipfastlabs/modern-vue-starter-kit-auth/blob/main/LICENSE.md"><img src="https://img.shields.io/github/license/shipfastlabs/modern-vue-starter-kit-auth" alt="License"></a>
-    <a href="https://github.com/shipfastlabs/modern-vue-starter-kit-auth"><img src="https://img.shields.io/github/stars/shipfastlabs/modern-vue-starter-kit-auth" alt="GitHub Stars"></a>
-</p>
+The layer founders rebuild after authentication: organizations as the tenant and billing
+boundary, tenant-scoped authorization, subscriptions, entitlements, usage, and an
+operations console.
 
-This starter kit brings updates the base laravel starter kit with opinionated modern tooling setup.
+Built **above** Laravel's official starter kits, never duplicating them.
 
-**What's Included:**
+> **Status: pre-alpha, and honestly so.** The authentication layer below works and is
+> tested. The foundation itself is being built now, in the open, milestone by milestone.
+> Nothing here is ready to depend on yet. There is no tagged release.
 
-- **Laravel Latest**: Built with the latest Laravel version (requires PHP 8.4+ and support 8.5)
-- **Essential Packages**: Pre-configured with Laravel Essentials and Laravel Boost
-- **Code Quality**: Integrated Pint, Rector, and PHPStan
-- **Testing Ready**: Pest testing framework included
-- **IDE Support**: Laravel IDE Helper for better development experience
+## What it will be
 
-## 🚀 Quick Start
+**MIT · Inertia + Vue · a real entitlement boundary · a billing path that is actually
+tested.** Four claims, and no race to ship the largest feature checklist.
 
-> **Requires [PHP 8.4+](https://php.net/releases/)**.
+The definition of done is one journey, which is simultaneously the demo, the
+specification, and an automated end-to-end test:
 
-### Using Laravel Installer (Recommended)
+> Register → a personal organization is created → invite a teammate → subscribe to Pro
+> via Stripe Checkout in test mode → create projects until the plan limit is hit and the
+> upgrade prompt appears → open admin and inspect the resolved entitlement, the usage
+> counter, and the webhook event that set it.
+
+If that journey cannot be demonstrated, the project is not done, regardless of how much
+code exists.
+
+## Progress
+
+| Milestone                                              | State       |
+| ------------------------------------------------------ | ----------- |
+| M0 — Skeleton, inherited-tooling audit, governance, CI | In progress |
+| M1 — Organizations, memberships, tenant context        | Not started |
+| M2 — Invitations                                       | Not started |
+| M3 — Tenant-scoped RBAC                                | Not started |
+| M4 — Cashier on the organization, Stripe Checkout      | Not started |
+| M5 — Entitlements, usage, the plan limit               | Not started |
+| M6 — Filament admin and operations                     | Not started |
+| M7 — `saas:demo`, the journey as one test              | Not started |
+
+## The boundary this exists to fix
+
+An entitlement is what an organization may do **right now**. It is the application's
+answer, derived from billing facts, plan mapping and overrides — not a JSON column on a
+row synced from a payment provider, and never a provider API call in the request path.
+
+That resolution layer is already built and released as a standalone package:
+
+- **[`impruthvi/cashier-entitlements`](https://github.com/impruthvi/cashier-entitlements)**
+  — features, numeric limits, usage meters with idempotent increments, audited
+  time-bound overrides, and reconciliation against the provider.
+- **[`impruthvi/cashier-dunning`](https://github.com/impruthvi/cashier-dunning)** —
+  replays recorded Stripe billing lifecycles offline, shuffled and duplicated, through
+  the application's real webhook route. It enters here as a `require-dev` dependency and
+  its job is to prove entitlements survive failed payments, retries, cancellation and
+  out-of-order webhooks.
+
+This foundation is their first consumer, not their replacement.
+
+## Requirements
+
+PHP 8.4+ · Laravel 13 · PostgreSQL (the documented path; SQLite works for local
+development) · Node 22+
+
+## Installation
+
+Once there is a release worth installing:
 
 ```bash
-# Create a new project using Laravel installer
-laravel new larasonic --using=shipfastlabs/modern-vue-starter-kit-auth
-
-composer run dev
+laravel new my-app --using=impruthvi/saas-foundation
 ```
 
-### Using Git Clone
+The skeleton is distributed from GitHub and is deliberately **not** on Packagist — a
+starter kit is a project template, not a dependency.
 
-```bash
-# Clone the repository via github
-git clone git@github.com:shipfastlabs/modern-vue-starter-kit-auth.git
-cd modern-vue-starter-kit-auth
+## Built on
 
-# Install dependencies
-composer install
-npm install
+Laravel 13 · Fortify · Inertia 3 · Vue · Wayfinder · Tailwind · shadcn-vue ·
+Pest 5 · Larastan · Rector · Pint · Filament (admin only)
 
-# Set up environment
-cp .env.example .env
-php artisan key:generate
+## Support
 
-# Run migrations
-php artisan migrate
+Issues are triaged weekly. Security reports are acknowledged within 7 days. There is no
+response-time SLA, no LTS, and releases happen when they are ready. One maintainer —
+the scope is kept to what one person can actually operate.
 
-# Start development server
-composer run dev
-```
+See [SECURITY.md](SECURITY.md) to report a vulnerability, and
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-## 📦 Included Packages
+## License
 
-### Production
+MIT. See [LICENSE.md](LICENSE.md).
 
-- `nunomaduro/essentials` - Essential Laravel packages
-
-### Development
-
-- `larastan/larastan` - PHP static analysis
-- `rector/rector` - Code refactoring and upgrades
-- `barryvdh/laravel-ide-helper` - IDE autocompletion
-- `laravel/boost` - Laravel-focused MCP server
-
-## 🛠️ Development Tools
-
-```bash
-# Code formatting with Pint
-./vendor/bin/pint
-
-# Static analysis with PHPStan/Larastan
-./vendor/bin/phpstan analyse --memory-limit=-1
-
-# Code refactoring with Rector
-./vendor/bin/rector
-
-# Run tests
-php artisan test
-```
-
-## 📝 License
-
-This project is open-sourced software licensed under the [MIT license](LICENSE.md).
-
-Credits:
-
-- [Laravel Starter Kit](https://github.com/laravel/laravel-starter-kit)
-- [Nuno's Strict Laravel Starter Kit](https://github.com/nunomaduro/laravel-starter-kit)
+Templated from
+[`shipfastlabs/modern-vue-starter-kit-auth`](https://github.com/shipfastlabs/modern-vue-starter-kit-auth)
+by Pushpak Chhajed, whose copyright is retained in the licence. That kit is the official
+[`laravel/vue-starter-kit`](https://github.com/laravel/vue-starter-kit) with a modern
+tooling setup, and it is the reason this project did not spend its first day wiring
+Pest, Rector, Larastan and lint configuration.
