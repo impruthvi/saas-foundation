@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tenancy;
 
 use App\Exceptions\TenantContextMissing;
+use App\Models\Organization;
 use Closure;
 use Illuminate\Support\Facades\Context;
 
@@ -34,6 +35,8 @@ final class TenantContext
 
     private ?int $organizationId = null;
 
+    private ?Organization $organization = null;
+
     /**
      * The resolved organization's key, or null when no tenant is resolved.
      */
@@ -60,9 +63,38 @@ final class TenantContext
      */
     public function setId(int $organizationId): void
     {
+        if ($organizationId !== $this->organizationId) {
+            $this->organization = null;
+        }
+
         $this->organizationId = $organizationId;
 
         Context::add(self::KEY, $organizationId);
+    }
+
+    /**
+     * Resolve a tenant from an organization already in hand.
+     */
+    public function set(Organization $organization): void
+    {
+        $this->setId($organization->id);
+
+        $this->organization = $organization;
+    }
+
+    /**
+     * The resolved organization, loaded once per unit of work.
+     *
+     * Reads the organizations table, which is not tenant-owned, so no scope is
+     * stood down to answer this.
+     */
+    public function current(): ?Organization
+    {
+        if ($this->organizationId === null) {
+            return null;
+        }
+
+        return $this->organization ??= Organization::query()->find($this->organizationId);
     }
 
     /**
@@ -71,6 +103,7 @@ final class TenantContext
     public function forget(): void
     {
         $this->organizationId = null;
+        $this->organization = null;
 
         Context::forget(self::KEY);
     }
@@ -94,6 +127,23 @@ final class TenantContext
         } finally {
             $previous === null ? $this->forget() : $this->setId($previous);
         }
+    }
+
+    /**
+     * Run the callback with the given organization resolved, then restore what was there.
+     *
+     * The entry point for work with no ambient tenant of its own: scheduled
+     * commands, webhook processing, and anything else that knows which
+     * organization it is acting for and must not inherit one (D24).
+     *
+     * @template TReturn
+     *
+     * @param  Closure(): TReturn  $callback
+     * @return TReturn
+     */
+    public function runFor(Organization $organization, Closure $callback): mixed
+    {
+        return $this->runForId($organization->id, $callback);
     }
 
     /**
