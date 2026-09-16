@@ -12,6 +12,7 @@ declare(strict_types=1);
 | need to change it using the "pest()" function to bind a different classes or traits.
 |
 */
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
@@ -21,6 +22,15 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->beforeEach(function (): void {
+        // Automatic relationship autoloading runs *before* the lazy-loading check in
+        // Model::getRelationValue(), and returns early when it succeeds. Left enabled
+        // under test, it silently satisfies every relation accessed on a model that came
+        // from a collection, so ShouldBeStrict's preventLazyLoading never fires for the
+        // one case it exists to catch. Disabled here, and only here: the convenience is
+        // real in development and production, but a guard that cannot fail is not a guard.
+        // The framework makes the same call itself in Factory::createChildren().
+        Model::automaticallyEagerLoadRelationships(false);
+
         Str::createRandomStringsNormally();
         Str::createUuidsNormally();
         Http::preventStrayRequests();
