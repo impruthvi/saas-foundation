@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Tests\Support\TenantQueryGuard;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
@@ -30,6 +31,12 @@ pest()->extend(TestCase::class)
         // real in development and production, but a guard that cannot fail is not a guard.
         // The framework makes the same call itself in Factory::createChildren().
         Model::automaticallyEagerLoadRelationships(false);
+
+        // The tenant boundary is a property of queries, so it is asserted against
+        // queries, for every test in the suite rather than for the handful written
+        // with tenancy in mind. See tests/Support/TenantQueryGuard.php and D20.
+        TenantQueryGuard::flush();
+        TenantQueryGuard::install();
 
         Str::createRandomStringsNormally();
         Str::createUuidsNormally();
