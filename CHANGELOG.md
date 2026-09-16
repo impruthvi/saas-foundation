@@ -19,6 +19,8 @@ be listed here under **Changed** or **Removed**.
   security policy, code of conduct, and this changelog.
 - `tests/Unit/StrictnessTest.php`, pinning the model strictness the tenant boundary
   depends on.
+- CI runs the full gate against both PostgreSQL and SQLite on every push, so neither
+  supported database can drift unnoticed.
 
 ### Changed
 
@@ -26,6 +28,8 @@ be listed here under **Changed** or **Removed**.
   `preventLazyLoading` can actually fire on models drawn from a collection.
 - The inherited tree now passes its own formatter, so `composer ci:check` succeeds on a
   clean checkout.
+- `.env.example` documents PostgreSQL as the supported alternative to the SQLite default,
+  replacing a commented MySQL block that documented neither.
 
 ### Removed
 
