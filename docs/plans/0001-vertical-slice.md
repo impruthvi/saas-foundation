@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-16
 - **Status:** **M0 complete.** `main` is pushed and both CI matrix jobs pass on GitHub
-  Actions. M1 not started.
+  Actions. **M1 in progress**, amended 2026-09-16 by D20-D26.
 - **Decisions:** `docs/decisions/0001-architecture-decisions.md` and
   `docs/decisions/0002-inherited-tooling-audit.md`.
 - **Defines done for:** D8, the ten-minute journey.
@@ -42,7 +42,7 @@ the extension point, defer the implementation.
 | #      | Deliverable                                                                                      | Depends on | Proof it is done                                                                                                                                                                 |
 | ------ | ------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **M0** | Skeleton configured; inherited-tooling audit; Postgres; D9 governance; CI                        | —          | **Done** — full gate green on PostgreSQL and SQLite, locally and on GitHub Actions. 46 tests, 184 assertions. Audit recorded in `docs/decisions/0002-inherited-tooling-audit.md` |
-| **M1** | Organizations, memberships, personal org at registration, tenant context                         | M0         | Registering creates exactly one personal organization; a queued job resolves the correct organization with no ambient state                                                      |
+| **M1** | Organizations, memberships, personal org at registration, tenant context                         | M0         | Registering creates exactly one personal organization; a job resolves the correct organization across a real queue roundtrip, and the next job on that worker inherits nothing   |
 | **M2** | Invitations — expiring, revocable, audited                                                       | M1         | Expiry, revoke-then-accept, accept-as-wrong-user and re-invite all rejected with distinct errors                                                                                 |
 | **M3** | Tenant-scoped RBAC on `spatie/laravel-permission`                                                | M1         | A role granted in organization A grants nothing in organization B                                                                                                                |
 | **M4** | Cashier on `Organization`; plan/price catalog; Stripe Checkout, test mode                        | M1, M3     | Checkout completes in test mode, the webhook lands, and billing facts appear locally                                                                                             |
@@ -86,14 +86,24 @@ The module D6 committed to writing rather than inheriting from Jetstream.
   a billed quantity, not a person.
 - **Personal organization auto-created at registration (D1).** No personal
   subscriptions, ever. The workspace switcher is hidden for a solo user, not absent.
-- **Lifecycle states** and **ownership transfer**, both named in the brief.
+- **Lifecycle states** — the status columns and `MembershipStatus` land here because M2's
+  invitations need them. The `Suspend` / `Archive` / `Restore` transitions have no caller
+  until M6 and are deferred there under D11's filter; the extension point is the enum.
+- **Ownership transfer**, named in the brief and load-bearing immediately: it is the
+  remedy offered when account deletion is refused (D25).
+- **`Project`**, minimal, as the first genuinely tenant-owned model (D21). Without it the
+  tenancy machinery has no consumer until M5.
 - **Tenant context resolver** (RFC 0001 Q6) reaching queued jobs, scheduled commands,
   notifications and webhook processing. This is the hard part and the reason Jetstream
   was rejected.
 
-**Scoping is enforced at the model/repository boundary (D3), not in controllers.** An
-architecture test asserts that no tenant-owned model is queried without an
-`organization_id` scope. Write that test before the models.
+**Scoping is enforced at the model/repository boundary (D3), not in controllers.** The
+architecture test asserting that no tenant-owned model is queried without an
+`organization_id` scope is written before the models — and because that is a property of
+queries rather than of classes, the static rules are backed by a suite-wide `DB::listen`
+guard (D20). Two framework behaviours the resolver has to survive are recorded in D24:
+context hydration fires on every job including empty ones, and `SerializesModels`
+restoration bypasses global scopes.
 
 **Vocabulary is fixed by `CONTEXT.md` and is not renegotiated in code review.**
 
