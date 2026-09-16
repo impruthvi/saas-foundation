@@ -29,8 +29,14 @@ yarn-error.log
 /.zed
 
 # AI Tools
-CLAUDE.md
-AGENTS.md
+#
+# AGENTS.md, CLAUDE.md and .mcp.json are tracked deliberately (D16). They carry this
+# project's conventions and the pointer to the Boost MCP server, so a contributor's
+# agent starts with the same rules rather than guessing. Regenerate with
+# `php artisan boost:update`.
+#
+# Everything below is either per-developer editor state or Boost-owned content that
+# `php artisan boost:install --skills` reproduces identically.
 .claude/
 .cursor/
 .idea/
@@ -38,8 +44,8 @@ AGENTS.md
 .vscode/
 .agents/
 .codex/
-.mcp.json
 boost.json
+opencode.json
 .github/skills/
 /tmp
 

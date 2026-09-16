@@ -21,6 +21,8 @@ be listed here under **Changed** or **Removed**.
   depends on.
 - CI runs the full gate against both PostgreSQL and SQLite on every push, so neither
   supported database can drift unnoticed.
+- `laravel/boost` as a dev dependency, with `AGENTS.md`, `CLAUDE.md` and `.mcp.json`
+  tracked so a contributor's agent inherits this project's conventions (D16).
 
 ### Changed
 

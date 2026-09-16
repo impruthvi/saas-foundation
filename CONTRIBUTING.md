@@ -58,6 +58,29 @@ instead of discussing them.
   is where the reasoning lives, and it is read far more often than it is written.
 - **No drive-by reformatting** of code you are not otherwise touching.
 
+## If you work with an AI agent
+
+`AGENTS.md` and `CLAUDE.md` are tracked and carry this project's conventions — the
+Action pattern, the fixed vocabulary, and the framework-specific rules Laravel Boost
+derives from the installed packages. Your agent should read one of them before writing
+code here.
+
+`.mcp.json` points at the Boost MCP server, which gives an agent version-accurate
+documentation for the exact versions this project installs. That matters more than
+usual here: Laravel 13, Fortify, Inertia 3 and Pest 5 are recent enough that a model
+working from memory will confidently produce APIs that do not exist.
+
+Agent skills are not tracked, because Boost owns them and reproduces them identically.
+Install them locally:
+
+```bash
+php artisan boost:install --skills
+php artisan boost:update      # refresh guidelines after a dependency change
+```
+
+None of this is required to contribute. The gate is `composer ci:check`, not the
+tooling you used to get there.
+
 ## Vocabulary
 
 The domain terms — organization, membership, plan, price, subscription, feature,
