@@ -1,8 +1,10 @@
 # 0001 — Vertical slice build plan
 
 - **Date:** 2026-09-16
-- **Status:** **M0 complete.** `main` is pushed and both CI matrix jobs pass on GitHub
-  Actions. **M1 in progress**, amended 2026-09-16 by D20-D26.
+- **Status:** **M0 and M1 complete.** M1's segment of the journey runs: registering
+  creates exactly one personal organization, and a job resolves the correct
+  organization across a real queue roundtrip while the next job on that worker
+  inherits nothing. Amended 2026-09-16 by D20-D26. M2 not started.
 - **Decisions:** `docs/decisions/0001-architecture-decisions.md` and
   `docs/decisions/0002-inherited-tooling-audit.md`.
 - **Defines done for:** D8, the ten-minute journey.
@@ -39,16 +41,16 @@ the extension point, defer the implementation.
 
 ## Milestones
 
-| #      | Deliverable                                                                                      | Depends on | Proof it is done                                                                                                                                                                 |
-| ------ | ------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M0** | Skeleton configured; inherited-tooling audit; Postgres; D9 governance; CI                        | —          | **Done** — full gate green on PostgreSQL and SQLite, locally and on GitHub Actions. 46 tests, 184 assertions. Audit recorded in `docs/decisions/0002-inherited-tooling-audit.md` |
-| **M1** | Organizations, memberships, personal org at registration, tenant context                         | M0         | Registering creates exactly one personal organization; a job resolves the correct organization across a real queue roundtrip, and the next job on that worker inherits nothing   |
-| **M2** | Invitations — expiring, revocable, audited                                                       | M1         | Expiry, revoke-then-accept, accept-as-wrong-user and re-invite all rejected with distinct errors                                                                                 |
-| **M3** | Tenant-scoped RBAC on `spatie/laravel-permission`                                                | M1         | A role granted in organization A grants nothing in organization B                                                                                                                |
-| **M4** | Cashier on `Organization`; plan/price catalog; Stripe Checkout, test mode                        | M1, M3     | Checkout completes in test mode, the webhook lands, and billing facts appear locally                                                                                             |
-| **M5** | Entitlements wired; `projects` limit; the upgrade prompt                                         | M4         | Creating past the limit is refused **server-side**, and concurrent creates cannot exceed it                                                                                      |
-| **M6** | Filament admin: entitlement inspector, usage counter, webhook timeline, audit log, impersonation | M5         | Deleting the admin module leaves the suite green with no dead navigation                                                                                                         |
-| **M7** | `saas:demo`, the journey as one browser test, README, agent discoverability                      | M6         | `laravel new --using=impruthvi/saas-foundation` → `saas:demo` → journey completes, unassisted, inside ten minutes                                                                |
+| #      | Deliverable                                                                                      | Depends on | Proof it is done                                                                                                                                                                          |
+| ------ | ------------------------------------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M0** | Skeleton configured; inherited-tooling audit; Postgres; D9 governance; CI                        | —          | **Done** — full gate green on PostgreSQL and SQLite, locally and on GitHub Actions. 46 tests, 184 assertions. Audit recorded in `docs/decisions/0002-inherited-tooling-audit.md`          |
+| **M1** | Organizations, memberships, personal org at registration, tenant context                         | M0         | **Done** — registering creates exactly one personal organization; a job resolves the correct organization across a real queue roundtrip, and the next job on that worker inherits nothing |
+| **M2** | Invitations — expiring, revocable, audited                                                       | M1         | Expiry, revoke-then-accept, accept-as-wrong-user and re-invite all rejected with distinct errors                                                                                          |
+| **M3** | Tenant-scoped RBAC on `spatie/laravel-permission`                                                | M1         | A role granted in organization A grants nothing in organization B                                                                                                                         |
+| **M4** | Cashier on `Organization`; plan/price catalog; Stripe Checkout, test mode                        | M1, M3     | Checkout completes in test mode, the webhook lands, and billing facts appear locally                                                                                                      |
+| **M5** | Entitlements wired; `projects` limit; the upgrade prompt                                         | M4         | Creating past the limit is refused **server-side**, and concurrent creates cannot exceed it                                                                                               |
+| **M6** | Filament admin: entitlement inspector, usage counter, webhook timeline, audit log, impersonation | M5         | Deleting the admin module leaves the suite green with no dead navigation                                                                                                                  |
+| **M7** | `saas:demo`, the journey as one browser test, README, agent discoverability                      | M6         | `laravel new --using=impruthvi/saas-foundation` → `saas:demo` → journey completes, unassisted, inside ten minutes                                                                         |
 
 ## Milestone detail
 
