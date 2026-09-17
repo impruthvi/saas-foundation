@@ -12,6 +12,27 @@ be listed here under **Changed** or **Removed**.
 
 ### Added
 
+- **Invitations (M2).** Expiring, revocable, audited offers of membership, made to an
+  email address rather than to a user because the recipient usually has no account yet.
+  Accept, decline, revoke and resend, with a queued email carrying the only usable copy
+  of the token. Expiry is derived from `expires_at` and never stored; tokens are sha-256
+  digests behind a unique index.
+- **Eight distinct refusals.** Expired, revoked, declined, already accepted, addressed to
+  another, organization not accepting members, already invited, already a member — each
+  its own class under one abstract `InvitationRefused`, so a caller catches once while the
+  tests assert the reason. A token that resolves to nothing is a 404 worded honestly,
+  never "expired".
+- **A second audited way around the tenant scope (D27).** `App\Tenancy\InvitationRepository`
+  resolves an invitation by token for someone who is outside the tenant by definition.
+  `tests/Unit/TenantScopingTest.php` still fails the build if a third one appears.
+
+### Fixed
+
+- **Route model binding on a tenant-owned model returned 500 (D28).** `SubstituteBindings`
+  ran ahead of `ResolveTenantContext`, so binding queried the model before an organization
+  was resolved and the global scope raised. It now runs after the tenant resolver, and a
+  cross-tenant request gets the 404 it deserves.
+
 - **Organizations (M1).** The organization is the tenant: `Organization`,
   `Membership` and a first tenant-owned `Project`, with a personal organization
   created for every user at registration (D1, D21).

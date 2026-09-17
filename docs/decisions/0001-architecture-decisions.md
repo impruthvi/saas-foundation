@@ -1,6 +1,6 @@
 # 0001 — Architecture decisions
 
-- **Date:** 2026-09-08, amended 2026-09-16 (D20-D26 added for M1)
+- **Date:** 2026-09-08, amended 2026-09-16 (D20-D26 for M1) and 2026-09-17 (D27-D28 for M2)
 - **Status:** Accepted
 - **Scope:** the technical decisions that bind this codebase.
 
@@ -229,6 +229,44 @@ through an explicit switch endpoint.
 against a payment provider, so it is decided before the first row exists. A URL segment
 built on globally unique slugs is also enumerable, which leaks other tenants' names for
 no benefit the session approach lacks.
+
+## D27 — Resolving an invitation by token is the second query that cannot be scoped
+
+It lives in `App\Tenancy\InvitationRepository`, which joins `MembershipRepository` on
+the allowed-caller list in `tests/Unit/TenantScopingTest.php`. Like that one it runs
+inside `runWithoutTenant()`, because both halves of the boundary have to stand down: the
+global scope so the `SELECT` runs at all, and the `retrieved` guard so a row belonging to
+another organization does not raise on arrival.
+
+**Why:** the person holding an invitation token is outside the tenant by definition —
+unauthenticated, or signed in with their own organization resolved. The question is asked
+before the organization it concerns is known, which is exactly D22's situation a second
+time. D22's wording says "the one query"; adding a second door quietly is precisely what
+that test exists to notice, so it gets a number.
+
+The repository returns the row and nothing else. Whether it may be taken is the accepting
+action's job, because the answer is one of eight distinct refusals and a repository that
+returned null would collapse them into "not found".
+
+**Consequence for tests:** every test that resolves an invitation by token emits SQL with
+no `organization_id`, so the suite-wide guard fails it. `throughTheAuditedDoor()` in
+`tests/Pest.php` is the one sanctioned way past, and it is named so the escape is visible
+in a diff.
+
+## D28 — Route model binding runs after the tenant is resolved
+
+`SubstituteBindings` is removed from its stock position in the web group and appended
+after `ResolveTenantContext` in `bootstrap/app.php`. Two tests in
+`tests/Feature/Tenancy/TenantBoundaryTest.php` lock the ordering.
+
+**Why:** binding queries the model, and a tenant-owned model's global scope raises when no
+organization is resolved (D3). In its shipped position, binding `{invitation}` — or
+`{project}` at M5 — is a 500, and a cross-tenant request gets a server error instead of
+the 404 it deserves. The alternative is never binding a tenant-owned model, which is a
+permanent tax on every route the foundation will grow.
+
+**Cost accepted:** the middleware order is now something this project owns rather than
+inherits, so an upgrade that reshuffles the web group has to be read rather than merged.
 
 ---
 
