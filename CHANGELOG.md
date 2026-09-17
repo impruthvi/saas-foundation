@@ -12,6 +12,24 @@ be listed here under **Changed** or **Removed**.
 
 ### Added
 
+- **Organizations (M1).** The organization is the tenant: `Organization`,
+  `Membership` and a first tenant-owned `Project`, with a personal organization
+  created for every user at registration (D1, D21).
+- **Tenant context.** `App\Tenancy\TenantContext` resolves one organization per
+  unit of work and carries it into queued jobs and queued notifications through
+  `Illuminate\Log\Context`. Scheduled commands and webhook processing state their
+  organization with `runFor()` rather than inheriting one (D24).
+- **The boundary is proven against queries, not declarations.** A `DB::listen`
+  guard fails any test whose SQL reaches a tenant-owned table without an
+  `organization_id` predicate, backed by static rules for what a query cannot
+  show: a model carrying the column without declaring the interface, and callers
+  reaching for the escape hatch outside the one place allowed it (D20, D22).
+- **Ownership transfer**, and an account deletion that refuses to orphan an
+  organization instead of silently leaving one behind (D23, D25).
+- **The current organization** is resolved from the session per request and
+  changed through `POST /organizations/{organization}/switch`. The workspace
+  switcher is hidden for a solo user, not absent (D26).
+
 - Project skeleton, templated from `shipfastlabs/modern-vue-starter-kit-auth`: Laravel
   13, PHP 8.4, Fortify, Inertia 3 with Vue, Wayfinder, Tailwind, shadcn-vue, Pest 5,
   Larastan, Rector and Pint.
@@ -26,6 +44,11 @@ be listed here under **Changed** or **Removed**.
 
 ### Changed
 
+- Account deletion is refused while the user solely owns an organization other
+  people are in, and takes the organizations they alone own with them when it
+  proceeds. It also logs out with `logoutCurrentDevice()`: `Auth::logout()`
+  cycles the remember token, which saves the model, and saving a model whose row
+  has just been deleted re-inserts the account.
 - Automatic relationship autoloading is disabled for the test run, so that
   `preventLazyLoading` can actually fire on models drawn from a collection.
 - The inherited tree now passes its own formatter, so `composer ci:check` succeeds on a
