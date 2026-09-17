@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Actions\AddOrganizationMember;
+use App\Actions\CreateOrganization;
+use App\Actions\CreatePersonalOrganization;
+use App\Models\Organization;
 use App\Models\User;
 
 test('profile page is displayed', function (): void {
@@ -84,4 +88,39 @@ test('correct password must be provided to delete account', function (): void {
         ->assertRedirect(route('profile.edit'));
 
     expect($user->fresh())->not->toBeNull();
+});
+
+test('account deletion is refused while the user solely owns a shared organization', function (): void {
+    $owner = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create());
+
+    $response = $this
+        ->actingAs($owner)
+        ->from(route('profile.edit'))
+        ->delete(route('profile.destroy'), [
+            'password' => 'password',
+        ]);
+
+    $response->assertRedirect(route('profile.edit'));
+
+    expect($owner->fresh())->not->toBeNull()
+        ->and(Organization::query()->find($organization->id))->not->toBeNull();
+
+    $this->assertAuthenticatedAs($owner);
+});
+
+test('deleting an account takes its personal organization with it', function (): void {
+    $user = User::factory()->create();
+    $organization = resolve(CreatePersonalOrganization::class)->handle($user);
+
+    $this
+        ->actingAs($user)
+        ->delete(route('profile.destroy'), [
+            'password' => 'password',
+        ])
+        ->assertRedirect(route('home'));
+
+    expect($user->fresh())->toBeNull()
+        ->and(Organization::query()->find($organization->id))->toBeNull();
 });
