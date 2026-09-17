@@ -82,6 +82,9 @@ it('keeps the way around the scope to the places that are allowed it', function 
         // The one query that cannot be scoped: which organizations does this user
         // belong to, asked before any organization is resolved (D22).
         'app/Tenancy/MembershipRepository.php',
+        // The second, and for the same reason: which invitation does this token
+        // name, asked by a stranger who is outside the tenant by definition (D27).
+        'app/Tenancy/InvitationRepository.php',
         // The mechanism itself.
         'app/Tenancy/TenantContext.php',
         'app/Exceptions/TenantContextMissing.php',
