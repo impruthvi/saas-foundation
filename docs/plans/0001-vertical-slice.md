@@ -1,10 +1,10 @@
 # 0001 — Vertical slice build plan
 
 - **Date:** 2026-09-16
-- **Status:** **M0 and M1 complete.** M1's segment of the journey runs: registering
-  creates exactly one personal organization, and a job resolves the correct
-  organization across a real queue roundtrip while the next job on that worker
-  inherits nothing. Amended 2026-09-16 by D20-D26. M2 not started.
+- **Status:** **M0, M1 and M2 complete.** M2's segment of the journey runs: an
+  invited stranger opens the emailed link with no account, registers, and lands
+  as an active member of both the inviting organization and their own personal
+  one. Amended 2026-09-16 by D20-D26 and 2026-09-17 by D27-D28. M3 is next.
 - **Decisions:** `docs/decisions/0001-architecture-decisions.md` and
   `docs/decisions/0002-inherited-tooling-audit.md`.
 - **Defines done for:** D8, the ten-minute journey.
@@ -45,7 +45,7 @@ the extension point, defer the implementation.
 | ------ | ------------------------------------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **M0** | Skeleton configured; inherited-tooling audit; Postgres; D9 governance; CI                        | —          | **Done** — full gate green on PostgreSQL and SQLite, locally and on GitHub Actions. 46 tests, 184 assertions. Audit recorded in `docs/decisions/0002-inherited-tooling-audit.md`          |
 | **M1** | Organizations, memberships, personal org at registration, tenant context                         | M0         | **Done** — registering creates exactly one personal organization; a job resolves the correct organization across a real queue roundtrip, and the next job on that worker inherits nothing |
-| **M2** | Invitations — expiring, revocable, audited                                                       | M1         | Expiry, revoke-then-accept, accept-as-wrong-user and re-invite all rejected with distinct errors                                                                                          |
+| **M2** | Invitations — expiring, revocable, audited                                                       | M1         | **Done** — eight refusals, eight exception classes; a stranger goes from emailed link to membership of two organizations without a manual database edit                                   |
 | **M3** | Tenant-scoped RBAC on `spatie/laravel-permission`                                                | M1         | A role granted in organization A grants nothing in organization B                                                                                                                         |
 | **M4** | Cashier on `Organization`; plan/price catalog; Stripe Checkout, test mode                        | M1, M3     | Checkout completes in test mode, the webhook lands, and billing facts appear locally                                                                                                      |
 | **M5** | Entitlements wired; `projects` limit; the upgrade prompt                                         | M4         | Creating past the limit is refused **server-side**, and concurrent creates cannot exceed it                                                                                               |
@@ -111,8 +111,22 @@ restoration bypasses global scopes.
 
 ### M2 — Invitations
 
-Expiring, auditable, revocable. Accept, decline, revoke, resend. Email delivery.
-Budgeted honestly as real, unglamorous work in D6.
+**Done.** Expiring, auditable, revocable. Accept, decline, revoke, resend. Email
+delivery. Budgeted honestly as real, unglamorous work in D6, and it was.
+
+Two things the milestone turned up that were not on the list. Resolving an invitation by
+token is a second query that cannot be tenant-scoped, because the person holding the token
+is outside the tenant by definition — D27, and the second and last audited door. And route
+model binding on a tenant-owned model was a 500: `SubstituteBindings` shipped ahead of the
+tenant resolver, so binding queried the model before an organization existed to scope it
+by. D28 fixes the ordering, which M5 would otherwise have hit the moment it bound
+`Project`.
+
+Expiry is derived from `expires_at` and never stored, so nothing sweeps the table to make
+a fact about the clock true. Tokens are sha-256 digests behind a unique index; the
+plaintext exists only in the email. `(organization_id, email)` is unique, so re-inviting
+rotates the row — and a rotated token resolving to nothing is a 404 worded honestly, never
+"expired", because it was replaced rather than aged out.
 
 ### M3 — RBAC
 
