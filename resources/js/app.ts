@@ -14,6 +14,9 @@ createInertiaApp({
             case name === 'Welcome':
                 return null;
             case name.startsWith('auth/'):
+            // An invitation is opened by a stranger who is usually not signed
+            // in, so it gets the guest chrome rather than the app shell.
+            case name.startsWith('invitations/'):
                 return AuthLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
