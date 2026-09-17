@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Actions\ConsumePendingInvitation;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\Invitation;
+use App\Models\Organization;
+use App\Tenancy\InvitationRepository;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -69,8 +73,13 @@ final class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/Register', [
+        // Someone who arrived holding an invitation registers against the address
+        // it names, and nothing else: the token is spent on the way through, and
+        // a mismatch would drop it silently. So the address is supplied here and
+        // the field is locked rather than merely pre-filled.
+        Fortify::registerView(fn (Request $request) => Inertia::render('auth/Register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'invitation' => fn (): ?array => $this->pendingInvitation($request),
         ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge'));
@@ -94,5 +103,39 @@ final class FortifyServiceProvider extends ServiceProvider
         RateLimiter::for('passkeys', fn (Request $request) => Limit::perMinute(10)->by(
             ($request->input('credential.id') ?: $request->session()->getId()).'|'.$request->ip(),
         ));
+    }
+
+    /**
+     * The invitation whose token this visitor is carrying, if any.
+     *
+     * Read through the audited repository (D27): the visitor is unauthenticated,
+     * so there is no tenant to scope the lookup by. A token that no longer
+     * resolves, or an invitation that has lapsed, simply produces nothing — the
+     * register form then behaves normally rather than refusing to load.
+     *
+     * @return array{email: string, organization: string}|null
+     */
+    private function pendingInvitation(Request $request): ?array
+    {
+        if (! $request->hasSession()) {
+            return null;
+        }
+
+        $token = $request->session()->get(ConsumePendingInvitation::SESSION_KEY);
+
+        if (! is_string($token) || $token === '') {
+            return null;
+        }
+
+        $invitation = resolve(InvitationRepository::class)->findByToken($token);
+
+        if (! $invitation instanceof Invitation || ! $invitation->isAcceptable()) {
+            return null;
+        }
+
+        return [
+            'email' => $invitation->email,
+            'organization' => Organization::query()->findOrFail($invitation->organization_id)->name,
+        ];
     }
 }

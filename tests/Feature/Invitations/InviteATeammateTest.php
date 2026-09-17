@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Tenancy\MembershipRepository;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 use Tests\Support\TenantQueryGuard;
 
 /*
@@ -168,4 +169,44 @@ it('does not let a parked token admit whoever signs up next', function (): void 
     );
 
     expect($invitation->accepted_by_user_id)->toBeNull();
+});
+
+it('locks the register form to the address the invitation names', function (): void {
+    [$organization] = organizationOwnedBySomeone();
+    $token = issueInvitation($organization, 'fixed@example.com');
+
+    throughTheAuditedDoor(fn () => $this->get(route('invitations.show', ['token' => $token])));
+
+    throughTheAuditedDoor(fn () => $this->get(route('register'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('invitation.email', 'fixed@example.com')
+            ->where('invitation.organization', $organization->name)));
+});
+
+it('offers no invitation to the register form when none is parked', function (): void {
+    $this->get(route('register'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('invitation', null));
+});
+
+it('says so when a parked invitation could not be taken', function (): void {
+    $organization = Organization::factory()->create();
+    $token = issueInvitation($organization, 'lapsed@example.com');
+
+    throughTheAuditedDoor(fn () => $this->get(route('invitations.show', ['token' => $token])));
+
+    $this->travel(8)->days();
+
+    // The account is still created — an expiry must not cost somebody their
+    // registration — but they are told, rather than left believing they joined.
+    throughTheAuditedDoor(fn () => $this->post(route('register.store'), [
+        'name' => 'Lapsed',
+        'email' => 'lapsed@example.com',
+        'password' => 'password-that-is-long',
+        'password_confirmation' => 'password-that-is-long',
+    ])->assertRedirect());
+
+    expect(User::query()->where('email', 'lapsed@example.com')->exists())->toBeTrue()
+        ->and(Inertia::getFlashed()['toast'] ?? null)->toMatchArray(['type' => 'warning']);
 });

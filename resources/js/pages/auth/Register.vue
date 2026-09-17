@@ -10,8 +10,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
-defineProps<{
+const props = defineProps<{
     passwordRules: string;
+    // Present only when the visitor arrived holding an invitation. The address
+    // is then fixed: registering with a different one would spend nothing and
+    // drop the invitation without saying so.
+    invitation?: { email: string; organization: string } | null;
 }>();
 
 defineOptions({
@@ -24,6 +28,16 @@ defineOptions({
 
 <template>
     <Head title="Register" />
+
+    <p
+        v-if="props.invitation"
+        class="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground"
+    >
+        You're joining
+        <strong class="font-medium text-foreground">
+            {{ props.invitation.organization }}</strong
+        >. Your account uses the address it was sent to.
+    </p>
 
     <Form
         v-bind="store.form()"
@@ -52,6 +66,9 @@ defineOptions({
                 <Input
                     id="email"
                     type="email"
+                    :default-value="props.invitation?.email"
+                    :readonly="Boolean(props.invitation)"
+                    :class="props.invitation ? 'bg-muted' : undefined"
                     required
                     :tabindex="2"
                     autocomplete="email"

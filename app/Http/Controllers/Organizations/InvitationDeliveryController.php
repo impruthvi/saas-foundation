@@ -45,8 +45,8 @@ final class InvitationDeliveryController extends Controller
 
         try {
             $issued = $resend->handle($invitation);
-        } catch (InvitationRefused $refused) {
-            return back()->withErrors(['invitation' => $refused->getMessage()]);
+        } catch (InvitationRefused $invitationRefused) {
+            return back()->withErrors(['invitation' => $invitationRefused->getMessage()]);
         }
 
         $deliver->handle($issued['invitation'], $organization, $issued['token']);
