@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Actions\AcceptOrganizationInvitation;
 use App\Actions\AddOrganizationMember;
 use App\Actions\DeclineOrganizationInvitation;
-use App\Actions\InviteOrganizationMember;
 use App\Actions\ResendOrganizationInvitation;
 use App\Actions\RevokeOrganizationInvitation;
 use App\Enums\InvitationStatus;
@@ -24,9 +23,7 @@ use App\Models\Invitation;
 use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
-use App\Tenancy\InvitationRepository;
 use App\Tenancy\TenantContext;
-use Tests\Support\TenantQueryGuard;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,38 +46,10 @@ use Tests\Support\TenantQueryGuard;
 |
 */
 
-/**
- * Resolve an invitation the way a stranger's request does.
- *
- * The suite-wide guard fails any read of a tenant-owned table whose SQL carries
- * no organization_id, and this read deliberately carries none — that is the
- * whole of D27. `allowUnscoped()` is the one sanctioned way past the guard, and
- * it lives here, named, rather than scattered through every test that clicks a
- * link.
- */
-function findInvitation(string $token): ?Invitation
-{
-    return TenantQueryGuard::allowUnscoped(
-        fn (): ?Invitation => resolve(InvitationRepository::class)->findByToken($token),
-    );
-}
-
-/**
- * Invite an address, and hand back the token the email would have carried.
- */
-function invite(Organization $organization, string $email, ?User $by = null): string
-{
-    return resolve(TenantContext::class)->runFor(
-        $organization,
-        fn (): string => resolve(InviteOrganizationMember::class)
-            ->handle($organization, $email, MembershipRole::Member, $by)['token'],
-    );
-}
-
 it('mints a token that resolves to the invitation and is never stored in the clear', function (): void {
     $organization = Organization::factory()->create();
 
-    $token = invite($organization, 'new@example.com');
+    $token = issueInvitation($organization, 'new@example.com');
 
     $invitation = findInvitation($token);
 
@@ -93,7 +62,7 @@ it('mints a token that resolves to the invitation and is never stored in the cle
 
 it('resolves an invitation for a stranger who has no organization of their own', function (): void {
     $organization = Organization::factory()->create();
-    $token = invite($organization, 'stranger@example.com');
+    $token = issueInvitation($organization, 'stranger@example.com');
 
     // What an unauthenticated request looks like: no tenant, so the global scope
     // would throw and the retrieved guard would raise. The audited door is the
@@ -107,7 +76,7 @@ it('resolves an invitation for a stranger who has no organization of their own',
 it('accepts an invitation and makes the invitee a member of the inviting organization', function (): void {
     $organization = Organization::factory()->create();
     $invitee = User::factory()->create(['email' => 'invitee@example.com']);
-    $token = invite($organization, 'invitee@example.com');
+    $token = issueInvitation($organization, 'invitee@example.com');
 
     $invitation = findInvitation($token);
     $membership = resolve(AcceptOrganizationInvitation::class)->handle($invitation, $invitee);
@@ -122,7 +91,7 @@ it('accepts an invitation and makes the invitee a member of the inviting organiz
 it('rejects an invitation whose clock ran out', function (): void {
     $organization = Organization::factory()->create();
     $invitee = User::factory()->create(['email' => 'late@example.com']);
-    $token = invite($organization, 'late@example.com');
+    $token = issueInvitation($organization, 'late@example.com');
 
     $this->travel(8)->days();
 
@@ -135,7 +104,7 @@ it('rejects an invitation whose clock ran out', function (): void {
 it('rejects an invitation that was revoked before it was accepted', function (): void {
     $organization = Organization::factory()->create();
     $invitee = User::factory()->create(['email' => 'withdrawn@example.com']);
-    $token = invite($organization, 'withdrawn@example.com');
+    $token = issueInvitation($organization, 'withdrawn@example.com');
 
     $invitation = findInvitation($token);
     resolve(TenantContext::class)->runFor(
@@ -150,7 +119,7 @@ it('rejects an invitation that was revoked before it was accepted', function ():
 it('rejects an invitation the recipient already declined', function (): void {
     $organization = Organization::factory()->create();
     $invitee = User::factory()->create(['email' => 'nothanks@example.com']);
-    $token = invite($organization, 'nothanks@example.com');
+    $token = issueInvitation($organization, 'nothanks@example.com');
 
     $invitation = findInvitation($token);
     resolve(TenantContext::class)->runFor(
@@ -165,7 +134,7 @@ it('rejects an invitation the recipient already declined', function (): void {
 it('rejects acceptance by a user the invitation does not name', function (): void {
     $organization = Organization::factory()->create();
     $someoneElse = User::factory()->create(['email' => 'someone.else@example.com']);
-    $token = invite($organization, 'intended@example.com');
+    $token = issueInvitation($organization, 'intended@example.com');
 
     $invitation = findInvitation($token);
 
@@ -176,7 +145,7 @@ it('rejects acceptance by a user the invitation does not name', function (): voi
 it('matches the addressee regardless of how the address is cased', function (): void {
     $organization = Organization::factory()->create();
     $invitee = User::factory()->create(['email' => 'mixed.case@example.com']);
-    $token = invite($organization, 'Mixed.Case@Example.com');
+    $token = issueInvitation($organization, 'Mixed.Case@Example.com');
 
     $invitation = findInvitation($token);
 
@@ -186,9 +155,9 @@ it('matches the addressee regardless of how the address is cased', function (): 
 
 it('rejects a second invitation while one is still live', function (): void {
     $organization = Organization::factory()->create();
-    invite($organization, 'pending@example.com');
+    issueInvitation($organization, 'pending@example.com');
 
-    expect(fn (): string => invite($organization, 'pending@example.com'))
+    expect(fn (): string => issueInvitation($organization, 'pending@example.com'))
         ->toThrow(AlreadyInvited::class);
 });
 
@@ -201,14 +170,14 @@ it('rejects inviting somebody who is already a member', function (): void {
         fn (): Membership => resolve(AddOrganizationMember::class)->handle($organization, $member),
     );
 
-    expect(fn (): string => invite($organization, 'inside@example.com'))
+    expect(fn (): string => issueInvitation($organization, 'inside@example.com'))
         ->toThrow(AlreadyMember::class);
 });
 
 it('rejects acceptance into an organization that is no longer usable', function (): void {
     $organization = Organization::factory()->create();
     $invitee = User::factory()->create(['email' => 'toolate@example.com']);
-    $token = invite($organization, 'toolate@example.com');
+    $token = issueInvitation($organization, 'toolate@example.com');
 
     $organization->update(['status' => OrganizationStatus::Suspended]);
 
@@ -221,7 +190,7 @@ it('rejects acceptance into an organization that is no longer usable', function 
 it('rejects a second acceptance of an invitation already taken', function (): void {
     $organization = Organization::factory()->create();
     $invitee = User::factory()->create(['email' => 'twice@example.com']);
-    $token = invite($organization, 'twice@example.com');
+    $token = issueInvitation($organization, 'twice@example.com');
 
     $invitation = findInvitation($token);
     resolve(AcceptOrganizationInvitation::class)->handle($invitation, $invitee);
@@ -232,7 +201,7 @@ it('rejects a second acceptance of an invitation already taken', function (): vo
 
 it('lets a revoked address be invited again, on a new token', function (): void {
     $organization = Organization::factory()->create();
-    $first = invite($organization, 'again@example.com');
+    $first = issueInvitation($organization, 'again@example.com');
 
     $invitation = findInvitation($first);
     resolve(TenantContext::class)->runFor(
@@ -240,7 +209,7 @@ it('lets a revoked address be invited again, on a new token', function (): void 
         fn (): Invitation => resolve(RevokeOrganizationInvitation::class)->handle($invitation),
     );
 
-    $second = invite($organization, 'again@example.com');
+    $second = issueInvitation($organization, 'again@example.com');
 
     expect($second)->not->toBe($first)
         ->and(findInvitation($first))->toBeNull()
@@ -250,7 +219,7 @@ it('lets a revoked address be invited again, on a new token', function (): void 
 
 it('retires the previous token when an invitation is resent', function (): void {
     $organization = Organization::factory()->create();
-    $first = invite($organization, 'resend@example.com');
+    $first = issueInvitation($organization, 'resend@example.com');
 
     $invitation = findInvitation($first);
     $second = resolve(TenantContext::class)->runFor(
@@ -272,7 +241,7 @@ it('returns nothing for a token that was never issued', function (): void {
 it('survives the membership already existing when the invitation is accepted', function (): void {
     $organization = Organization::factory()->create();
     $invitee = User::factory()->create(['email' => 'racer@example.com']);
-    $token = invite($organization, 'racer@example.com');
+    $token = issueInvitation($organization, 'racer@example.com');
 
     // The state the loser of a concurrent accept finds: the winner's membership
     // has landed, but this request read the invitation before it did. The row
@@ -298,8 +267,8 @@ it('survives the membership already existing when the invitation is accepted', f
 it('keeps one organization from seeing or revoking another organization invitation', function (): void {
     [$ours, $theirs] = [Organization::factory()->create(), Organization::factory()->create()];
 
-    invite($ours, 'ours@example.com');
-    $theirToken = invite($theirs, 'theirs@example.com');
+    issueInvitation($ours, 'ours@example.com');
+    $theirToken = issueInvitation($theirs, 'theirs@example.com');
 
     $visible = resolve(TenantContext::class)->runFor(
         $ours,

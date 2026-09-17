@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,14 +21,24 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        $middleware->web(append: [
-            HandleAppearance::class,
-            // Before Inertia, so shared props are built with the tenant already
-            // resolved rather than resolving one of their own.
-            ResolveTenantContext::class,
-            HandleInertiaRequests::class,
-            AddLinkHeadersForPreloadedAssets::class,
-        ]);
+        // SubstituteBindings is pulled out of its default position and put back
+        // after the tenant is resolved. Route model binding queries the model,
+        // and a tenant-owned model's global scope raises when no organization is
+        // resolved (D3) — so binding `{project}` or `{invitation}` in its stock
+        // position is a 500 rather than the 404 a cross-tenant request deserves.
+        $middleware->web(
+            append: [
+                HandleAppearance::class,
+                // Before bindings, so a bound tenant-owned model is scoped, and
+                // before Inertia, so shared props are built with the tenant
+                // already resolved rather than resolving one of their own.
+                ResolveTenantContext::class,
+                SubstituteBindings::class,
+                HandleInertiaRequests::class,
+                AddLinkHeadersForPreloadedAssets::class,
+            ],
+            remove: [SubstituteBindings::class],
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

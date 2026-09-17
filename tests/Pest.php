@@ -12,6 +12,14 @@ declare(strict_types=1);
 | need to change it using the "pest()" function to bind a different classes or traits.
 |
 */
+use App\Actions\CreateOrganization;
+use App\Actions\InviteOrganizationMember;
+use App\Enums\MembershipRole;
+use App\Models\Invitation;
+use App\Models\Organization;
+use App\Models\User;
+use App\Tenancy\InvitationRepository;
+use App\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -71,7 +79,64 @@ expect()->extend('toBeOne', fn () => $this->toBe(1));
 |
 */
 
-function something(): void
+/*
+|--------------------------------------------------------------------------
+| Invitations
+|--------------------------------------------------------------------------
+|
+| Shared by the invitation tests. They live here rather than in one file
+| because three files need them and Pest helpers are file-scoped.
+|
+*/
+
+/**
+ * Make a request or a read that resolves an invitation by its token.
+ *
+ * Those reads hit `invitations` with no organization_id, which is D27's audited
+ * door and exactly what the suite-wide guard is built to flag. Standing the
+ * guard down lives in this one named helper, so a test that needs it says so and
+ * every other test keeps full protection.
+ *
+ * @template TReturn
+ *
+ * @param  Closure(): TReturn  $work
+ * @return TReturn
+ */
+function throughTheAuditedDoor(Closure $work): mixed
 {
-    // ..
+    return TenantQueryGuard::allowUnscoped($work);
+}
+
+/**
+ * Resolve an invitation the way a stranger's request does.
+ */
+function findInvitation(string $token): ?Invitation
+{
+    return throughTheAuditedDoor(
+        fn (): ?Invitation => resolve(InvitationRepository::class)->findByToken($token),
+    );
+}
+
+/**
+ * Invite an address, and hand back the token the email would have carried.
+ */
+function issueInvitation(Organization $organization, string $email, ?User $by = null): string
+{
+    return resolve(TenantContext::class)->runFor(
+        $organization,
+        fn (): string => resolve(InviteOrganizationMember::class)
+            ->handle($organization, $email, MembershipRole::Member, $by)['token'],
+    );
+}
+
+/**
+ * An organization and the user who owns it.
+ *
+ * @return array{0: Organization, 1: User}
+ */
+function organizationOwnedBySomeone(string $name = 'Acme'): array
+{
+    $owner = User::factory()->create();
+
+    return [resolve(CreateOrganization::class)->handle($owner, $name), $owner];
 }

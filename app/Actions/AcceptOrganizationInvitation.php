@@ -9,6 +9,7 @@ use App\Exceptions\Invitations\InvitationAddressedToAnother;
 use App\Exceptions\Invitations\InvitationAlreadyAccepted;
 use App\Exceptions\Invitations\InvitationDeclined;
 use App\Exceptions\Invitations\InvitationExpired;
+use App\Exceptions\Invitations\InvitationRefused;
 use App\Exceptions\Invitations\InvitationRevoked;
 use App\Exceptions\Invitations\OrganizationNotAcceptingMembers;
 use App\Models\Invitation;
@@ -58,7 +59,7 @@ final readonly class AcceptOrganizationInvitation
 
     public function handle(Invitation $invitation, User $user): Membership
     {
-        $this->refuse($invitation, $user);
+        $this->assertAcceptableBy($invitation, $user);
 
         return $this->tenant->runForId(
             $invitation->organization_id,
@@ -74,8 +75,14 @@ final readonly class AcceptOrganizationInvitation
      * still open. Each reason is a distinct class, because "too late", "not for
      * you" and "not right now" are three different answers and collapsing them
      * into one is the failure M2 exists to avoid.
+     *
+     * Public because the accept screen asks the same question without acting on
+     * the answer: it renders the reason instead of throwing it. One ladder, so
+     * the screen and the endpoint cannot drift apart about why.
+     *
+     * @throws InvitationRefused
      */
-    private function refuse(Invitation $invitation, User $user): void
+    public function assertAcceptableBy(Invitation $invitation, User $user): void
     {
         match ($invitation->status) {
             InvitationStatus::Accepted => throw InvitationAlreadyAccepted::make(),
