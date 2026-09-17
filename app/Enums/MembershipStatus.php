@@ -7,8 +7,10 @@ namespace App\Enums;
 /**
  * Whether a membership currently grants access.
  *
- * M2's invitations add the states before acceptance; these are the two a
- * membership can hold once it exists.
+ * These are the only two states a membership can hold, because a membership only
+ * exists once someone is in. The states *before* that — pending, revoked,
+ * declined — belong to `InvitationStatus`, on a row that is not a membership
+ * yet. M1 guessed they would land here; M2 put them where the fact lives.
  */
 enum MembershipStatus: string
 {
