@@ -57,6 +57,33 @@ trait BelongsToOrganization
             $model->setAttribute($column, $tenant->idOrFail());
         });
 
+        $guardAgainstOtherTenants = function (Model&TenantOwned $model): void {
+            $tenant = resolve(TenantContext::class);
+
+            if (! $tenant->hasTenant()) {
+                return;
+            }
+
+            $column = $model->tenantColumn();
+            $attributes = $model->getAttributes();
+
+            if (! array_key_exists($column, $attributes)) {
+                return;
+            }
+
+            $organizationId = $attributes[$column] === null ? null : (int) $attributes[$column];
+
+            if ($organizationId !== $tenant->idOrFail()) {
+                throw CrossTenantAccess::forModel($model::class, $organizationId, $tenant->idOrFail());
+            }
+        };
+
+        // Writing is guarded on the way in as reading is on the way out: an
+        // instance loaded for one organization cannot be saved or deleted while
+        // another is resolved, and it fails loudly rather than updating nothing.
+        static::saving($guardAgainstOtherTenants);
+        static::deleting($guardAgainstOtherTenants);
+
         static::retrieved(function (Model&TenantOwned $model): void {
             $tenant = resolve(TenantContext::class);
 
@@ -93,6 +120,36 @@ trait BelongsToOrganization
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Constrain writes against an existing row by tenant as well as by key.
+     *
+     * Eloquent addresses a loaded model by primary key alone, so `$model->save()`
+     * and `$model->delete()` never reach the global scope. Adding the tenant
+     * predicate here means an instance carrying one organization's key cannot
+     * write to another's row, and it keeps every statement the application emits
+     * against a tenant-owned table carrying an organization_id (D20).
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    protected function setKeysForSaveQuery($query)
+    {
+        parent::setKeysForSaveQuery($query);
+
+        return $query->where($this->tenantColumn(), $this->getAttribute($this->tenantColumn()));
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    protected function setKeysForSelectQuery($query)
+    {
+        parent::setKeysForSelectQuery($query);
+
+        return $query->where($this->tenantColumn(), $this->getAttribute($this->tenantColumn()));
     }
 
     /**

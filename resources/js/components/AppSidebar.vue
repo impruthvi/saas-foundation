@@ -5,6 +5,7 @@ import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
+import OrganizationSwitcher from '@/components/OrganizationSwitcher.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -51,6 +52,8 @@ const footerNavItems: NavItem[] = [
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
+
+            <OrganizationSwitcher />
         </SidebarHeader>
 
         <SidebarContent>

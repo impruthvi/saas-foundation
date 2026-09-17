@@ -63,3 +63,29 @@ it('raises when a row arrives from another organization with the scope bypassed'
         );
     });
 })->throws(CrossTenantAccess::class);
+
+it('refuses to write through an instance that belongs to another organization', function (): void {
+    [$first, $second] = [Organization::factory()->create(), Organization::factory()->create()];
+
+    $theirs = Project::factory()->for($first)->create(['name' => 'theirs']);
+
+    // Loaded with no tenant resolved, the way a console command or a stale
+    // payload would hand one over.
+    $stale = TenantQueryGuard::allowUnscoped(
+        fn (): ?Project => Project::query()->withoutTenantScope()->find($theirs->id)
+    );
+
+    try {
+        resolve(TenantContext::class)->runForId($second->id, function () use ($stale): void {
+            $stale->forceFill(['name' => 'renamed'])->save();
+        });
+
+        test()->fail("Writing another organization's row should have been refused.");
+    } catch (CrossTenantAccess) {
+        $reloaded = TenantQueryGuard::allowUnscoped(
+            fn (): ?Project => Project::query()->withoutTenantScope()->find($theirs->id)
+        );
+
+        expect($reloaded?->name)->toBe('theirs');
+    }
+});

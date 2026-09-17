@@ -55,6 +55,14 @@ final class Organization extends Model
     use HasFactory;
 
     /**
+     * Organizations are addressed by slug in links and forms (D26).
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    /**
      * The user who owns the organization and is billed for it.
      *
      * @return BelongsTo<User, $this>
