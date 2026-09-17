@@ -8,7 +8,8 @@ Built **above** Laravel's official starter kits, never duplicating them.
 
 > **Status: pre-alpha, and honestly so.** The authentication layer below works and is
 > tested. The foundation itself is being built now, in the open, milestone by milestone.
-> Nothing here is ready to depend on yet. There is no tagged release.
+> The journey's first two segments run today. Nothing here is ready to depend on yet.
+> There is no tagged release.
 
 ## What it will be
 
@@ -30,14 +31,40 @@ code exists.
 
 | Milestone                                              | State       |
 | ------------------------------------------------------ | ----------- |
-| M0 — Skeleton, inherited-tooling audit, governance, CI | In progress |
-| M1 — Organizations, memberships, tenant context        | Not started |
-| M2 — Invitations                                       | Not started |
+| M0 — Skeleton, inherited-tooling audit, governance, CI | **Done**    |
+| M1 — Organizations, memberships, tenant context        | **Done**    |
+| M2 — Invitations                                       | Next        |
 | M3 — Tenant-scoped RBAC                                | Not started |
 | M4 — Cashier on the organization, Stripe Checkout      | Not started |
 | M5 — Entitlements, usage, the plan limit               | Not started |
 | M6 — Filament admin and operations                     | Not started |
 | M7 — `saas:demo`, the journey as one test              | Not started |
+
+A milestone is done when its segment of the journey runs, not when its code exists.
+
+## What runs today
+
+Registering creates exactly one personal organization, with the user as its owner and a
+member of it, in a single transaction. There are no personal subscriptions, ever: a solo
+user is an organization of one rather than a second billing subject threaded through the
+product, and the workspace switcher is hidden for them rather than absent.
+
+Every request resolves one organization, held in the session and changed through an
+explicit switch that checks membership rather than trusting the request. That resolved
+tenant reaches background work: a queued job resolves the organization it was dispatched
+for, and the next job on the same worker inherits nothing.
+
+**Scoping is enforced at the model boundary, not in controllers.** A tenant-owned model
+queried with no organization resolved raises rather than quietly returning every
+tenant's rows, writes are constrained the same way reads are, and a row arriving from
+another organization raises even on the paths that bypass Eloquent's global scopes — the
+one a queued job takes when it restores a serialized model.
+
+That rule is asserted against queries rather than declarations: a listener installed for
+the whole test suite fails any test whose SQL reaches a tenant-owned table without an
+`organization_id` predicate, including tests written with no tenancy in mind. Reads that
+are deliberately cross-tenant say so, and there is exactly one of them in the
+application.
 
 ## The boundary this exists to fix
 
@@ -62,6 +89,9 @@ This foundation is their first consumer, not their replacement.
 
 PHP 8.4+ · Laravel 13 · PostgreSQL (the documented path; SQLite works for local
 development) · Node 22+
+
+CI runs the full gate — Pint, Rector, Larastan, Pest and the frontend checks — against
+both PostgreSQL and SQLite on every push.
 
 ## Installation
 
