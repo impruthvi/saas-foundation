@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Concerns\BelongsToOrganization;
 use App\Contracts\TenantOwned;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
@@ -49,7 +50,7 @@ it('gives every tenant-owned model the behaviour that enforces the claim', funct
             continue;
         }
 
-        if (! in_array('App\Concerns\BelongsToOrganization', class_uses_recursive($model), true)) {
+        if (! in_array(BelongsToOrganization::class, class_uses_recursive($model), true)) {
             $offenders[] = $model;
         }
     }
