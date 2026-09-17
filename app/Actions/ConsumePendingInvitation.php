@@ -9,6 +9,7 @@ use App\Models\Invitation;
 use App\Models\User;
 use App\Tenancy\InvitationRepository;
 use Illuminate\Contracts\Session\Session;
+use Inertia\Inertia;
 
 /**
  * Takes the invitation a visitor arrived holding, once they have an account.
@@ -55,15 +56,29 @@ final readonly class ConsumePendingInvitation
         $invitation = $this->invitations->findByToken($token);
 
         if (! $invitation instanceof Invitation) {
-            return null;
+            return $this->explain(__('That invitation link is no longer valid, so your account was created on its own. Ask for a new invitation.'));
         }
 
         try {
             $this->accept->handle($invitation, $user);
-        } catch (InvitationRefused) {
-            return null;
+        } catch (InvitationRefused $invitationRefused) {
+            // Registration still succeeded, so the refusal is reported rather
+            // than thrown — but it IS reported. Dropping an invitation in
+            // silence leaves somebody believing they joined an organization
+            // they are not in, which they have no way to discover.
+            return $this->explain($invitationRefused->getMessage());
         }
 
         return $invitation;
+    }
+
+    /**
+     * Tell the new account holder why they are not where they expected to be.
+     */
+    private function explain(string $message): null
+    {
+        Inertia::flash('toast', ['type' => 'warning', 'message' => $message]);
+
+        return null;
     }
 }

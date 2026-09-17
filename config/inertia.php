@@ -18,7 +18,13 @@ return [
     */
 
     'ssr' => [
-        'enabled' => true,
+        // Server-side rendering is driven by the Vite dev server in development
+        // (Inertia v3), so leaving this on under test makes the suite depend on
+        // whether `composer run dev` happens to be running: with a dev server up,
+        // `public/hot` exists, Inertia renders through it, and every Inertia
+        // assertion fails on a stray HTTP request. Tests assert props, not
+        // rendered markup, so they turn it off.
+        'enabled' => env('INERTIA_SSR_ENABLED', true),
         'url' => 'http://127.0.0.1:13714',
         // 'bundle' => base_path('bootstrap/ssr/ssr.mjs'),
 
