@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\TenantQueryGuard;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,9 +87,17 @@ it('keeps each organization assignments to itself', function (): void {
 
     replayTheRbacMigration();
 
+    // Counting every assignment regardless of organization is the assertion
+    // itself: the backfill must have written two rows and not a third. The
+    // guard is stood down by name rather than by adding an organization_id to
+    // the query, which would make the count unable to see a leak.
+    $total = TenantQueryGuard::allowUnscoped(
+        fn (): int => DB::table('model_has_roles')->count(),
+    );
+
     expect(assignmentsWithin($acme->id))->toHaveCount(1)
         ->and(assignmentsWithin($other->id))->toHaveCount(1)
-        ->and(DB::table('model_has_roles')->count())->toBe(2);
+        ->and($total)->toBe(2);
 });
 
 it('skips a membership whose rank names no role rather than guessing one', function (): void {

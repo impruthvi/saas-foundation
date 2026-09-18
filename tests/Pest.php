@@ -45,6 +45,13 @@ pest()->extend(TestCase::class)
         // queries, for every test in the suite rather than for the handful written
         // with tenancy in mind. See tests/Support/TenantQueryGuard.php and D20.
         TenantQueryGuard::flush();
+
+        // The role and permission assignments are tenant-owned in everything but
+        // name: they carry an organization_id and are meaningless without one.
+        // No model declares them, so they are registered by hand (D29).
+        TenantQueryGuard::register('model_has_roles');
+        TenantQueryGuard::register('model_has_permissions');
+
         TenantQueryGuard::install();
 
         // The authorization boundary needs its own guard, because it does not
@@ -111,6 +118,25 @@ expect()->extend('toBeOne', fn () => $this->toBe(1));
  * @return TReturn
  */
 function throughTheAuditedDoor(Closure $work): mixed
+{
+    return TenantQueryGuard::allowUnscoped($work);
+}
+
+/**
+ * Close an account, which revokes its roles in every organization at once.
+ *
+ * `HasRoles` detaches across all teams on delete, so the deletes it emits
+ * carry no organization_id and the query guard flags them. That crossing is
+ * intended — an account being closed should keep grants nowhere — so it gets a
+ * door with a name rather than a blanket exemption, and the name says which
+ * crossing is being allowed.
+ *
+ * @template TReturn
+ *
+ * @param  Closure(): TReturn  $work
+ * @return TReturn
+ */
+function whileClosingAnAccount(Closure $work): mixed
 {
     return TenantQueryGuard::allowUnscoped($work);
 }

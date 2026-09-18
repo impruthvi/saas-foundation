@@ -94,7 +94,7 @@ it('deletes the organizations a departing user alone owns', function (): void {
     $personal = resolve(CreateOrganization::class)->handle($user, 'Personal', personal: true);
     $solo = resolve(CreateOrganization::class)->handle($user, 'Acme');
 
-    resolve(DeleteUser::class)->handle($user);
+    whileClosingAnAccount(fn () => resolve(DeleteUser::class)->handle($user));
 
     $memberships = TenantQueryGuard::allowUnscoped(
         fn (): int => Membership::query()->withoutTenantScope()->count()
@@ -114,7 +114,7 @@ it('lets the account be deleted once ownership has moved on', function (): void 
     resolve(AddOrganizationMember::class)->handle($organization, $successor);
     resolve(TransferOrganizationOwnership::class)->handle($organization, $successor);
 
-    resolve(DeleteUser::class)->handle($owner);
+    whileClosingAnAccount(fn () => resolve(DeleteUser::class)->handle($owner));
 
     expect(User::query()->find($owner->id))->toBeNull()
         ->and(Organization::query()->find($organization->id)?->owner_id)->toBe($successor->id);
