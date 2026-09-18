@@ -59,11 +59,11 @@ test('email verification status is unchanged when the email address is unchanged
 test('user can delete their account', function (): void {
     $user = User::factory()->create();
 
-    $response = $this
+    $response = whileClosingAnAccount(fn () => $this
         ->actingAs($user)
         ->delete(route('profile.destroy'), [
             'password' => 'password',
-        ]);
+        ]));
 
     $response
         ->assertSessionHasNoErrors()
@@ -114,12 +114,12 @@ test('deleting an account takes its personal organization with it', function ():
     $user = User::factory()->create();
     $organization = resolve(CreatePersonalOrganization::class)->handle($user);
 
-    $this
+    whileClosingAnAccount(fn () => $this
         ->actingAs($user)
         ->delete(route('profile.destroy'), [
             'password' => 'password',
         ])
-        ->assertRedirect(route('home'));
+        ->assertRedirect(route('home')));
 
     expect($user->fresh())->toBeNull()
         ->and(Organization::query()->find($organization->id))->toBeNull();
