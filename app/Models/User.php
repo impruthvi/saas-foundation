@@ -21,6 +21,7 @@ use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Passkeys\Passkey;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
@@ -63,6 +64,14 @@ final class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
+
+    /**
+     * Roles are read against the organization `TenantContext` has resolved (D29).
+     *
+     * A membership's rank is still the writable fact; the assignment this trait
+     * reads is a projection of it, and never the other way round (D23, D31).
+     */
+    use HasRoles;
 
     use Notifiable;
     use PasskeyAuthenticatable;

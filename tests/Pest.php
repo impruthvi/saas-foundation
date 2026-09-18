@@ -25,6 +25,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Tests\Support\AuthorizationTeamGuard;
 use Tests\Support\TenantQueryGuard;
 use Tests\TestCase;
 
@@ -45,6 +46,13 @@ pest()->extend(TestCase::class)
         // with tenancy in mind. See tests/Support/TenantQueryGuard.php and D20.
         TenantQueryGuard::flush();
         TenantQueryGuard::install();
+
+        // The authorization boundary needs its own guard, because it does not
+        // leak through SQL the way the tenant boundary does: a stale permissions
+        // team answers can() for the wrong organization while every query stays
+        // correctly scoped. See tests/Support/AuthorizationTeamGuard.php and D29.
+        AuthorizationTeamGuard::flush();
+        AuthorizationTeamGuard::install();
 
         Str::createRandomStringsNormally();
         Str::createUuidsNormally();
