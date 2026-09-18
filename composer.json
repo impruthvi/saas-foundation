@@ -21,7 +21,8 @@
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
-        "nunomaduro/essentials": "^1.2"
+        "nunomaduro/essentials": "^1.2",
+        "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.7",
