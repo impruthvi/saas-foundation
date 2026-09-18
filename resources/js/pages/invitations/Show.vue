@@ -5,12 +5,6 @@ import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { login, register } from '@/routes';
 
-defineOptions({
-    layout: {
-        title: "You've been invited",
-    },
-});
-
 const props = defineProps<{
     token: string;
     organization: string;
@@ -19,31 +13,35 @@ const props = defineProps<{
     expiresAt: string;
     // Why this invitation cannot be taken by whoever is signed in. Rendered
     // rather than thrown: somebody signed in to the wrong account needs to be
-    // told which account, not shown an error page.
+    // told which account.
     refusal: string | null;
     authenticated: boolean;
 }>();
 
-const expiresOn = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-}).format(new Date(props.expiresAt));
+defineOptions({
+    layout: {
+        title: '',
+    },
+});
 </script>
 
 <template>
     <Head title="Invitation" />
 
     <div class="flex flex-col gap-6">
-        <p class="text-sm text-muted-foreground">
-            <template v-if="invitedBy">{{ invitedBy }} invited</template>
-            <template v-else>You have been invited</template>
-            <strong class="font-medium text-foreground">
-                {{ ' ' }}{{ email }}{{ ' ' }}
-            </strong>
-            to join
-            <strong class="font-medium text-foreground">
-                {{ organization }}</strong
-            >.
-        </p>
+        <header class="space-y-2 text-center">
+            <p class="text-sm text-muted-foreground">
+                You've been invited to join
+            </p>
+            <h1 class="text-2xl leading-tight font-semibold">
+                {{ organization }}
+            </h1>
+            <p class="text-sm text-muted-foreground">
+                <template v-if="invitedBy">{{ invitedBy }} invited</template>
+                <template v-else>Invitation sent to</template>
+                {{ ' ' }}{{ email }}
+            </p>
+        </header>
 
         <p
             v-if="refusal"
@@ -75,29 +73,25 @@ const expiresOn = new Intl.DateTimeFormat(undefined, {
                     Decline
                 </Button>
             </Form>
-
-            <p class="text-center text-xs text-muted-foreground">
-                This invitation expires on {{ expiresOn }}.
-            </p>
         </template>
 
         <template v-else>
-            <!-- The token is already parked in the session, so registering or
-                 signing in finishes the job without coming back here. -->
+            <!-- The token is parked in the session, so registering or signing in
+                 finishes the job without returning here. -->
             <Button as-child class="w-full">
                 <a :href="register.url({ query: { email } })">
-                    Create an account
+                    Join {{ organization }}
                 </a>
             </Button>
 
             <p class="text-center text-sm text-muted-foreground">
-                Already have one?
+                Already have an account?
                 <TextLink :href="login()">Log in</TextLink>
             </p>
-
-            <p class="text-center text-xs text-muted-foreground">
-                This invitation expires on {{ expiresOn }}.
-            </p>
         </template>
+
+        <p class="text-center text-xs text-muted-foreground">
+            This invitation expires on {{ props.expiresAt }}.
+        </p>
     </div>
 </template>

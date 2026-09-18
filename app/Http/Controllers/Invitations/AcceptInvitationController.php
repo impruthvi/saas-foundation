@@ -60,7 +60,7 @@ final class AcceptInvitationController extends Controller
             'organization' => $this->organizationOf($invitation)->name,
             'email' => $invitation->email,
             'invitedBy' => $invitation->invitedBy?->name,
-            'expiresAt' => $invitation->expires_at->toIso8601String(),
+            'expiresAt' => $invitation->expires_at->toFormattedDateString(),
             'refusal' => $this->refusalFor($invitation, $user, $accept),
             'authenticated' => $user instanceof User,
         ]);

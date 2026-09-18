@@ -1,11 +1,22 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import InvitationController from '@/actions/App/Http/Controllers/Organizations/InvitationController';
 import InvitationDeliveryController from '@/actions/App/Http/Controllers/Organizations/InvitationDeliveryController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -34,13 +45,7 @@ defineProps<{
     canInvite: boolean;
 }>();
 
-const expiry = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-});
-
-function expiresOn(iso: string): string {
-    return expiry.format(new Date(iso));
-}
+const withdrawing = ref<PendingInvitation | null>(null);
 </script>
 
 <template>
@@ -59,11 +64,11 @@ function expiresOn(iso: string): string {
             <Form
                 v-bind="InvitationController.store.form()"
                 reset-on-success
-                class="flex flex-col gap-3 sm:flex-row sm:items-start"
+                class="flex flex-col gap-3 sm:flex-row sm:items-end"
                 v-slot="{ errors, processing }"
             >
                 <div class="grid flex-1 gap-2">
-                    <Label class="sr-only" for="email">Email address</Label>
+                    <Label for="email">Email address</Label>
                     <Input
                         id="email"
                         name="email"
@@ -76,7 +81,7 @@ function expiresOn(iso: string): string {
                 </div>
 
                 <div class="grid gap-2">
-                    <Label class="sr-only" for="role">Role</Label>
+                    <Label for="role">Role</Label>
                     <Select name="role" default-value="member">
                         <SelectTrigger id="role" class="w-full sm:w-40">
                             <SelectValue placeholder="Role" />
@@ -117,10 +122,12 @@ function expiresOn(iso: string): string {
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <Badge v-if="member.isOwner" variant="default">
-                            Owner
+                        <!-- Ownership implies admin rank, so the owner gets one
+                             badge rather than two describing the same fact. -->
+                        <Badge v-if="member.isOwner">Owner</Badge>
+                        <Badge v-else variant="secondary">
+                            {{ member.role }}
                         </Badge>
-                        <Badge variant="secondary">{{ member.role }}</Badge>
                         <Badge
                             v-if="member.status !== 'active'"
                             variant="outline"
@@ -130,6 +137,8 @@ function expiresOn(iso: string): string {
                     </div>
                 </li>
             </ul>
+
+            <Pagination :links="members.links" label="Members pages" />
         </section>
 
         <section class="space-y-3">
@@ -158,7 +167,7 @@ function expiresOn(iso: string): string {
                             {{ invitation.email }}
                         </p>
                         <p class="truncate text-sm text-muted-foreground">
-                            Expires {{ expiresOn(invitation.expiresAt) }}
+                            Expires {{ invitation.expiresAt }}
                             <template v-if="invitation.invitedBy">
                                 · invited by {{ invitation.invitedBy }}
                             </template>
@@ -168,30 +177,75 @@ function expiresOn(iso: string): string {
                     <div v-if="canInvite" class="flex items-center gap-2">
                         <Badge variant="secondary">{{ invitation.role }}</Badge>
 
-                        <Link
+                        <Form
                             v-bind="
                                 InvitationDeliveryController.store.form(
                                     invitation.id,
                                 )
                             "
-                            as="button"
-                            class="text-sm underline-offset-4 hover:underline"
+                            v-slot="{ processing }"
                         >
-                            Resend
-                        </Link>
+                            <Button
+                                type="submit"
+                                variant="outline"
+                                size="sm"
+                                class="h-11"
+                                :disabled="processing"
+                            >
+                                Resend
+                            </Button>
+                        </Form>
 
-                        <Link
-                            v-bind="
-                                InvitationController.destroy.form(invitation.id)
-                            "
-                            as="button"
-                            class="text-sm text-destructive underline-offset-4 hover:underline"
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            class="h-11 text-destructive hover:text-destructive"
+                            @click="withdrawing = invitation"
                         >
                             Withdraw
-                        </Link>
+                        </Button>
                     </div>
                 </li>
             </ul>
+
+            <Pagination :links="invitations.links" label="Invitation pages" />
         </section>
     </div>
+
+    <Dialog
+        :open="withdrawing !== null"
+        @update:open="(open) => !open && (withdrawing = null)"
+    >
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Withdraw this invitation?</DialogTitle>
+                <DialogDescription>
+                    {{ withdrawing?.email }} will no longer be able to use the
+                    link that was sent to them. You can invite them again later.
+                </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter class="gap-2">
+                <DialogClose as-child>
+                    <Button variant="outline">Keep it</Button>
+                </DialogClose>
+
+                <Form
+                    v-if="withdrawing"
+                    v-bind="InvitationController.destroy.form(withdrawing.id)"
+                    @success="withdrawing = null"
+                    v-slot="{ processing }"
+                >
+                    <Button
+                        type="submit"
+                        variant="destructive"
+                        :disabled="processing"
+                    >
+                        {{ processing ? 'Withdrawing…' : 'Withdraw' }}
+                    </Button>
+                </Form>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 </template>

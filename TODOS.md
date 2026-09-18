@@ -55,3 +55,29 @@ same way M5 asks it about the `projects` limit. `impruthvi/cashier-entitlements`
 for server-side limit enforcement, including the concurrency test). Do not attempt before
 M5's limit enforcement is written — the invitation case should reuse it, not invent a
 parallel one.
+
+## Remove a member from an organization
+
+**What:** Let an administrator remove somebody from an organization, from the members
+screen.
+
+**Why:** `/organizations/members` lists members and offers no action on any of them. The
+screen promises management and delivers a read-only list, which is the first thing anyone
+will ask about.
+
+**Pros:** The screen does what its name says. Removal is also the other half of
+invitation: M2 built the way in and left no way out.
+
+**Cons:** Removal is an authorization question before it is a UI one — who may remove
+whom, what happens to the last administrator, whether the owner can ever be removed. M3
+rewrites exactly that layer, so building it now means building it twice.
+
+**Context:** M2's design review (2026-09-18) raised this and chose to defer. `InvitationPolicy`
+is the seam the permission check will slot into; a `MembershipPolicy` alongside it is the
+likely shape. `organizations.owner_id` restricts on delete, so the database already refuses
+to orphan an organization, and `App\Actions\DeleteUser` documents the ownership-transfer
+remedy that removal will need to reuse. Note that removing the last administrator is the
+case that needs a rule, not a guard clause.
+
+**Depends on / blocked by:** M3 (tenant-scoped RBAC). Do not build before the role source
+of truth moves to `spatie/laravel-permission`.

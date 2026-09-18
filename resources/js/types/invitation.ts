@@ -15,8 +15,14 @@ export type PendingInvitation = {
     invitedBy: string | null;
 };
 
+export type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
 export type Paginated<T> = {
     data: T[];
-    links: { url: string | null; label: string; active: boolean }[];
+    links: PaginationLink[];
     total: number;
 };
