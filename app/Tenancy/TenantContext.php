@@ -8,6 +8,7 @@ use App\Exceptions\TenantContextMissing;
 use App\Models\Organization;
 use Closure;
 use Illuminate\Support\Facades\Context;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * The resolved tenant for the current unit of work.
@@ -18,13 +19,27 @@ use Illuminate\Support\Facades\Context;
  * payload and hydrates on `JobProcessing` before the payload is unserialized —
  * that is the whole propagation mechanism (D24).
  *
- *   set(id) ──► Context::add(tenant.organization_id)
- *                      │
- *                      ▼
- *            Queue::createPayloadUsing ──► payload
- *                      │
- *                      ▼
- *            JobProcessing ──► Context::hydrate ──► listener ──► set(id) | forget()
+ * It is also mirrored into `spatie/laravel-permission`, whose active team is
+ * held on a registrar and is **not** carried by `Context` — nothing dehydrates
+ * it into a payload. So this class is the one writer of it (D29), and the line
+ * that matters most is the one in `forget()`: a registrar left holding the
+ * previous organization answers `can()` for a tenant that is no longer
+ * resolved, while every query stays correctly scoped. That is an authorization
+ * leak with no query leak, and the D20 guard is built to watch queries.
+ *
+ *   setId(id) ──┬──► Context::add(tenant.organization_id)
+ *               │            │
+ *               │            ▼
+ *               │    Queue::createPayloadUsing ──► payload
+ *               │            │
+ *               │            ▼
+ *               │    JobProcessing ──► Context::hydrate ──► listener
+ *               │            │                                 │
+ *               │            │           key present ──► setId(id)
+ *               │            │           key ABSENT  ──► forget()
+ *               │            │                                 │
+ *               └──► PermissionRegistrar ◄─────────────────────┘
+ *                    ::setPermissionsTeamId(id | null)
  */
 final class TenantContext
 {
@@ -70,6 +85,8 @@ final class TenantContext
         $this->organizationId = $organizationId;
 
         Context::add(self::KEY, $organizationId);
+
+        $this->resolveAuthorization()->setPermissionsTeamId($organizationId);
     }
 
     /**
@@ -106,6 +123,8 @@ final class TenantContext
         $this->organization = null;
 
         Context::forget(self::KEY);
+
+        $this->resolveAuthorization()->setPermissionsTeamId(null);
     }
 
     /**
@@ -171,5 +190,19 @@ final class TenantContext
                 $this->setId($previous);
             }
         }
+    }
+
+    /**
+     * The registrar holding the team every role assignment is read against.
+     *
+     * Resolved here rather than injected. The package binds it as a singleton
+     * from its `packageBooted()`, so a constructor argument would be filled by
+     * whatever the container could auto-wire if anything resolved this class
+     * first — a second, unshared registrar, written to here and never read by
+     * the package. Asking for it at call time is always after boot.
+     */
+    private function resolveAuthorization(): PermissionRegistrar
+    {
+        return resolve(PermissionRegistrar::class);
     }
 }
