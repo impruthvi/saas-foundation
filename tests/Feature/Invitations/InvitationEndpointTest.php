@@ -311,3 +311,56 @@ describe('declining', function (): void {
             ->assertForbidden());
     });
 });
+
+it('pages the member list once it outgrows one page', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+
+    resolve(TenantContext::class)->runFor($organization, function () use ($organization): void {
+        for ($i = 0; $i < 30; $i++) {
+            resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create());
+        }
+    });
+
+    $this->actingAs($owner)
+        ->get(route('organizations.members.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('members.total', 31)
+            ->has('members.data', 25)
+            // Fewer than four links means the paginator rendered a single page
+            // and the component hides itself, leaving later members unreachable.
+            ->has('members.links', 4));
+
+    $this->actingAs($owner)
+        ->get(route('organizations.members.index', ['members' => 2]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('members.data', 6));
+});
+
+it('presents a role as a label rather than the stored value', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    issueInvitation($organization, 'labelled@example.com', $owner);
+
+    $this->actingAs($owner)
+        ->get(route('organizations.members.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('members.data.0.role', 'Admin')
+            ->where('invitations.data.0.role', 'Member'));
+});
+
+it('sends dates to the client already formatted', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    $token = issueInvitation($organization, 'dated@example.com', $owner);
+
+    // Formatting client-side lets Intl resolve a different locale than SSR did,
+    // which Vue reports as a hydration mismatch and repairs by re-rendering.
+    $this->actingAs($owner)
+        ->get(route('organizations.members.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('invitations.data.0.expiresAt', now()->addDays(7)->toFormattedDateString()));
+
+    throughTheAuditedDoor(fn () => $this->get(route('invitations.show', ['token' => $token]))
+        ->assertInertia(fn ($page) => $page
+            ->where('expiresAt', now()->addDays(7)->toFormattedDateString())));
+});

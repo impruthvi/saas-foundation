@@ -46,7 +46,7 @@ final class MemberController extends Controller
                     'id' => $membership->id,
                     'name' => $membership->user->name,
                     'email' => $membership->user->email,
-                    'role' => $membership->role->value,
+                    'role' => $membership->role->label(),
                     'status' => $membership->status->value,
                     'isOwner' => $organization instanceof Organization
                         && $organization->owner_id === $membership->user_id,
@@ -59,8 +59,8 @@ final class MemberController extends Controller
                 ->through(fn (Invitation $invitation): array => [
                     'id' => $invitation->id,
                     'email' => $invitation->email,
-                    'role' => $invitation->role->value,
-                    'expiresAt' => $invitation->expires_at->toIso8601String(),
+                    'role' => $invitation->role->label(),
+                    'expiresAt' => $invitation->expires_at->toFormattedDateString(),
                     'invitedBy' => $invitation->invitedBy?->name,
                 ]),
             'canInvite' => $request->user()?->can('create', Invitation::class) ?? false,
