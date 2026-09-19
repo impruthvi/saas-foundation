@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
+use App\Actions\ChangeOrganizationMemberRole;
 use App\Actions\CreateOrganization;
+use App\Actions\RemoveOrganizationMember;
 use App\Actions\TransferOrganizationOwnership;
+use App\Enums\MembershipRole;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
@@ -74,6 +77,44 @@ function projectionMismatches(): array
         ->all());
 }
 
+/**
+ * Assignments with no membership behind them.
+ *
+ * The direction `projectionMismatches()` cannot see: it joins out from
+ * memberships, so a grant whose membership is gone leaves nothing to join from.
+ *
+ * @return list<int>
+ */
+function orphanedAssignments(): array
+{
+    return TenantQueryGuard::allowUnscoped(fn (): array => DB::table('model_has_roles')
+        ->leftJoin('memberships', function ($join): void {
+            $join->on('memberships.user_id', '=', 'model_has_roles.model_id')
+                ->on('memberships.organization_id', '=', 'model_has_roles.organization_id');
+        })
+        ->whereNull('memberships.id')
+        ->pluck('model_has_roles.organization_id')
+        ->all());
+}
+
+/**
+ * Anyone holding more than one role in one organization.
+ *
+ * `syncRoles` prevents it, `assignRole` would not, and the mismatch join cannot
+ * see it because one of the two rows always matches.
+ *
+ * @return list<int>
+ */
+function doubledAssignments(): array
+{
+    return TenantQueryGuard::allowUnscoped(fn (): array => DB::table('model_has_roles')
+        ->select('model_id')
+        ->groupBy('model_id', 'organization_id')
+        ->havingRaw('count(*) > 1')
+        ->pluck('model_id')
+        ->all());
+}
+
 it('gives an organization owner the role their rank implies', function (): void {
     $owner = User::factory()->create();
 
@@ -124,6 +165,33 @@ it('moves the role with the rank when ownership is transferred', function (): vo
 
     expect(assignmentsWithin($organization->id)->all())
         ->toBe([$owner->id => 'admin', $successor->id => 'admin'])
+        ->and(projectionMismatches())->toBeEmpty();
+});
+
+it('leaves no assignment behind when a membership ends', function (): void {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $member);
+
+    expect(orphanedAssignments())->toBeEmpty();
+
+    resolve(RemoveOrganizationMember::class)->handle($membership);
+
+    expect(orphanedAssignments())->toBeEmpty()
+        ->and(doubledAssignments())->toBeEmpty()
+        ->and(projectionMismatches())->toBeEmpty();
+});
+
+it('never lets one person hold two roles in one organization', function (): void {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $member);
+
+    resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Admin);
+
+    expect(doubledAssignments())->toBeEmpty()
         ->and(projectionMismatches())->toBeEmpty();
 });
 
