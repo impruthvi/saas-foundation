@@ -6,9 +6,12 @@ use App\Actions\AddOrganizationMember;
 use App\Actions\ChangeOrganizationMemberRole;
 use App\Actions\CreateOrganization;
 use App\Enums\MembershipRole;
+use App\Enums\MembershipStatus;
 use App\Enums\Permission;
 use App\Exceptions\Memberships\LastAdministrator;
+use App\Exceptions\Memberships\OwnerCannotBeDemoted;
 use App\Models\Membership;
+use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 
@@ -23,6 +26,17 @@ use App\Tenancy\TenantContext;
 | the failure this milestone can produce silently is the two disagreeing.
 |
 */
+
+/**
+ * The membership row for one person in one organization.
+ */
+function membershipOf(User $user, Organization $organization): Membership
+{
+    return resolve(TenantContext::class)->runFor(
+        $organization,
+        fn (): Membership => Membership::query()->where('user_id', $user->id)->sole(),
+    );
+}
 
 it('promotes a member, and the promotion is what lets them invite', function (): void {
     $owner = User::factory()->create();
@@ -70,33 +84,60 @@ it('demotes an administrator while another one remains', function (): void {
         ->and(mayWithin($second, $organization->id, Permission::ViewMembers))->toBeTrue();
 });
 
-it('refuses to demote the last administrator', function (): void {
+it('refuses to demote the owner, whatever the administrator count says', function (): void {
     $owner = User::factory()->create();
     $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
-    resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create());
+    resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create(), MembershipRole::Admin);
 
-    $membership = resolve(TenantContext::class)->runFor(
-        $organization,
-        fn (): Membership => Membership::query()->where('user_id', $owner->id)->sole(),
-    );
+    $membership = membershipOf($owner, $organization);
 
     try {
         resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Member);
-        $this->fail('Demoting the last administrator should have been refused.');
+        $this->fail('Demoting the owner should have been refused.');
+    } catch (OwnerCannotBeDemoted $ownerCannotBeDemoted) {
+        expect($ownerCannotBeDemoted->getMessage())->toContain('Acme')
+            ->and(mayWithin($owner, $organization->id, Permission::ManageBilling))->toBeTrue();
+    }
+});
+
+it('refuses to demote the last administrator who is not the owner', function (): void {
+    $owner = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    $admin = User::factory()->create();
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+
+    // The owner is suspended, so they hold the rank and grant nothing. The
+    // other administrator is the only one actually running the organization.
+    membershipOf($owner, $organization)
+        ->forceFill(['status' => MembershipStatus::Suspended])->save();
+
+    try {
+        resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Member);
+        $this->fail('Demoting the last active administrator should have been refused.');
     } catch (LastAdministrator $lastAdministrator) {
         expect($lastAdministrator->getMessage())->toContain('Acme')
-            ->and(mayWithin($owner, $organization->id, Permission::InviteMembers))->toBeTrue();
+            ->and(mayWithin($admin, $organization->id, Permission::InviteMembers))->toBeTrue();
     }
+});
+
+it('demotes a suspended administrator while an active one remains', function (): void {
+    $owner = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    $suspended = User::factory()->create();
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $suspended, MembershipRole::Admin);
+
+    $membership->forceFill(['status' => MembershipStatus::Suspended])->save();
+
+    $demoted = resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Member);
+
+    expect($demoted->role)->toBe(MembershipRole::Member);
 });
 
 it('does nothing when the rank is already the one asked for', function (): void {
     $owner = User::factory()->create();
     $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
 
-    $membership = resolve(TenantContext::class)->runFor(
-        $organization,
-        fn (): Membership => Membership::query()->where('user_id', $owner->id)->sole(),
-    );
+    $membership = membershipOf($owner, $organization);
 
     $unchanged = resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Admin);
 

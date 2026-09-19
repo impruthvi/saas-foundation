@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\MembershipRole;
-use App\Enums\MembershipStatus;
 use App\Enums\OrganizationRole;
 use App\Exceptions\Memberships\LastAdministrator;
+use App\Exceptions\Memberships\OwnerCannotBeDemoted;
 use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
@@ -23,6 +23,9 @@ use Illuminate\Support\Facades\DB;
  * cannot invite anyone.
  *
  *   already at this rank? ──yes──► nothing to do, return the membership
+ *              │ no
+ *              ▼
+ *   demoting the owner? ─────────────► OwnerCannotBeDemoted
  *              │ no
  *              ▼
  *   demoting the last administrator? ──yes──► LastAdministrator
@@ -48,7 +51,7 @@ final readonly class ChangeOrganizationMemberRole
         return DB::transaction(fn (): Membership => $this->tenant->runForId(
             $membership->organization_id,
             function () use ($membership, $role): Membership {
-                $this->assertAnAdministratorRemains($membership, $role);
+                $this->assertTheDemotionIsSafe($membership, $role);
 
                 $membership->forceFill(['role' => $role])->save();
 
@@ -64,32 +67,45 @@ final readonly class ChangeOrganizationMemberRole
     }
 
     /**
-     * Refuse a demotion that would leave nobody able to run the organization.
+     * Refuse a demotion that would strand the organization.
      *
-     * @throws LastAdministrator
+     * Two refusals, and the order matters: the owner is refused whatever the
+     * administrator count says, because ownership and rank are separate facts
+     * that must not disagree (D23).
+     *
+     * @throws OwnerCannotBeDemoted|LastAdministrator
      */
-    private function assertAnAdministratorRemains(Membership $membership, MembershipRole $role): void
+    private function assertTheDemotionIsSafe(Membership $membership, MembershipRole $role): void
     {
-        if ($role === MembershipRole::Admin || $membership->role !== MembershipRole::Admin) {
+        if ($role === MembershipRole::Admin) {
             return;
         }
 
-        // The ids rather than a count: PostgreSQL refuses FOR UPDATE alongside
-        // an aggregate, and the point of the lock is to hold the rows anyway,
-        // so that two administrators demoting each other at the same moment
-        // cannot both read "there are two of us" and both proceed.
-        $administrators = Membership::query()
+        $organization = Organization::query()->findOrFail($membership->organization_id);
+
+        throw_if(
+            $organization->owner_id === $membership->user_id,
+            OwnerCannotBeDemoted::of($organization),
+        );
+
+        if ($membership->role !== MembershipRole::Admin) {
+            return;
+        }
+
+        // Who *remains*, not who is there: this membership is excluded, so
+        // demoting a suspended administrator is not refused for the sake of an
+        // administrator who was already granting nothing.
+        //
+        // The ids rather than a count, because PostgreSQL refuses FOR UPDATE
+        // alongside an aggregate. Ordered, so two concurrent changes take the
+        // row locks in the same sequence and queue instead of deadlocking.
+        $remaining = Membership::query()
             ->lockForUpdate()
-            ->where('role', MembershipRole::Admin)
-            ->where('status', MembershipStatus::Active)
+            ->administrators()
+            ->whereKeyNot($membership->id)
+            ->orderBy('id')
             ->pluck('id');
 
-        if ($administrators->count() > 1) {
-            return;
-        }
-
-        throw LastAdministrator::of(
-            Organization::query()->findOrFail($membership->organization_id),
-        );
+        throw_if($remaining->isEmpty(), LastAdministrator::of($organization));
     }
 }

@@ -11,6 +11,7 @@ use App\Enums\MembershipStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\MembershipFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -56,6 +57,22 @@ final class Membership extends Model implements TenantOwned
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Members who can still actually run the organization.
+     *
+     * Rank alone is not enough: a suspended administrator holds the rank and
+     * grants nothing, so counting them would let the last usable administrator
+     * be removed.
+     *
+     * @param  Builder<static>  $query
+     */
+    #[Scope]
+    protected function administrators(Builder $query): void
+    {
+        $query->where('role', MembershipRole::Admin)
+            ->where('status', MembershipStatus::Active);
     }
 
     /**
