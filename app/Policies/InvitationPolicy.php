@@ -6,19 +6,12 @@ namespace App\Policies;
 
 use App\Concerns\ChecksOrganizationPermissions;
 use App\Enums\Permission;
-use App\Models\Membership;
-use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\MembershipRepository;
 use App\Tenancy\TenantContext;
 
 /**
  * Who may see and manage an organization's invitations.
- *
- * Three questions in order: ownership, then membership standing, then the
- * permission. Each answers something the next cannot — `owner_id` survives a
- * drifted role assignment (D31), status is not expressible as a permission,
- * and the permission is the part M3 made configurable.
  *
  * The organization is the resolved tenant rather than an argument, because
  * these questions are only asked about the organization the request is acting
@@ -60,19 +53,13 @@ final readonly class InvitationPolicy
         return $this->allows($user, Permission::InviteMembers);
     }
 
-    private function allows(User $user, Permission $permission): bool
+    private function tenant(): TenantContext
     {
-        $organization = $this->tenant->current();
+        return $this->tenant;
+    }
 
-        if (! $organization instanceof Organization) {
-            return false;
-        }
-
-        if (! $this->memberships->activeMembership($user, $organization) instanceof Membership) {
-            return false;
-        }
-
-        return $organization->owner_id === $user->id
-            || $this->may($user, $permission);
+    private function memberships(): MembershipRepository
+    {
+        return $this->memberships;
     }
 }
