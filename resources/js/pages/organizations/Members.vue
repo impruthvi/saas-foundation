@@ -3,6 +3,7 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import InvitationController from '@/actions/App/Http/Controllers/Organizations/InvitationController';
 import InvitationDeliveryController from '@/actions/App/Http/Controllers/Organizations/InvitationDeliveryController';
+import MemberController from '@/actions/App/Http/Controllers/Organizations/MemberController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -46,6 +47,7 @@ defineProps<{
 }>();
 
 const withdrawing = ref<PendingInvitation | null>(null);
+const removing = ref<OrganizationMember | null>(null);
 </script>
 
 <template>
@@ -125,15 +127,57 @@ const withdrawing = ref<PendingInvitation | null>(null);
                         <!-- Ownership implies admin rank, so the owner gets one
                              badge rather than two describing the same fact. -->
                         <Badge v-if="member.isOwner">Owner</Badge>
-                        <Badge v-else variant="secondary">
-                            {{ member.role }}
+                        <Badge
+                            v-else-if="!member.canManage"
+                            variant="secondary"
+                        >
+                            {{ member.roleLabel }}
                         </Badge>
+
+                        <Form
+                            v-else
+                            v-bind="MemberController.update.form(member.id)"
+                            v-slot="{ submit }"
+                        >
+                            <Select
+                                :model-value="member.role"
+                                :name="'role'"
+                                @update:model-value="
+                                    (value) => value !== member.role && submit()
+                                "
+                            >
+                                <SelectTrigger
+                                    class="h-11 w-32"
+                                    :aria-label="`Role for ${member.name}`"
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="member">
+                                        Member
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </Form>
+
                         <Badge
                             v-if="member.status !== 'active'"
                             variant="outline"
                         >
                             {{ member.status }}
                         </Badge>
+
+                        <Button
+                            v-if="member.canManage"
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            class="h-11 text-destructive hover:text-destructive"
+                            @click="removing = member"
+                        >
+                            {{ member.isYou ? 'Leave' : 'Remove' }}
+                        </Button>
                     </div>
                 </li>
             </ul>
@@ -212,6 +256,63 @@ const withdrawing = ref<PendingInvitation | null>(null);
             <Pagination :links="invitations.links" label="Invitation pages" />
         </section>
     </div>
+
+    <Dialog
+        :open="removing !== null"
+        @update:open="(open) => !open && (removing = null)"
+    >
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>
+                    {{
+                        removing?.isYou
+                            ? 'Leave this organization?'
+                            : 'Remove this member?'
+                    }}
+                </DialogTitle>
+                <DialogDescription>
+                    <template v-if="removing?.isYou">
+                        You will lose access to this organization immediately.
+                        Somebody who manages members can invite you back.
+                    </template>
+                    <template v-else>
+                        {{ removing?.name }} will lose access to this
+                        organization immediately. You can invite them again
+                        later.
+                    </template>
+                </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter class="gap-2">
+                <DialogClose as-child>
+                    <Button variant="outline">Cancel</Button>
+                </DialogClose>
+
+                <Form
+                    v-if="removing"
+                    v-bind="MemberController.destroy.form(removing.id)"
+                    @success="removing = null"
+                    v-slot="{ processing }"
+                >
+                    <Button
+                        type="submit"
+                        variant="destructive"
+                        :disabled="processing"
+                    >
+                        {{
+                            removing.isYou
+                                ? processing
+                                    ? 'Leaving…'
+                                    : 'Leave'
+                                : processing
+                                  ? 'Removing…'
+                                  : 'Remove'
+                        }}
+                    </Button>
+                </Form>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 
     <Dialog
         :open="withdrawing !== null"

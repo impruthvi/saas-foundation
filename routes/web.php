@@ -21,6 +21,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('organizations/members', [MemberController::class, 'index'])
         ->name('organizations.members.index');
 
+    Route::patch('organizations/members/{membership}', [MemberController::class, 'update'])
+        ->name('organizations.members.update');
+
+    Route::delete('organizations/members/{membership}', [MemberController::class, 'destroy'])
+        ->name('organizations.members.destroy');
+
     // Throttled because an unthrottled invite endpoint is an email cannon
     // pointed at arbitrary addresses, and the sender is us.
     Route::post('organizations/invitations', [InvitationController::class, 'store'])

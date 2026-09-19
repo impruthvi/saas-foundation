@@ -9,6 +9,7 @@ use App\Enums\MembershipStatus;
 use App\Enums\Permission;
 use App\Exceptions\Memberships\LastAdministrator;
 use App\Exceptions\Memberships\OwnerCannotBeRemoved;
+use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
@@ -185,4 +186,83 @@ it('refuses a plain member who tries to remove somebody', function (): void {
     );
 
     expect($allowed)->toBeFalse();
+});
+
+it('removes a member over HTTP and reports it', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    $member = User::factory()->create();
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $member);
+
+    $this->actingAs($owner)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+        ->delete(route('organizations.members.destroy', $membership))
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect(stillAMember($membership, $organization))->toBeFalse();
+});
+
+it('refuses over HTTP when a plain member tries to remove somebody', function (): void {
+    [$organization] = organizationOwnedBySomeone();
+    $member = User::factory()->create();
+    resolve(AddOrganizationMember::class)->handle($organization, $member);
+    $theirs = resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create());
+
+    $this->actingAs($member)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+        ->delete(route('organizations.members.destroy', $theirs))
+        ->assertForbidden();
+
+    expect(stillAMember($theirs, $organization))->toBeTrue();
+});
+
+it('refuses over HTTP to remove the owner', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    $admin = User::factory()->create();
+    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+
+    $this->actingAs($admin)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+        ->delete(route('organizations.members.destroy', removalOf($owner, $organization)))
+        ->assertForbidden();
+});
+
+it('cannot reach a membership belonging to another organization', function (): void {
+    [$acme, $owner] = organizationOwnedBySomeone('Acme');
+    [$other] = organizationOwnedBySomeone('Other');
+    $theirs = resolve(AddOrganizationMember::class)->handle($other, User::factory()->create());
+
+    $this->actingAs($owner)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $acme->id])
+        ->delete(route('organizations.members.destroy', $theirs))
+        ->assertNotFound();
+
+    expect(stillAMember($theirs, $other))->toBeTrue();
+});
+
+it('changes a rank over HTTP', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    $member = User::factory()->create();
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $member);
+
+    $this->actingAs($owner)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+        ->patch(route('organizations.members.update', $membership), ['role' => MembershipRole::Admin->value])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect(mayWithin($member, $organization->id, Permission::InviteMembers))->toBeTrue();
+});
+
+it('refuses over HTTP to change the owner rank', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    $admin = User::factory()->create();
+    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+
+    $this->actingAs($admin)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+        ->patch(route('organizations.members.update', removalOf($owner, $organization)), [
+            'role' => MembershipRole::Member->value,
+        ])
+        ->assertForbidden();
 });
