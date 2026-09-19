@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\MembershipRole;
+use App\Enums\OrganizationRole;
 use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
@@ -44,6 +45,13 @@ final readonly class TransferOrganizationOwnership
             $organization->memberships()
                 ->where('user_id', $newOwner->id)
                 ->update(['role' => MembershipRole::Admin]);
+
+            // The update above is a bulk statement and fires no model events, so
+            // the projection of rank onto a role assignment (D31) is written
+            // here rather than inherited from one. syncRoles and not
+            // assignRole: the new owner was a member a line ago, and a promotion
+            // that accumulates leaves them holding both roles.
+            $newOwner->syncRoles([OrganizationRole::forRank(MembershipRole::Admin)->value]);
 
             return $organization->refresh();
         }));

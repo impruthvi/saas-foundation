@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
 use App\Actions\CreateOrganization;
+use App\Actions\TransferOrganizationOwnership;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
@@ -49,6 +50,82 @@ function assignmentsWithin(int $organizationId): Collection
         ->where('model_has_roles.organization_id', $organizationId)
         ->pluck('roles.name', 'model_has_roles.model_id');
 }
+
+/**
+ * Every membership whose rank and role assignment disagree.
+ *
+ * Read across organizations on purpose: the invariant is about the database as
+ * a whole, and scoping the query to one organization would make it unable to
+ * see the case it exists for.
+ *
+ * @return list<string>
+ */
+function projectionMismatches(): array
+{
+    return TenantQueryGuard::allowUnscoped(fn (): array => DB::table('memberships')
+        ->leftJoin('model_has_roles', function ($join): void {
+            $join->on('model_has_roles.model_id', '=', 'memberships.user_id')
+                ->on('model_has_roles.organization_id', '=', 'memberships.organization_id');
+        })
+        ->leftJoin('roles', 'roles.id', '=', 'model_has_roles.role_id')
+        ->whereColumn('memberships.role', '!=', DB::raw("coalesce(roles.name, '')"))
+        ->selectRaw("memberships.id || ': rank ' || memberships.role || ', role ' || coalesce(roles.name, 'none') as detail")
+        ->pluck('detail')
+        ->all());
+}
+
+it('gives an organization owner the role their rank implies', function (): void {
+    $owner = User::factory()->create();
+
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+
+    expect(assignmentsWithin($organization->id)->all())->toBe([$owner->id => 'admin'])
+        ->and(projectionMismatches())->toBeEmpty();
+});
+
+it('gives an added member the role their rank implies', function (): void {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+
+    resolve(AddOrganizationMember::class)->handle($organization, $member);
+
+    expect(assignmentsWithin($organization->id)->all())
+        ->toBe([$owner->id => 'admin', $member->id => 'member'])
+        ->and(projectionMismatches())->toBeEmpty();
+});
+
+it('leaves neither the membership nor the assignment when the write is rolled back', function (): void {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+
+    try {
+        DB::transaction(function () use ($organization, $member): void {
+            resolve(AddOrganizationMember::class)->handle($organization, $member);
+
+            throw new RuntimeException('the rest of the request failed');
+        });
+    } catch (RuntimeException) {
+        // The point is what survives it.
+    }
+
+    expect(assignmentsWithin($organization->id)->all())->toBe([$owner->id => 'admin'])
+        ->and(projectionMismatches())->toBeEmpty();
+});
+
+it('moves the role with the rank when ownership is transferred', function (): void {
+    $owner = User::factory()->create();
+    $successor = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    resolve(AddOrganizationMember::class)->handle($organization, $successor);
+
+    resolve(TransferOrganizationOwnership::class)->handle($organization, $successor);
+
+    expect(assignmentsWithin($organization->id)->all())
+        ->toBe([$owner->id => 'admin', $successor->id => 'admin'])
+        ->and(projectionMismatches())->toBeEmpty();
+});
 
 it('gives memberships that already existed the role their rank implies', function (): void {
     $owner = User::factory()->create();
