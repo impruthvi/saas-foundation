@@ -4,18 +4,23 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Organizations;
 
+use App\Actions\ChangeOrganizationMemberRole;
+use App\Actions\RemoveOrganizationMember;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Organizations\ChangeMemberRoleRequest;
 use App\Models\Invitation;
 use App\Models\Membership;
 use App\Models\Organization;
 use App\Tenancy\TenantContext;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 /**
- * Who is in this organization, and who has been asked.
+ * Who is in this organization, who has been asked, and what may be done about it.
  *
  * Both lists are scoped by the global scope rather than by anything written
  * here — that is the point of enforcing tenancy at the model boundary (D3).
@@ -25,6 +30,11 @@ use Inertia\Response;
  * environment and not only for tests, reading `$membership->user` without
  * loading it raises `LazyLoadingViolationException`. A missed eager load here
  * is a broken page on the second member, not a slow one.
+ *
+ * The per-row flags are derived from one policy call plus one aggregate, never
+ * from a policy call per row: `Membership::mayBeRemovedFrom()` is the same
+ * predicate `MembershipPolicy` uses, so a button can only appear where the
+ * endpoint would also allow it.
  */
 final class MemberController extends Controller
 {
@@ -35,6 +45,14 @@ final class MemberController extends Controller
         Gate::authorize('viewAny', Invitation::class);
 
         $organization = $tenant->current();
+        $user = $request->user();
+
+        $mayManage = $user?->can('manage', Membership::class) ?? false;
+
+        // One aggregate for the whole screen: "is anyone else still running
+        // this organization" is not a row-local question, and the last
+        // administrator can sit on any page.
+        $administrators = Membership::query()->administrators()->count();
 
         return Inertia::render('organizations/Members', [
             'members' => Membership::query()
@@ -44,12 +62,20 @@ final class MemberController extends Controller
                 ->paginate(self::PER_PAGE, pageName: 'members')
                 ->through(fn (Membership $membership): array => [
                     'id' => $membership->id,
+                    'userId' => $membership->user_id,
                     'name' => $membership->user->name,
                     'email' => $membership->user->email,
-                    'role' => $membership->role->label(),
+                    'role' => $membership->role->value,
+                    'roleLabel' => $membership->role->label(),
                     'status' => $membership->status->value,
                     'isOwner' => $organization instanceof Organization
                         && $organization->owner_id === $membership->user_id,
+                    'isYou' => $membership->user_id === $user?->id,
+                    'canManage' => $mayManage && $organization instanceof Organization
+                        && $membership->mayBeRemovedFrom(
+                            $organization,
+                            $administrators - ($membership->isActiveAdministrator() ? 1 : 0),
+                        ),
                 ]),
             'invitations' => Invitation::query()
                 ->pending()
@@ -63,7 +89,58 @@ final class MemberController extends Controller
                     'expiresAt' => $invitation->expires_at->toFormattedDateString(),
                     'invitedBy' => $invitation->invitedBy?->name,
                 ]),
-            'canInvite' => $request->user()?->can('create', Invitation::class) ?? false,
+            'canInvite' => $user?->can('create', Invitation::class) ?? false,
         ]);
+    }
+
+    /**
+     * Change somebody's rank, and the role it implies with it.
+     */
+    public function update(
+        ChangeMemberRoleRequest $request,
+        Membership $membership,
+        ChangeOrganizationMemberRole $change,
+    ): RedirectResponse {
+        try {
+            $change->handle($membership, $request->role());
+        } catch (RuntimeException $runtimeException) {
+            return back()->withErrors(['role' => $runtimeException->getMessage()]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Role updated.')]);
+
+        return back();
+    }
+
+    /**
+     * Take somebody out of the organization.
+     *
+     * Removing yourself is allowed, so the redirect cannot assume the members
+     * screen is still readable afterwards — the next request resolves whatever
+     * organization is left, usually the person's own.
+     */
+    public function destroy(
+        Request $request,
+        Membership $membership,
+        RemoveOrganizationMember $remove,
+    ): RedirectResponse {
+        Gate::authorize('delete', $membership);
+
+        $removingSelf = $membership->user_id === $request->user()?->id;
+
+        try {
+            $remove->handle($membership);
+        } catch (RuntimeException $runtimeException) {
+            return back()->withErrors(['member' => $runtimeException->getMessage()]);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $removingSelf ? __('You have left the organization.') : __('Member removed.'),
+        ]);
+
+        return $removingSelf
+            ? to_route('dashboard')
+            : back();
     }
 }

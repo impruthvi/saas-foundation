@@ -337,15 +337,19 @@ it('pages the member list once it outgrows one page', function (): void {
         ->assertInertia(fn ($page) => $page->has('members.data', 6));
 });
 
-it('presents a role as a label rather than the stored value', function (): void {
+it('sends a role label to display, and the stored value only where a control needs it', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     issueInvitation($organization, 'labelled@example.com', $owner);
 
+    // A member row carries both: the label is what is rendered, and the value
+    // is what the role Select binds to. An invitation has no such control, so
+    // it still carries the label alone.
     $this->actingAs($owner)
         ->get(route('organizations.members.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('members.data.0.role', 'Admin')
+            ->where('members.data.0.roleLabel', 'Admin')
+            ->where('members.data.0.role', 'admin')
             ->where('invitations.data.0.role', 'Member'));
 });
 

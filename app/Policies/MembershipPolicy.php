@@ -38,6 +38,15 @@ final readonly class MembershipPolicy
         return $this->allows($user, Permission::ViewMembers);
     }
 
+    /**
+     * Whether this person manages members at all, before any particular row is
+     * considered. The members screen asks once and derives each row from it.
+     */
+    public function manage(User $user): bool
+    {
+        return $this->allows($user, Permission::ManageMembers);
+    }
+
     public function delete(User $user, Membership $membership): bool
     {
         $organization = $this->tenant->current();

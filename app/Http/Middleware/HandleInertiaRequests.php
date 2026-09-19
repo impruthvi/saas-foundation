@@ -49,8 +49,12 @@ final class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            // withoutRelations(), because a policy that ran earlier in the
+            // request loaded roles and permissions onto this very instance, and
+            // sharing the model whole serializes them - pivot rows, team key
+            // and all - into every page payload.
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->withoutRelations(),
             ],
             // The switcher is hidden for a solo user rather than absent (D1), so
             // the list is shared either way and the count decides the chrome.

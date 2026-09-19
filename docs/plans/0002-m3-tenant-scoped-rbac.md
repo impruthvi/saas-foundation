@@ -19,23 +19,23 @@
 
 `spatie/laravel-permission` ^8.3 arrives team-scoped with the organization as the team.
 `memberships.role` keeps meaning rank and never becomes a second permission store (D23).
-What changes is *where the answer to `can()` comes from* — not the shape of any policy.
+What changes is _where the answer to `can()` comes from_ — not the shape of any policy.
 
 ## What already exists and is not rebuilt
 
-| Existing | What M3 does with it |
-| --- | --- |
-| `App\Tenancy\TenantContext` (`setId` / `forget` / `runFor` / `runForId` / the cross-tenant runner) | The single funnel for "which organization is this unit of work acting for". spatie needs exactly that signal. It is pushed from inside this class. **No second resolver, no second middleware.** |
-| `TenancyServiceProvider`'s `Context::hydrated` listener | Queue propagation already exists (D24). Because the team id is pushed from inside `TenantContext`, it rides D24's mechanism without a new listener. |
-| `App\Policies\InvitationPolicy::manages()` | One private method is the entire seam. Its four public methods keep their signatures, and its `owner_id` floor stays (see D31). |
-| `App\Tenancy\MembershipRepository::activeMembership()` | The membership lookup authorization needs, already audited past the scope (D22). It also carries the **status** check that `can()` cannot express, so it stays in the policy rather than being replaced by it. |
-| `App\Enums\MembershipRole::label()` | Stays the display layer. The new `Permission` enum copies its `label()` shape rather than inventing a second one. |
-| `organizations.owner_id` | Ownership stays here. Only *permissions* move. |
-| `App\Actions\AddOrganizationMember` | Becomes the single place a membership is created, and therefore the single place a role is assigned. |
-| `App\Actions\TransferOrganizationOwnership` | Already moves rank to the new owner in a transaction. It gains the role write in that same transaction — `syncRoles`, not `assignRole`. |
-| `tests/Support/TenantQueryGuard` | Extended to watch the spatie pivot tables, rather than replaced — with the limits D29 records. |
+| Existing                                                                                           | What M3 does with it                                                                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `App\Tenancy\TenantContext` (`setId` / `forget` / `runFor` / `runForId` / the cross-tenant runner) | The single funnel for "which organization is this unit of work acting for". spatie needs exactly that signal. It is pushed from inside this class. **No second resolver, no second middleware.**               |
+| `TenancyServiceProvider`'s `Context::hydrated` listener                                            | Queue propagation already exists (D24). Because the team id is pushed from inside `TenantContext`, it rides D24's mechanism without a new listener.                                                            |
+| `App\Policies\InvitationPolicy::manages()`                                                         | One private method is the entire seam. Its four public methods keep their signatures, and its `owner_id` floor stays (see D31).                                                                                |
+| `App\Tenancy\MembershipRepository::activeMembership()`                                             | The membership lookup authorization needs, already audited past the scope (D22). It also carries the **status** check that `can()` cannot express, so it stays in the policy rather than being replaced by it. |
+| `App\Enums\MembershipRole::label()`                                                                | Stays the display layer. The new `Permission` enum copies its `label()` shape rather than inventing a second one.                                                                                              |
+| `organizations.owner_id`                                                                           | Ownership stays here. Only _permissions_ move.                                                                                                                                                                 |
+| `App\Actions\AddOrganizationMember`                                                                | Becomes the single place a membership is created, and therefore the single place a role is assigned.                                                                                                           |
+| `App\Actions\TransferOrganizationOwnership`                                                        | Already moves rank to the new owner in a transaction. It gains the role write in that same transaction — `syncRoles`, not `assignRole`.                                                                        |
+| `tests/Support/TenantQueryGuard`                                                                   | Extended to watch the spatie pivot tables, rather than replaced — with the limits D29 records.                                                                                                                 |
 
-Nothing above is rewritten. The only file whose *shape* changes is `InvitationPolicy`,
+Nothing above is rewritten. The only file whose _shape_ changes is `InvitationPolicy`,
 and only in its private method.
 
 ## Decisions this milestone proposes
@@ -50,8 +50,8 @@ package default `team_id`. `config('permission.register_permission_check_method'
 migration, a model and a SQL log that all say `organization_id` are readable by the same
 person who read D3. That is the whole argument.
 
-**What it is explicitly *not*:** it is not a way to satisfy the D20 query guard.
-`tests/Support/TenantQueryGuard.php:126` returns early on *any* SQL containing the string
+**What it is explicitly _not_:** it is not a way to satisfy the D20 query guard.
+`tests/Support/TenantQueryGuard.php:126` returns early on _any_ SQL containing the string
 `organization_id`, before it checks which table was touched. So naming the column
 `organization_id` does not make spatie's queries pass the guard truthfully — it makes
 them pass unconditionally, including the case that matters: when the registrar's team id
@@ -93,8 +93,8 @@ because isolation lives in the assignment, not the definition.
 
 **Two package behaviours this binds:**
 
-- `Spatie\Permission\Models\Role::create()` fills the team key from the *currently
-  resolved* team unless the key is explicitly present. Every seed statement passes
+- `Spatie\Permission\Models\Role::create()` fills the team key from the _currently
+  resolved_ team unless the key is explicitly present. Every seed statement passes
   `'organization_id' => null` explicitly. It is never omitted and never inferred.
 - The package's unique index is `(organization_id, name, guard_name)`, and both Postgres
   and MySQL treat NULLs as distinct — so under D30 the normal case has no database-level
@@ -126,12 +126,12 @@ without setting rank.
 M3 is the milestone that creates the second store, so M3 is where the rule against
 drifting goes.
 
-**Three things this decision does *not* claim**, each corrected from revision 1:
+**Three things this decision does _not_ claim**, each corrected from revision 1:
 
 1. **Rank is not the only fact that gates access.** `memberships.status` is the other,
    and `can()` cannot express it — `model_has_roles` has no notion of a suspended member.
    `InvitationPolicy::manages()` therefore keeps its `activeMembership()` call and asks
-   `can()` *in addition*, not *instead*. Today a suspended member fails closed only
+   `can()` _in addition_, not _instead_. Today a suspended member fails closed only
    because `ResolveTenantContext` filters to active memberships; M6's suspend transitions
    land directly on this and must not find the check gone.
 2. **The `owner_id` short-circuit stays.** Revision 1 deleted it on the theory that the
@@ -146,7 +146,7 @@ drifting goes.
    the database was created by the code under test, so "for every membership the
    assignment matches" is vacuously true. The assertion that earns its keep is the
    **backfill**: a migration that writes assignments for memberships that already exist,
-   and a test that runs it against a database seeded *before* the package landed.
+   and a test that runs it against a database seeded _before_ the package landed.
 
 **Consequence:** `CreateOrganization` stops inlining its own `Membership::query()->create()`
 and calls `AddOrganizationMember`, so there is one writer rather than two.
@@ -193,7 +193,7 @@ a second time, in the authorization layer.
 
 `forget()` nulling the team id is not symmetry for its own sake. Without it the registrar
 keeps the previous organization and `can()` answers for a tenant that is no longer
-resolved, while every *query* is correctly scoped — an authorization leak with no query
+resolved, while every _query_ is correctly scoped — an authorization leak with no query
 leak, which the D20 guard cannot see. D29's invariant listener is what sees it.
 
 ### Where the answer comes from
@@ -267,7 +267,7 @@ And the relationship between the two stores, which D31 fixes in one direction:
     turns team scoping **off process-wide**, detaches roles across all teams, and turns it
     back on — which emits an unscoped delete against a watched table, and leaves teams
     disabled for the rest of the process if it throws. Revoking across every team is the
-    *correct* behaviour on account deletion, so this is a fourth audited exception in the
+    _correct_ behaviour on account deletion, so this is a fourth audited exception in the
     shape D22 and D27 established, not a bug to suppress.
 11. `tests/Pest.php`: register the two pivot tables with the query guard, install D29's
     invariant listener, flush the permission cache per test.
@@ -317,20 +317,20 @@ And the relationship between the two stores, which D31 fixes in one direction:
 
 ### NOT in scope
 
-| Deferred | Why |
-| --- | --- |
-| Customer-defined roles and a role-editing UI | D11's filter: the journey never defines a role. D30 records the schema-level extension point *and* the arch test it will trip. |
-| `display_name` columns on `roles` / `permissions` | D15 anticipated this as the usual first need; the enum's `label()` answers it for a fixed catalog at zero cost. |
-| `organization.manage_settings` | Revision 1 listed it and then, three lines later, cited D11 against guessing. It has no caller in M3. |
-| Permission checks in Filament admin | M6 owns admin. An `admin.*` permission now guesses at a surface nobody has designed. |
-| `Suspend` / `Archive` / `Restore` transitions | Still M6. D31.1 records that they land on the status check, so it must not be removed in the meantime. |
-| Wildcard permissions, `permission:` route middleware, and the package's `Gate::before` | Policies are the one way an ability is answered. D29 turns the third one off explicitly. |
-| Counting a pending invitation against seats | Already in `TODOS.md`, blocked on M4/M5, unaffected. |
-| Superseded invitation history | Already in `TODOS.md`, blocked on M6's audit log. |
-| Reassigning a removed member's data | `Project` has no per-user ownership column. Nothing to reassign until one exists. |
-| An audit record of who removed whom | M2 shipped invitations as audited; removal ships without a record. `TODOS.md` already defers the audit log to M6, and removal events belong in it rather than in a bespoke table. Named here so the silence is a decision. |
-| Withdrawing invitations issued by a removed member | They stay, and the screen keeps crediting them by name. The invitation is the organization's, not the issuer's, and `invited_by_user_id` is already `nullOnDelete` for the account-deletion case. |
-| Voluntarily leaving an organization | A different verb from removal, with different rules and no caller on the journey (D11). |
+| Deferred                                                                               | Why                                                                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Customer-defined roles and a role-editing UI                                           | D11's filter: the journey never defines a role. D30 records the schema-level extension point _and_ the arch test it will trip.                                                                                             |
+| `display_name` columns on `roles` / `permissions`                                      | D15 anticipated this as the usual first need; the enum's `label()` answers it for a fixed catalog at zero cost.                                                                                                            |
+| `organization.manage_settings`                                                         | Revision 1 listed it and then, three lines later, cited D11 against guessing. It has no caller in M3.                                                                                                                      |
+| Permission checks in Filament admin                                                    | M6 owns admin. An `admin.*` permission now guesses at a surface nobody has designed.                                                                                                                                       |
+| `Suspend` / `Archive` / `Restore` transitions                                          | Still M6. D31.1 records that they land on the status check, so it must not be removed in the meantime.                                                                                                                     |
+| Wildcard permissions, `permission:` route middleware, and the package's `Gate::before` | Policies are the one way an ability is answered. D29 turns the third one off explicitly.                                                                                                                                   |
+| Counting a pending invitation against seats                                            | Already in `TODOS.md`, blocked on M4/M5, unaffected.                                                                                                                                                                       |
+| Superseded invitation history                                                          | Already in `TODOS.md`, blocked on M6's audit log.                                                                                                                                                                          |
+| Reassigning a removed member's data                                                    | `Project` has no per-user ownership column. Nothing to reassign until one exists.                                                                                                                                          |
+| An audit record of who removed whom                                                    | M2 shipped invitations as audited; removal ships without a record. `TODOS.md` already defers the audit log to M6, and removal events belong in it rather than in a bespoke table. Named here so the silence is a decision. |
+| Withdrawing invitations issued by a removed member                                     | They stay, and the screen keeps crediting them by name. The invitation is the organization's, not the issuer's, and `invited_by_user_id` is already `nullOnDelete` for the account-deletion case.                          |
+| Voluntarily leaving an organization                                                    | A different verb from removal, with different rules and no caller on the journey (D11).                                                                                                                                    |
 
 **Checked against M4:** nothing above is load-bearing for Cashier on `Organization`. M4
 needs one permission (`organization.manage_billing`, which ships here) and the
@@ -404,21 +404,21 @@ Legend: ★★★ behavior + edge + error · ★★ happy path · ★ smoke · [
 
 ### Test files
 
-| File | What it proves |
-| --- | --- |
-| `tests/Feature/Authorization/RoleIsolationTest.php` | **The milestone's proof.** Admin in A, plain member in B. `can()` is true in A and false in B, across a switch, an explicit `runFor()`, and a queue roundtrip. Includes the stale-relation cases for *both* `roles` and `permissions`. |
-| `tests/Feature/Authorization/TenantContextTeamTest.php` | `setId` sets, `forget` nulls, `runForId` restores including restoring to null, the cross-tenant runner leaves no team resolved. |
-| `tests/Feature/Authorization/RolePersistenceTest.php` | D31's projection, and the backfill run against a database seeded before the package landed. Rollback leaves neither row. |
-| `tests/Feature/Authorization/AssignmentLifecycleTest.php` | The foreign keys: deleting an organization and deleting a user each take their assignments with them. |
-| `tests/Feature/Organizations/MemberRemovalTest.php` | Removal, the last-administrator refusal, the owner refusal, the 403 for a plain member. The concurrent double-removal is tagged to run on Postgres only — `lockForUpdate` is a no-op on SQLite, and "at least one administrator remains" is not expressible as a unique index, so the precedent in `InvitationBoundaryTest` does not transfer. |
-| `tests/Feature/Organizations/MemberRoleChangeTest.php` | Promotion and demotion, the last-administrator demotion refusal, and that a promoted member holds exactly one role. |
-| `tests/Unit/PermissionCatalogTest.php` | Every `OrganizationRole` case maps to at least one `Permission`; every seeded row matches the enums; every seeded role has a null `organization_id`; no orphan permission rows. |
-| `tests/Browser/MembersManagementTest.php` | The `[→E2E]` flows: an administrator sees and uses Remove; a plain member sees neither the button nor a working endpoint. |
-| Amendments to `tests/Pest.php` | Register both pivot tables with the query guard; install the D29 invariant listener; flush the permission cache. |
-| Amendments to `tests/Feature/Settings/ProfileUpdateTest.php` | Regression: `DeleteUser` still works with the guard watching, through its named door, and team scoping is on afterwards. |
-| Amendments to `tests/Feature/Invitations/InvitationEndpointTest.php` | Regression: the owner floor; a suspended member refused. |
-| Amendments to `tests/Feature/Organizations/OwnershipTest.php` | Regression: `syncRoles` on transfer, no leftover role. |
-| Amendments to `tests/Feature/Organizations/PersonalOrganizationTest.php` | Regression: the slug-collision retry loop survives the delegation. |
+| File                                                                     | What it proves                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/Feature/Authorization/RoleIsolationTest.php`                      | **The milestone's proof.** Admin in A, plain member in B. `can()` is true in A and false in B, across a switch, an explicit `runFor()`, and a queue roundtrip. Includes the stale-relation cases for _both_ `roles` and `permissions`.                                                                                                         |
+| `tests/Feature/Authorization/TenantContextTeamTest.php`                  | `setId` sets, `forget` nulls, `runForId` restores including restoring to null, the cross-tenant runner leaves no team resolved.                                                                                                                                                                                                                |
+| `tests/Feature/Authorization/RolePersistenceTest.php`                    | D31's projection, and the backfill run against a database seeded before the package landed. Rollback leaves neither row.                                                                                                                                                                                                                       |
+| `tests/Feature/Authorization/AssignmentLifecycleTest.php`                | The foreign keys: deleting an organization and deleting a user each take their assignments with them.                                                                                                                                                                                                                                          |
+| `tests/Feature/Organizations/MemberRemovalTest.php`                      | Removal, the last-administrator refusal, the owner refusal, the 403 for a plain member. The concurrent double-removal is tagged to run on Postgres only — `lockForUpdate` is a no-op on SQLite, and "at least one administrator remains" is not expressible as a unique index, so the precedent in `InvitationBoundaryTest` does not transfer. |
+| `tests/Feature/Organizations/MemberRoleChangeTest.php`                   | Promotion and demotion, the last-administrator demotion refusal, and that a promoted member holds exactly one role.                                                                                                                                                                                                                            |
+| `tests/Unit/PermissionCatalogTest.php`                                   | Every `OrganizationRole` case maps to at least one `Permission`; every seeded row matches the enums; every seeded role has a null `organization_id`; no orphan permission rows.                                                                                                                                                                |
+| `tests/Browser/MembersManagementTest.php`                                | The `[→E2E]` flows: an administrator sees and uses Remove; a plain member sees neither the button nor a working endpoint.                                                                                                                                                                                                                      |
+| Amendments to `tests/Pest.php`                                           | Register both pivot tables with the query guard; install the D29 invariant listener; flush the permission cache.                                                                                                                                                                                                                               |
+| Amendments to `tests/Feature/Settings/ProfileUpdateTest.php`             | Regression: `DeleteUser` still works with the guard watching, through its named door, and team scoping is on afterwards.                                                                                                                                                                                                                       |
+| Amendments to `tests/Feature/Invitations/InvitationEndpointTest.php`     | Regression: the owner floor; a suspended member refused.                                                                                                                                                                                                                                                                                       |
+| Amendments to `tests/Feature/Organizations/OwnershipTest.php`            | Regression: `syncRoles` on transfer, no leftover role.                                                                                                                                                                                                                                                                                         |
+| Amendments to `tests/Feature/Organizations/PersonalOrganizationTest.php` | Regression: the slug-collision retry loop survives the delegation.                                                                                                                                                                                                                                                                             |
 
 ### Test traps this suite will hit
 
@@ -430,11 +430,11 @@ this repository; 1 and 6 came out of this review.
    mid-hook leaves team scoping globally off — in a queue worker, for every subsequent
    job. `DeleteUser` needs the named door, and a test that asserts scoping is back on.
 2. **`ShouldBeStrict` is on app-wide** (`config/essentials.php:165`). This turned out
-   *not* to bite `can()`: `hasPermissionTo()` and `hasRole()` both call `loadMissing()`,
+   _not_ to bite `can()`: `hasPermissionTo()` and `hasRole()` both call `loadMissing()`,
    which is explicit eager loading, so `preventLazyLoading` never fires. It still binds
    anything that reads `$membership->user` or `$invitation->organization` — unchanged
    from M2.
-3. **The stale relations.** After a switch inside one request or job, both `roles` *and*
+3. **The stale relations.** After a switch inside one request or job, both `roles` _and_
    `permissions` are the previous team's. `forgetCachedPermissions()` clears the registrar
    cache, not a loaded Eloquent relation. Fixed at the authorization seam (scope item 21),
    because `TenantContext` cannot reach the user.
@@ -442,7 +442,7 @@ this repository; 1 and 6 came out of this review.
    `withoutTenantScope` and `runWithoutTenant`** — including inside docblocks. M3's new
    files must not name either, even when explaining themselves.
 5. **Queue test ordering.** Proving a worker forgets the team between jobs requires the
-   no-context job to be *dispatched before* the tenant-carrying job is worked. Dispatch it
+   no-context job to be _dispatched before_ the tenant-carrying job is worked. Dispatch it
    afterwards and it captures the tenant into its own payload and passes for the wrong
    reason.
 6. **The permission cache versus `RefreshDatabase`.** spatie caches the permission map in
@@ -451,30 +451,30 @@ this repository; 1 and 6 came out of this review.
 
 ## Failure modes
 
-| Codepath | Realistic production failure | Test? | Handled? | User sees |
-| --- | --- | --- | --- | --- |
-| `TenantContext::forget()` | Worker keeps the previous team; job authorizes against the wrong organization | Planned | Yes, once `forget()` nulls it | **Silent** — correct queries, wrong answer. The D20 guard cannot see it; D29's invariant listener can. |
-| Existing database, no backfill | Every current member and owner drops to zero permissions on deploy | Planned | Yes, backfill migration | Visible and total: the product stops working for everyone at once |
-| Missing assignment for one member | That member silently loses every ability | Planned | Owner recovers via the D31 floor; a non-owner administrator does not | Visible: blanket 403s, recoverable only by an owner |
-| Organization or user deleted | Orphan rows in both pivots; a recreated id inherits stale grants | Planned | Yes, foreign keys the package stub omits | Silent until it is a cross-tenant grant |
-| `DeleteUser`'s detach throws | Team scoping left off process-wide for every later job on that worker | Planned | Restore in a `finally`, plus the door | **Silent cross-tenant authorization** |
-| Stale `roles` / `permissions` after a switch | Organization B's screens answered with A's permissions | Planned | Yes, at the authorization seam | Visible: a button that 403s |
-| `AddOrganizationMember` partial write | Membership without assignment | Planned | Yes, one transaction | Visible: silent 403s on every action |
-| `RemoveOrganizationMember` concurrency | Two administrators remove each other; the organization ends with none | Partial | `lockForUpdate` + re-read | Visible on Postgres; **unprovable on SQLite** |
-| Permission cache after a deploy | Cached map predates a catalog change | No | `php artisan permission:cache-reset` in the deploy notes | Visible: blanket 403s |
-| Inertia leaks loaded relations | Role and permission rows, with pivots, serialized into page props | Planned | Present the shared user explicitly | Silent |
+| Codepath                                     | Realistic production failure                                                  | Test?   | Handled?                                                             | User sees                                                                                              |
+| -------------------------------------------- | ----------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `TenantContext::forget()`                    | Worker keeps the previous team; job authorizes against the wrong organization | Planned | Yes, once `forget()` nulls it                                        | **Silent** — correct queries, wrong answer. The D20 guard cannot see it; D29's invariant listener can. |
+| Existing database, no backfill               | Every current member and owner drops to zero permissions on deploy            | Planned | Yes, backfill migration                                              | Visible and total: the product stops working for everyone at once                                      |
+| Missing assignment for one member            | That member silently loses every ability                                      | Planned | Owner recovers via the D31 floor; a non-owner administrator does not | Visible: blanket 403s, recoverable only by an owner                                                    |
+| Organization or user deleted                 | Orphan rows in both pivots; a recreated id inherits stale grants              | Planned | Yes, foreign keys the package stub omits                             | Silent until it is a cross-tenant grant                                                                |
+| `DeleteUser`'s detach throws                 | Team scoping left off process-wide for every later job on that worker         | Planned | Restore in a `finally`, plus the door                                | **Silent cross-tenant authorization**                                                                  |
+| Stale `roles` / `permissions` after a switch | Organization B's screens answered with A's permissions                        | Planned | Yes, at the authorization seam                                       | Visible: a button that 403s                                                                            |
+| `AddOrganizationMember` partial write        | Membership without assignment                                                 | Planned | Yes, one transaction                                                 | Visible: silent 403s on every action                                                                   |
+| `RemoveOrganizationMember` concurrency       | Two administrators remove each other; the organization ends with none         | Partial | `lockForUpdate` + re-read                                            | Visible on Postgres; **unprovable on SQLite**                                                          |
+| Permission cache after a deploy              | Cached map predates a catalog change                                          | No      | `php artisan permission:cache-reset` in the deploy notes             | Visible: blanket 403s                                                                                  |
+| Inertia leaks loaded relations               | Role and permission rows, with pivots, serialized into page props             | Planned | Present the shared user explicitly                                   | Silent                                                                                                 |
 
 Rows one, two and five are the milestone's critical gaps and the reason lane A is
 sequenced before everything else.
 
 ## Parallelization
 
-| Step | Modules touched | Depends on |
-| --- | --- | --- |
-| A — mechanism | `composer.json`, `config/`, `database/migrations/`, `app/Enums/`, `app/Tenancy/`, `app/Models/User.php`, `app/Actions/DeleteUser.php`, `tests/Pest.php` | — |
-| B — writers | `app/Actions/` | A |
-| C — consumers | `app/Policies/`, `app/Http/`, `routes/`, `resources/js/` | A, B |
-| D — docs | `docs/`, `TODOS.md` | A, B, C |
+| Step          | Modules touched                                                                                                                                         | Depends on |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| A — mechanism | `composer.json`, `config/`, `database/migrations/`, `app/Enums/`, `app/Tenancy/`, `app/Models/User.php`, `app/Actions/DeleteUser.php`, `tests/Pest.php` | —          |
+| B — writers   | `app/Actions/`                                                                                                                                          | A          |
+| C — consumers | `app/Policies/`, `app/Http/`, `routes/`, `resources/js/`                                                                                                | A, B       |
+| D — docs      | `docs/`, `TODOS.md`                                                                                                                                     | A, B, C    |
 
 `Lane A → Lane B → Lane C → Lane D.` **Sequential implementation, no parallelization
 opportunity** — every lane reads the team id lane A installs, and lanes B and C both write
@@ -488,52 +488,53 @@ executable as written — revision 1's first three tasks were not.
 - [ ] **T1 (P1, human: ~1h / CC: ~10min)** — config — Install `spatie/laravel-permission:^8.3`;
       publish config with `teams`, `organization_id`, and
       `register_permission_check_method => false`
-  - Surfaced by: D29 — the package's `Gate::before` is a second authorization idiom
-  - Files: `composer.json`, `config/permission.php`
-  - Verify: `php artisan about` lists the package; `config('permission.teams') === true`
+    - Surfaced by: D29 — the package's `Gate::before` is a second authorization idiom
+    - Files: `composer.json`, `config/permission.php`
+    - Verify: `php artisan about` lists the package; `config('permission.teams') === true`
 - [ ] **T2 (P1, human: ~3h / CC: ~25min)** — migration — Package tables with the team key,
       the foreign keys the stub omits, the global-role seed, and the backfill
-  - Surfaced by: Outside voice — orphan rows; and D31.3 — the projection is vacuous
-        without a backfill
-  - Files: `database/migrations/`
-  - Verify: `php artisan migrate:fresh` on SQLite and Postgres; `RolePersistenceTest`
+    - Surfaced by: Outside voice — orphan rows; and D31.3 — the projection is vacuous
+      without a backfill
+    - Files: `database/migrations/`
+    - Verify: `php artisan migrate:fresh` on SQLite and Postgres; `RolePersistenceTest`
 - [ ] **T3 (P1, human: ~2h / CC: ~15min)** — tenancy — Push and null the registrar team id
       from `TenantContext::setId()` / `forget()`
-  - Surfaced by: Architecture — spatie's team is registrar state, not `Log\Context`
-  - Files: `app/Tenancy/TenantContext.php` (update its ASCII diagram in the same commit)
-  - Verify: `vendor/bin/pest tests/Feature/Authorization/TenantContextTeamTest.php`
+    - Surfaced by: Architecture — spatie's team is registrar state, not `Log\Context`
+    - Files: `app/Tenancy/TenantContext.php` (update its ASCII diagram in the same commit)
+    - Verify: `vendor/bin/pest tests/Feature/Authorization/TenantContextTeamTest.php`
 - [ ] **T4 (P1, human: ~2h / CC: ~15min)** — tests — D29's invariant listener, both pivots
       registered with the query guard, permission cache flushed per test
-  - Surfaced by: D29 — the guard's `organization_id` early return means it cannot see spatie
-  - Files: `tests/Pest.php`, `tests/Support/`
-  - Verify: `php artisan test --compact`
+    - Surfaced by: D29 — the guard's `organization_id` early return means it cannot see spatie
+    - Files: `tests/Pest.php`, `tests/Support/`
+    - Verify: `php artisan test --compact`
 - [ ] **T5 (P1, human: ~1h / CC: ~10min)** — actions — Named audited door for `DeleteUser`'s
       cross-team detach; restore team scoping in a `finally`
-  - Surfaced by: Outside voice — `HasRoles::bootHasRoles()` disables teams process-wide
-  - Files: `app/Actions/DeleteUser.php`, `tests/Unit/TenantScopingTest.php` (allowed list)
-  - Verify: `vendor/bin/pest tests/Feature/Settings/ProfileUpdateTest.php`
+    - Surfaced by: Outside voice — `HasRoles::bootHasRoles()` disables teams process-wide
+    - Files: `app/Actions/DeleteUser.php`, `tests/Unit/TenantScopingTest.php` (allowed list)
+    - Verify: `vendor/bin/pest tests/Feature/Settings/ProfileUpdateTest.php`
 - [ ] **T6 (P1, human: ~2h / CC: ~15min)** — enums — `Permission` (three cases) and
       `OrganizationRole` with the matrix
-  - Surfaced by: Architecture — the file a reviewer reads to learn who may do what
-  - Files: `app/Enums/Permission.php`, `app/Enums/OrganizationRole.php`
-  - Verify: `vendor/bin/pest tests/Unit/PermissionCatalogTest.php`
+    - Surfaced by: Architecture — the file a reviewer reads to learn who may do what
+    - Files: `app/Enums/Permission.php`, `app/Enums/OrganizationRole.php`
+    - Verify: `vendor/bin/pest tests/Unit/PermissionCatalogTest.php`
 - [ ] **T7 (P1, human: ~3h / CC: ~20min)** — actions — One writer for rank + role (D31),
       `syncRoles` not `assignRole`; `CreateOrganization` delegates to `AddOrganizationMember`
-  - Surfaced by: Code quality — two membership writers is two places to bolt assignment on
-  - Files: `app/Actions/AddOrganizationMember.php`, `CreateOrganization.php`,
-    `TransferOrganizationOwnership.php`, `ChangeOrganizationMemberRole.php`
-  - Verify: `vendor/bin/pest tests/Feature/Authorization tests/Feature/Organizations`
+    - Surfaced by: Code quality — two membership writers is two places to bolt assignment on
+    - Files: `app/Actions/AddOrganizationMember.php`, `CreateOrganization.php`,
+      `TransferOrganizationOwnership.php`, `ChangeOrganizationMemberRole.php`
+    - Verify: `vendor/bin/pest tests/Feature/Authorization tests/Feature/Organizations`
 - [ ] **T8 (P1, human: ~2h / CC: ~15min)** — policies — Extend `InvitationPolicy::manages()`:
       owner floor, then status, then `can()`; unset stale relations at the seam
-  - Surfaced by: D31.1 and D31.2 — `can()` cannot express status, and the floor is the
-        anti-lockout path
-  - Files: `app/Policies/InvitationPolicy.php`
-  - Verify: `vendor/bin/pest tests/Feature/Invitations`
+    - Surfaced by: D31.1 and D31.2 — `can()` cannot express status, and the floor is the
+      anti-lockout path
+    - Files: `app/Policies/InvitationPolicy.php`
+    - Verify: `vendor/bin/pest tests/Feature/Invitations`
 - [ ] **T9 (P1, human: ~3h / CC: ~25min)** — authorization — The proof test: a role granted
       in A grants nothing in B, over HTTP, a switch, and a queue roundtrip, for both relations
-  - Surfaced by: the build plan's proof sentence for M3
-  - Files: `tests/Feature/Authorization/RoleIsolationTest.php`
-  - Verify: `vendor/bin/pest tests/Feature/Authorization`
+    - Surfaced by: the build plan's proof sentence for M3
+    - Files: `tests/Feature/Authorization/RoleIsolationTest.php`
+    - Verify: `vendor/bin/pest tests/Feature/Authorization`
+
 ### What T1-T9 changed about T10-T12
 
 Reviewed again after lane A-C shipped. Five things moved.
@@ -548,7 +549,7 @@ larger task. T10 therefore covers removal only, and reuses
 assignment behind and the removed person keeps every permission it carried while no
 longer being a member. That is the single most dangerous line in the remaining work.
 
-A composite foreign key to `memberships(organization_id, user_id)` *would* be legal —
+A composite foreign key to `memberships(organization_id, user_id)` _would_ be legal —
 that pair is unique. It is refused for the reason already written into the migration:
 `model_id` is half of a polymorphic pair, and constraining it declares in the schema that
 only users ever hold roles. The revocation therefore lives in code, and it lives on a
@@ -556,7 +557,7 @@ only users ever hold roles. The revocation therefore lives in code, and it lives
 cannot bypass it.
 
 **The projection invariant only looks one way.** `projectionMismatches()` LEFT JOINs out
-*from* `memberships`, so an assignment with no membership is invisible to it — precisely
+_from_ `memberships`, so an assignment with no membership is invisible to it — precisely
 the row a careless removal creates. It gains the second direction in T10.
 
 **Permissions are asked with `hasPermissionTo()`.** D29's `Gate::before` is off, so
@@ -574,93 +575,93 @@ copying it three times is how the UI and the policy start disagreeing.
 
 - [ ] **T10a (P1, human: ~1h / CC: ~10min)** — authorization — Extract the ladder, and
       memoize the permission check
-  - Surfaced by: Outside voice — `ChecksOrganizationPermissions` is only the last rung.
-    The real ladder (no tenant → active membership → `owner_id` floor → permission) is a
-    **private** method of `InvitationPolicy`, and T10/T11 need it in three more places.
-    Copied rather than extracted, `MembershipPolicy` would let a suspended administrator
-    remove people and would lock a drifted owner out of the screen that repairs the drift.
-  - Files: `app/Concerns/ChecksOrganizationPermissions.php`,
-    `app/Policies/InvitationPolicy.php`
-  - Shape: `allows(User, Permission): bool` moves into the concern; `may()` memoizes on
-    (user, permission, resolved organization). Memoizing is what makes calling the policy
-    per row cheap, which is what makes chrome correct by construction.
-  - Verify: `vendor/bin/pest tests/Feature/Authorization/InvitationPolicyTest.php`
+    - Surfaced by: Outside voice — `ChecksOrganizationPermissions` is only the last rung.
+      The real ladder (no tenant → active membership → `owner_id` floor → permission) is a
+      **private** method of `InvitationPolicy`, and T10/T11 need it in three more places.
+      Copied rather than extracted, `MembershipPolicy` would let a suspended administrator
+      remove people and would lock a drifted owner out of the screen that repairs the drift.
+    - Files: `app/Concerns/ChecksOrganizationPermissions.php`,
+      `app/Policies/InvitationPolicy.php`
+    - Shape: `allows(User, Permission): bool` moves into the concern; `may()` memoizes on
+      (user, permission, resolved organization). Memoizing is what makes calling the policy
+      per row cheap, which is what makes chrome correct by construction.
+    - Verify: `vendor/bin/pest tests/Feature/Authorization/InvitationPolicyTest.php`
 - [ ] **T10b (P1, human: ~1h / CC: ~10min)** — actions — Close the two holes the shipped
       demotion path already has
-  - Surfaced by: Outside voice, both verified by running the code
-  - The owner can currently be demoted. `ChangeOrganizationMemberRole` has no `owner_id`
-    guard, so an owner can be dropped to `member` and keeps inviting only because
-    `InvitationPolicy` has a floor — M4's `organization.manage_billing` will not.
-  - The last-administrator count reads "who is there", not "who remains": it filters
-    `status = Active` but branches on rank alone, so demoting a *suspended* administrator
-    is refused even though nothing is lost. It must exclude the membership being changed
-    and count the active administrators that would remain.
-  - The lock has no deterministic order, so two concurrent changes can deadlock on
-    PostgreSQL. `orderBy('id')` before a second caller copies the shape.
-  - Files: `app/Actions/ChangeOrganizationMemberRole.php`,
-    `app/Exceptions/Memberships/OwnerCannotBeDemoted.php`
-  - Verify: `vendor/bin/pest tests/Feature/Organizations/MemberRoleChangeTest.php`
+    - Surfaced by: Outside voice, both verified by running the code
+    - The owner can currently be demoted. `ChangeOrganizationMemberRole` has no `owner_id`
+      guard, so an owner can be dropped to `member` and keeps inviting only because
+      `InvitationPolicy` has a floor — M4's `organization.manage_billing` will not.
+    - The last-administrator count reads "who is there", not "who remains": it filters
+      `status = Active` but branches on rank alone, so demoting a _suspended_ administrator
+      is refused even though nothing is lost. It must exclude the membership being changed
+      and count the active administrators that would remain.
+    - The lock has no deterministic order, so two concurrent changes can deadlock on
+      PostgreSQL. `orderBy('id')` before a second caller copies the shape.
+    - Files: `app/Actions/ChangeOrganizationMemberRole.php`,
+      `app/Exceptions/Memberships/OwnerCannotBeDemoted.php`
+    - Verify: `vendor/bin/pest tests/Feature/Organizations/MemberRoleChangeTest.php`
 - [ ] **T10c (P1, human: ~3h / CC: ~25min)** — members — `MembershipPolicy` and
       `RemoveOrganizationMember`
-  - Files: `app/Policies/MembershipPolicy.php`,
-    `app/Actions/RemoveOrganizationMember.php`,
-    `app/Exceptions/Memberships/OwnerCannotBeRemoved.php`,
-    `app/Models/Membership.php` (an `administrators()` scope and the `deleted` hook)
-  - Rules: an administrator may remove any member; the owner may never be removed
-    (mirrors D25, with `owner_id` restricting on delete beneath it); the last active
-    administrator may never be removed; removing yourself is allowed **if you may manage
-    members**, and is subject to the same last-administrator rule. Leaving voluntarily is
-    a different verb with no caller and is not built (D11).
-  - Revocation is `syncRoles([])` **and** `syncPermissions([])`. Direct permissions are
-    empty today, but `model_has_permissions` carries the same team key and M6's first
-    direct grant would otherwise survive the removal.
-  - `projectionMismatches()` gains the reverse direction (an assignment with no
-    membership) and an assignment-count assertion (two rows for one membership, which the
-    current LEFT JOIN also cannot see).
-  - Verify: `vendor/bin/pest tests/Feature/Organizations/MemberRemovalTest.php tests/Feature/Authorization/RolePersistenceTest.php`
+    - Files: `app/Policies/MembershipPolicy.php`,
+      `app/Actions/RemoveOrganizationMember.php`,
+      `app/Exceptions/Memberships/OwnerCannotBeRemoved.php`,
+      `app/Models/Membership.php` (an `administrators()` scope and the `deleted` hook)
+    - Rules: an administrator may remove any member; the owner may never be removed
+      (mirrors D25, with `owner_id` restricting on delete beneath it); the last active
+      administrator may never be removed; removing yourself is allowed **if you may manage
+      members**, and is subject to the same last-administrator rule. Leaving voluntarily is
+      a different verb with no caller and is not built (D11).
+    - Revocation is `syncRoles([])` **and** `syncPermissions([])`. Direct permissions are
+      empty today, but `model_has_permissions` carries the same team key and M6's first
+      direct grant would otherwise survive the removal.
+    - `projectionMismatches()` gains the reverse direction (an assignment with no
+      membership) and an assignment-count assertion (two rows for one membership, which the
+      current LEFT JOIN also cannot see).
+    - Verify: `vendor/bin/pest tests/Feature/Organizations/MemberRemovalTest.php tests/Feature/Authorization/RolePersistenceTest.php`
 - [ ] **T11 (P2, human: ~3h / CC: ~25min)** — ui — Remove and role change on the members
       screen
-  - Files: `app/Http/Controllers/Organizations/MemberController.php`, `routes/web.php`,
-    `resources/js/pages/organizations/Members.vue`, `resources/js/types/invitation.ts`
-  - Chrome calls the policy per row, once `may()` is memoized — not a reimplementation of
-    the ladder in the controller. The last-administrator fact is **not** row-local: it is
-    an aggregate across every page, so the count is taken once and passed in.
-  - `OrganizationMember` currently sends `role` as a **label**, and carries no `userId`.
-    The Select needs the value and the screen needs to mark "this is you".
-  - Self-removal redirects honestly: `ResolveTenantContext` will resolve the person into
-    their personal organization on the next request, so the response says which
-    organization they left and where they landed.
-  - Shape: follow the invitation withdrawal already on this screen — a `Dialog` holding a
-    Wayfinder `Form`.
-  - Verify: `php artisan wayfinder:generate` first — `/resources/js/actions` is
-    gitignored, so `MemberController.destroy.form()` does not exist until it runs and
-    `composer ci:check` will not catch it. Then
-    `vendor/bin/pest tests/Browser/MembersManagementTest.php`
+    - Files: `app/Http/Controllers/Organizations/MemberController.php`, `routes/web.php`,
+      `resources/js/pages/organizations/Members.vue`, `resources/js/types/invitation.ts`
+    - Chrome calls the policy per row, once `may()` is memoized — not a reimplementation of
+      the ladder in the controller. The last-administrator fact is **not** row-local: it is
+      an aggregate across every page, so the count is taken once and passed in.
+    - `OrganizationMember` currently sends `role` as a **label**, and carries no `userId`.
+      The Select needs the value and the screen needs to mark "this is you".
+    - Self-removal redirects honestly: `ResolveTenantContext` will resolve the person into
+      their personal organization on the next request, so the response says which
+      organization they left and where they landed.
+    - Shape: follow the invitation withdrawal already on this screen — a `Dialog` holding a
+      Wayfinder `Form`.
+    - Verify: `php artisan wayfinder:generate` first — `/resources/js/actions` is
+      gitignored, so `MemberController.destroy.form()` does not exist until it runs and
+      `composer ci:check` will not catch it. Then
+      `vendor/bin/pest tests/Browser/MembersManagementTest.php`
 - [ ] **T12 (P2, human: ~2h / CC: ~15min)** — docs — D29-D31 and every place that still
       says M3 is ahead of us
-  - Files: `docs/decisions/0001-architecture-decisions.md`,
-    `docs/plans/0001-vertical-slice.md`, `TODOS.md`, `CLAUDE.md`, **`AGENTS.md`** (a
-    byte-identical "current state" paragraph), **`README.md`** (its table still reads
-    "M3 — Tenant-scoped RBAC | Not started"), **`CONTEXT.md`**
-  - `CONTEXT.md` is the one that matters. The vocabulary is fixed and M3 shipped two
-    things called role: `MembershipRole` (rank) and `OrganizationRole` (the RBAC role).
-    CLAUDE.md forbids synonyms, so this is the moment to name them.
-  - The `permission:cache-reset` step is an operational note, not deferred work, so it
-    does not belong in `TODOS.md`. Record it wherever deployment is documented, or say
-    plainly that there is no deploy doc yet.
-  - Verify: `composer ci:check`
+    - Files: `docs/decisions/0001-architecture-decisions.md`,
+      `docs/plans/0001-vertical-slice.md`, `TODOS.md`, `CLAUDE.md`, **`AGENTS.md`** (a
+      byte-identical "current state" paragraph), **`README.md`** (its table still reads
+      "M3 — Tenant-scoped RBAC | Not started"), **`CONTEXT.md`**
+    - `CONTEXT.md` is the one that matters. The vocabulary is fixed and M3 shipped two
+      things called role: `MembershipRole` (rank) and `OrganizationRole` (the RBAC role).
+      CLAUDE.md forbids synonyms, so this is the moment to name them.
+    - The `permission:cache-reset` step is an operational note, not deferred work, so it
+      does not belong in `TODOS.md`. Record it wherever deployment is documented, or say
+      plainly that there is no deploy doc yet.
+    - Verify: `composer ci:check`
 
 ### Failure modes added by the remaining work
 
-| Codepath | Realistic production failure | Test? | Handled? | User sees |
-| --- | --- | --- | --- | --- |
-| Removal without revoking the role | Removed member keeps every permission the role carried, in an organization they are no longer in | Planned | Yes, one transaction | **Silent** — no membership row to notice, and the one-directional projection test cannot see it |
-| Removing the last administrator | Organization with nobody able to invite, promote or manage billing, unrecoverable in-app | Planned | `LastAdministrator`, under the same lock the demotion path uses | Visible: a named refusal |
-| Removing the owner | Orphaned organization holding a live subscription from M4 | Planned | `OwnerCannotBeRemoved`, with `owner_id` restricting on delete beneath it | Visible: a named refusal |
-| Two administrators removing each other | Both read "there are two of us" and both proceed | Planned | `lockForUpdate` on the administrator rows | Visible on PostgreSQL; **unprovable on SQLite**, so the test is tagged |
-| Removed member's open session | Next request still acting for an organization they left | Planned | Already handled: `ResolveTenantContext` filters to active memberships and falls back to their personal organization | Visible: they land in their own organization |
-| Per-row chrome | Chrome and policy disagree: Remove shown on the last administrator, or hidden from a drifted owner | Planned | Call the policy per row against a memoized `may()`, plus one admin-count aggregate | A button that 403s, or a repair path the owner cannot see |
-| Inertia shares the user whole | **Already happening.** `auth.user` props carry `roles` and `permissions` with their pivot rows, including `organization_id`, for every non-owner administrator. Verified against a live request | Planned in T11 | Not yet — scope item 20 was never built and had fallen out of the task list | Silent: tenant-shaped internals in every page payload |
+| Codepath                               | Realistic production failure                                                                                                                                                                    | Test?          | Handled?                                                                                                            | User sees                                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Removal without revoking the role      | Removed member keeps every permission the role carried, in an organization they are no longer in                                                                                                | Planned        | Yes, one transaction                                                                                                | **Silent** — no membership row to notice, and the one-directional projection test cannot see it |
+| Removing the last administrator        | Organization with nobody able to invite, promote or manage billing, unrecoverable in-app                                                                                                        | Planned        | `LastAdministrator`, under the same lock the demotion path uses                                                     | Visible: a named refusal                                                                        |
+| Removing the owner                     | Orphaned organization holding a live subscription from M4                                                                                                                                       | Planned        | `OwnerCannotBeRemoved`, with `owner_id` restricting on delete beneath it                                            | Visible: a named refusal                                                                        |
+| Two administrators removing each other | Both read "there are two of us" and both proceed                                                                                                                                                | Planned        | `lockForUpdate` on the administrator rows                                                                           | Visible on PostgreSQL; **unprovable on SQLite**, so the test is tagged                          |
+| Removed member's open session          | Next request still acting for an organization they left                                                                                                                                         | Planned        | Already handled: `ResolveTenantContext` filters to active memberships and falls back to their personal organization | Visible: they land in their own organization                                                    |
+| Per-row chrome                         | Chrome and policy disagree: Remove shown on the last administrator, or hidden from a drifted owner                                                                                              | Planned        | Call the policy per row against a memoized `may()`, plus one admin-count aggregate                                  | A button that 403s, or a repair path the owner cannot see                                       |
+| Inertia shares the user whole          | **Already happening.** `auth.user` props carry `roles` and `permissions` with their pivot rows, including `organization_id`, for every non-owner administrator. Verified against a live request | Planned in T11 | Not yet — scope item 20 was never built and had fallen out of the task list                                         | Silent: tenant-shaped internals in every page payload                                           |
 
 ## Inline diagrams the implementation should carry
 
@@ -681,15 +682,15 @@ Per this repository's existing habit (`TenantContext`, `AcceptOrganizationInvita
 
 Second pass, run after T1-T9 shipped. Scope reviewed: the remaining work, T10-T12.
 
-| Runs | Status | Findings |
-| --- | --- | --- |
-| Step 0 scope challenge | complete | Complexity gate tripped again (~13 files, 3 new classes). Scope decided as A: finish removal, the screen and the docs on this branch |
-| 1. Architecture | complete | 4 findings — no FK links an assignment to its membership; the projection invariant is one-directional; the shared ladder is private to `InvitationPolicy`; self-removal was unspecified |
-| 2. Code quality | complete | 3 findings — the admin count would be written twice; `canInvite` does not generalise to per-row chrome; `OrganizationMember` sends a label where the UI needs a value |
-| 3. Tests | complete | 3 gaps — reverse-direction projection, duplicate assignments, and a Wayfinder generate step no CI job performs |
-| 4. Performance | complete | 1 finding — per-row policy calls are only cheap once `may()` memoizes; unmemoized it is 25 role lookups per page |
-| Outside voice (Codex) | **unavailable** | `ERROR: You've hit your usage limit` — not a pass |
-| Outside voice (Claude subagent) | complete | 16 findings; 14 accepted, 1 corrected a claim in this plan, 1 recorded as out of scope |
+| Runs                            | Status          | Findings                                                                                                                                                                                |
+| ------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Step 0 scope challenge          | complete        | Complexity gate tripped again (~13 files, 3 new classes). Scope decided as A: finish removal, the screen and the docs on this branch                                                    |
+| 1. Architecture                 | complete        | 4 findings — no FK links an assignment to its membership; the projection invariant is one-directional; the shared ladder is private to `InvitationPolicy`; self-removal was unspecified |
+| 2. Code quality                 | complete        | 3 findings — the admin count would be written twice; `canInvite` does not generalise to per-row chrome; `OrganizationMember` sends a label where the UI needs a value                   |
+| 3. Tests                        | complete        | 3 gaps — reverse-direction projection, duplicate assignments, and a Wayfinder generate step no CI job performs                                                                          |
+| 4. Performance                  | complete        | 1 finding — per-row policy calls are only cheap once `may()` memoizes; unmemoized it is 25 role lookups per page                                                                        |
+| Outside voice (Codex)           | **unavailable** | `ERROR: You've hit your usage limit` — not a pass                                                                                                                                       |
+| Outside voice (Claude subagent) | complete        | 16 findings; 14 accepted, 1 corrected a claim in this plan, 1 recorded as out of scope                                                                                                  |
 
 **CODEX: unavailable.** Usage-limited, as on the first pass. Recorded as unavailable
 rather than clean, per the prior learning.
@@ -698,7 +699,7 @@ rather than clean, per the prior learning.
 
 - The owner can currently be demoted — no `owner_id` guard in `ChangeOrganizationMemberRole`.
 - `auth.user` props already carry `roles` and `permissions` with pivot rows, on a live request.
-- `memberships` has `unique(organization_id, user_id)`, so a composite FK *is* legal. This
+- `memberships` has `unique(organization_id, user_id)`, so a composite FK _is_ legal. This
   plan's stated reason for refusing one was wrong and has been corrected; the real reason
   is the polymorphic `model_id`, which the migration already records.
 - `/resources/js/actions` is gitignored, so T11's verify needs `wayfinder:generate`.
