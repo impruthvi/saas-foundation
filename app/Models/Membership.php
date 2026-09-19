@@ -8,6 +8,7 @@ use App\Concerns\BelongsToOrganization;
 use App\Contracts\TenantOwned;
 use App\Enums\MembershipRole;
 use App\Enums\MembershipStatus;
+use App\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Database\Factories\MembershipFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -57,6 +58,56 @@ final class Membership extends Model implements TenantOwned
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function isActiveAdministrator(): bool
+    {
+        return $this->role === MembershipRole::Admin
+            && $this->status === MembershipStatus::Active;
+    }
+
+    /**
+     * Whether this membership may be ended at all.
+     *
+     * The row-local half of the removal rules, in one place so the policy, the
+     * members screen and the action cannot disagree about it. The count is
+     * passed in because "is anyone else still running this" spans every page.
+     */
+    public function mayBeRemovedFrom(Organization $organization, int $otherActiveAdministrators): bool
+    {
+        if ($organization->owner_id === $this->user_id) {
+            return false;
+        }
+
+        return ! $this->isActiveAdministrator() || $otherActiveAdministrators > 0;
+    }
+
+    /**
+     * Revoke the organization's grants when the membership goes.
+     *
+     * `model_has_roles` is keyed to organizations and users, never to this
+     * table, so deleting a membership leaves the assignment behind and the
+     * removed person keeps everything it granted. The revocation is here rather
+     * than only in the action so that a later caller cannot forget it, and it
+     * names the organization explicitly rather than trusting whichever tenant
+     * happens to be resolved.
+     *
+     * Direct permissions go too. Nothing grants them today, but
+     * `model_has_permissions` carries the same team key and would outlive the
+     * membership in exactly the same way.
+     */
+    protected static function booted(): void
+    {
+        self::deleted(function (Membership $membership): void {
+            resolve(TenantContext::class)->runForId(
+                $membership->organization_id,
+                function () use ($membership): void {
+                    User::query()->find($membership->user_id)
+                        ?->syncRoles([])
+                        ->syncPermissions([]);
+                },
+            );
+        });
     }
 
     /**
