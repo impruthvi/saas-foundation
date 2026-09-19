@@ -33,9 +33,9 @@ code exists.
 | ------------------------------------------------------ | ----------- |
 | M0 — Skeleton, inherited-tooling audit, governance, CI | **Done**    |
 | M1 — Organizations, memberships, tenant context        | **Done**    |
-| M2 — Invitations                                       | Next        |
-| M3 — Tenant-scoped RBAC                                | Not started |
-| M4 — Cashier on the organization, Stripe Checkout      | Not started |
+| M2 — Invitations                                       | **Done**    |
+| M3 — Tenant-scoped RBAC                                | **Done**    |
+| M4 — Cashier on the organization, Stripe Checkout      | Next        |
 | M5 — Entitlements, usage, the plan limit               | Not started |
 | M6 — Filament admin and operations                     | Not started |
 | M7 — `saas:demo`, the journey as one test              | Not started |

@@ -56,28 +56,33 @@ for server-side limit enforcement, including the concurrency test). Do not attem
 M5's limit enforcement is written — the invitation case should reuse it, not invent a
 parallel one.
 
-## Remove a member from an organization
+## Run the browser tests, and run them in CI
 
-**What:** Let an administrator remove somebody from an organization, from the members
-screen.
+**What:** Get `tests/Browser` executing again, and put it in a test suite something runs.
 
-**Why:** `/organizations/members` lists members and offers no action on any of them. The
-screen promises management and delivers a read-only list, which is the first thing anyone
-will ask about.
+**Why:** Two separate problems, both older than M3 and both found while wiring the
+members screen. Playwright is outdated — `package.json` pins `playwright ^1.62.1` and the
+plugin demands 1.63.0 — so every browser test errors with "Playwright is outdated",
+including the `WelcomeTest` that has been in the repository since M0. And `phpunit.xml`
+registers only the `Unit` and `Feature` suites, so `tests/Browser` is not collected by
+`composer test` or by CI at all. That is why the suite reports green while those tests
+fail when named directly.
 
-**Pros:** The screen does what its name says. Removal is also the other half of
-invitation: M2 built the way in and left no way out.
+**Pros:** `tests/Browser/MembersManagementTest.php` exists and is written; it asserts the
+two things a feature test cannot reach, that the controls are on the page and that the
+confirmation actually removes somebody. M7 makes the whole ten-minute journey one browser
+test (D8), so this has to work before the milestone that depends on it entirely.
 
-**Cons:** Removal is an authorization question before it is a UI one — who may remove
-whom, what happens to the last administrator, whether the owner can ever be removed. M3
-rewrites exactly that layer, so building it now means building it twice.
+**Cons:** `npm install playwright@latest && npx playwright install` downloads browser
+binaries, which is a real cost on CI and on a fresh clone, and it is the kind of thing
+that should be a deliberate choice rather than a side effect of someone running a test.
 
-**Context:** M2's design review (2026-09-18) raised this and chose to defer. `InvitationPolicy`
-is the seam the permission check will slot into; a `MembershipPolicy` alongside it is the
-likely shape. `organizations.owner_id` restricts on delete, so the database already refuses
-to orphan an organization, and `App\Actions\DeleteUser` documents the ownership-transfer
-remedy that removal will need to reuse. Note that removing the last administrator is the
-case that needs a rule, not a guard clause.
+**Context:** Start by running those two commands and then
+`vendor/bin/pest tests/Browser`. Adding a `Browser` testsuite to `phpunit.xml` is one
+block, but do it _after_ the binaries work — wiring a suite that immediately fails turns
+a known gap into a red build. Consider whether browser tests belong in `composer test` at
+all or in a separate `composer test:browser` that CI runs as its own job, since they are
+slower than the rest of the suite combined.
 
-**Depends on / blocked by:** M3 (tenant-scoped RBAC). Do not build before the role source
-of truth moves to `spatie/laravel-permission`.
+**Depends on / blocked by:** Nothing. This is unblocked work that was deferred because
+installing browser binaries is the user's call, not the agent's.

@@ -1,10 +1,12 @@
 # 0001 — Vertical slice build plan
 
 - **Date:** 2026-09-16
-- **Status:** **M0, M1 and M2 complete.** M2's segment of the journey runs: an
+- **Status:** **M0 through M3 complete.** M2's segment of the journey runs: an
   invited stranger opens the emailed link with no account, registers, and lands
   as an active member of both the inviting organization and their own personal
-  one. Amended 2026-09-16 by D20-D26 and 2026-09-17 by D27-D28. M3 is next.
+  one. M3's proof runs too, and the members screen it unlocked. Amended
+  2026-09-16 by D20-D26, 2026-09-17 by D27-D28, and 2026-09-19 by D29-D31.
+  M4 is next.
 - **Decisions:** `docs/decisions/0001-architecture-decisions.md` and
   `docs/decisions/0002-inherited-tooling-audit.md`.
 - **Defines done for:** D8, the ten-minute journey.
@@ -46,7 +48,7 @@ the extension point, defer the implementation.
 | **M0** | Skeleton configured; inherited-tooling audit; Postgres; D9 governance; CI                        | —          | **Done** — full gate green on PostgreSQL and SQLite, locally and on GitHub Actions. 46 tests, 184 assertions. Audit recorded in `docs/decisions/0002-inherited-tooling-audit.md`          |
 | **M1** | Organizations, memberships, personal org at registration, tenant context                         | M0         | **Done** — registering creates exactly one personal organization; a job resolves the correct organization across a real queue roundtrip, and the next job on that worker inherits nothing |
 | **M2** | Invitations — expiring, revocable, audited                                                       | M1         | **Done** — eight refusals, eight exception classes; a stranger goes from emailed link to membership of two organizations without a manual database edit                                   |
-| **M3** | Tenant-scoped RBAC on `spatie/laravel-permission`                                                | M1         | A role granted in organization A grants nothing in organization B                                                                                                                         |
+| **M3** | Tenant-scoped RBAC on `spatie/laravel-permission`                                                | M1         | **Done** — a role granted in organization A grants nothing in organization B, asserted directly, across a switch inside one request, over HTTP, and across a real queue roundtrip         |
 | **M4** | Cashier on `Organization`; plan/price catalog; Stripe Checkout, test mode                        | M1, M3     | Checkout completes in test mode, the webhook lands, and billing facts appear locally                                                                                                      |
 | **M5** | Entitlements wired; `projects` limit; the upgrade prompt                                         | M4         | Creating past the limit is refused **server-side**, and concurrent creates cannot exceed it                                                                                               |
 | **M6** | Filament admin: entitlement inspector, usage counter, webhook timeline, audit log, impersonation | M5         | Deleting the admin module leaves the suite green with no dead navigation                                                                                                                  |
@@ -130,9 +132,26 @@ rotates the row — and a rotated token resolving to nothing is a 404 worded hon
 
 ### M3 — RBAC
 
-`spatie/laravel-permission`, team-scoped with the organization as the team (D15). Expect
-to extend it — display names on roles and permissions are the usual first need — so the
-extension points are decided here, not improvised later.
+**Done.** `spatie/laravel-permission`, team-scoped with the organization as the team
+(D15). Four permissions, two roles, and a catalog seeded by the migration so `migrate`
+alone produces a working system.
+
+The milestone's real work was not the package. It was that the package keeps its active
+team on a registrar rather than in `Illuminate\Log\Context`, so nothing carries it into
+a queue payload: `TenantContext` became its one writer, and `forget()` nulling it is the
+line that prevents a worker answering `can()` for the previous job's organization while
+every query stays correctly scoped. D20's guard cannot see that class of leak, so M3
+supplies its own invariant for the whole suite (D29).
+
+Rank stays the writable fact and the role assignment is a projection of it (D31), which
+made `AddOrganizationMember` the single writer and turned removal into a revocation
+problem rather than a delete. The members screen spends the layer on the thing `TODOS.md`
+parked here: an administrator removes a member, the owner cannot be removed or demoted,
+and the last active administrator cannot be either.
+
+Deliberately still open: customer-defined roles, display-name columns, and permission
+checks in the admin console. D30 records how the first arrives and which arch test it
+will trip.
 
 ### M4 — Billing
 
