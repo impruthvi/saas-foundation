@@ -15,18 +15,6 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 
-/*
-|--------------------------------------------------------------------------
-| Promotion and demotion move rank and role together
-|--------------------------------------------------------------------------
-|
-| Rank is the writable fact and the role assignment is its projection (D31),
-| so the interesting assertions are never "the column changed" on its own. They
-| are the column and what the person can actually do, checked together, because
-| the failure this milestone can produce silently is the two disagreeing.
-|
-*/
-
 /**
  * The membership row for one person in one organization.
  */

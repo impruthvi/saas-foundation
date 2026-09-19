@@ -17,14 +17,8 @@ use InvalidArgumentException;
 /**
  * Hands an organization to a different owner.
  *
- * Load-bearing from the day it is written: it is the remedy offered when
- * account deletion is refused (D25). The new owner has to already be an active
- * member, and a personal organization cannot be handed anywhere — it is one
- * user's own, and D1 has no notion of a personal organization that outlives the
- * person.
- *
- * The outgoing owner keeps their membership and their Admin rank. Ownership
- * itself moves as a single column, because ownership is a single fact (D23).
+ * The new owner must already be active, and personal organizations cannot be
+ * transferred. The outgoing owner keeps their membership and Admin rank.
  */
 final readonly class TransferOrganizationOwnership
 {
@@ -46,9 +40,8 @@ final readonly class TransferOrganizationOwnership
                 ->where('user_id', $newOwner->id)
                 ->update(['role' => MembershipRole::Admin]);
 
-            // The update above is a bulk statement and fires no model events, so
-            // the projection of rank onto a role assignment (D31) is written
-            // here rather than inherited from one. syncRoles and not
+            // The bulk update fires no model events, so update the projected
+            // role explicitly. Use syncRoles rather than
             // assignRole: the new owner was a member a line ago, and a promotion
             // that accumulates leaves them holding both roles.
             $newOwner->syncRoles([OrganizationRole::forRank(MembershipRole::Admin)->value]);

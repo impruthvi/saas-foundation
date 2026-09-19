@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Schema;
  * that is the whole reason the flow exists. `user_id` appears only once the
  * offer is taken, as `accepted_by_user_id`.
  *
- * Two shapes here are decisions rather than defaults:
- *
  * `token_hash` is unique and carries no companion index — the unique constraint
  * is the index. The column holds a sha-256 digest, never the token itself: a
  * readable token column is a password column nobody calls one, and read access
@@ -23,9 +21,8 @@ use Illuminate\Support\Facades\Schema;
  *
  * `(organization_id, email)` is unique, so an address has at most one
  * invitation per organization and re-inviting rotates that row. The tempting
- * alternative, a partial unique index over pending rows only, exists on
- * PostgreSQL and SQLite and not on MySQL, and core migrations stay portable
- * where portability is free (D3).
+ * alternative, a partial unique index over pending rows only, is not portable
+ * across the supported databases.
  */
 return new class extends Migration
 {
@@ -41,7 +38,7 @@ return new class extends Migration
             $table->timestamp('expires_at');
 
             // The inviter is history, not a dependency: deleting their account
-            // must not delete an invitation somebody is about to accept (D25).
+            // must not delete an invitation somebody is about to accept.
             $table->foreignId('invited_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('accepted_at')->nullable();
             $table->foreignId('accepted_by_user_id')->nullable()->constrained('users')->nullOnDelete();

@@ -9,18 +9,6 @@ use App\Models\Project;
 use App\Tenancy\TenantContext;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| The boundary, as the real models wear it
-|--------------------------------------------------------------------------
-|
-| tests/Feature/Tenancy/TenantBoundaryTest.php asserts the rule against a
-| fixture. These assert that Project and Membership actually wear it, including
-| the two paths a global scope alone does not cover: inserts, which never reach
-| a scope, and rows restored with scopes switched off.
-|
-*/
-
 it('stamps a new row with the resolved organization', function (): void {
     $organization = Organization::factory()->create();
 
@@ -56,7 +44,7 @@ it('raises when a row arrives from another organization with the scope bypassed'
 
     // The shape of a queued job restoring a serialized model: Laravel's
     // newQueryForRestoration() calls newQueryWithoutScopes(), so the scope is
-    // off and only the retrieved guard is left to notice (D24).
+    // off and only the retrieved guard is left to notice.
     resolve(TenantContext::class)->runForId($second->id, function () use ($theirs): void {
         TenantQueryGuard::allowUnscoped(
             fn () => Project::query()->withoutTenantScope()->whereKey($theirs->id)->first()

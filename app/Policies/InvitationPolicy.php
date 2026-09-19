@@ -36,18 +36,11 @@ final readonly class InvitationPolicy
         return $this->allows($user, Permission::InviteMembers);
     }
 
-    /**
-     * Resending is an update to the invitation, not a new one.
-     */
     public function update(User $user): bool
     {
         return $this->allows($user, Permission::InviteMembers);
     }
 
-    /**
-     * Revoking. Declining is the recipient's verb and is authorized by holding
-     * the token, not here.
-     */
     public function delete(User $user): bool
     {
         return $this->allows($user, Permission::InviteMembers);

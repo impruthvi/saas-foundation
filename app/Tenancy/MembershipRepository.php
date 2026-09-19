@@ -11,19 +11,8 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
- * The one query that cannot be scoped, in the one place allowed to make it.
- *
- * "Which organizations does this user belong to" is asked before any
- * organization is resolved — by the middleware that resolves one, by the
- * switcher, and by the check that decides whether a solo user sees a switcher
- * at all. Memberships are tenant-owned like everything else, so answering it
- * means stepping around the scope; D22 puts every such step here, and
- * `tests/Unit/TenantScopingTest.php` fails the build if one appears elsewhere.
- *
- * Both the global scope and the retrieved guard have to be stood down, which is
- * why the work runs inside `runWithoutTenant()` rather than only reaching for
- * `withoutTenantScope()`: a row from another organization would otherwise raise
- * `CrossTenantAccess` on arrival.
+ * Handles membership lookups that run before an organization is resolved.
+ * Both the tenant scope and retrieved guard must stand down for these queries.
  */
 final readonly class MembershipRepository
 {
@@ -63,7 +52,7 @@ final readonly class MembershipRepository
     /**
      * The organization to resolve when the user has not chosen one.
      *
-     * Their personal organization, which D1 guarantees exists from registration.
+     * Prefer the user's personal organization when the session names none.
      */
     public function defaultFor(User $user): ?Organization
     {
@@ -72,8 +61,6 @@ final readonly class MembershipRepository
 
     /**
      * Whether the user still solely owns an organization with other members.
-     *
-     * The question account deletion has to ask before it does anything (D25).
      *
      * @return Collection<int, Organization>
      */

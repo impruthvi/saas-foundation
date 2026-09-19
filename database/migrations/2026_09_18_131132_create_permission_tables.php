@@ -12,53 +12,15 @@ use Illuminate\Support\Facades\Schema;
 /**
  * The RBAC store: `spatie/laravel-permission`, team-scoped on the organization.
  *
- * Published from the package and then changed in four ways, each recorded as
- * D29 or D30.
- *
- * **The team key is `organization_id`** and teams are on unconditionally. The
- * package branches on `config('permission.teams')` so one stub can serve both
- * shapes; this application answered that question in D29 and a dead branch in a
- * migration is a second answer nobody will maintain.
- *
- * **Role definitions are global, assignments are team-scoped (D30).** A seeded
- * role carries a null `organization_id` and belongs to every organization; a
- * customer-defined role, if V1 ever grows one, is the same row with an
- * organization in that column. Isolation lives in the assignment tables, which
- * are never null.
- *
- * **Foreign keys the package stub omits.** The stub constrains `role_id` and
- * `permission_id` and stops. Without a constraint on the team key, deleting an
- * organization leaves its assignments behind — and a later organization
- * reusing that key inherits them, which is a cross-tenant grant arriving by
- * way of an auto-increment. `memberships` already cascades; these now match it.
- *
- * `model_id` deliberately gets no constraint. It is one half of a polymorphic
- * pair, and a foreign key on it would declare in the schema that only users
- * ever hold roles. Revoking on account deletion is the application's job:
- * `HasRoles` registers a `deleting` hook for it, and `App\Actions\DeleteUser`
- * owns the audited path.
- *
- * **The catalog is seeded here rather than by a seeder**, so `migrate` alone
- * produces a working system — M7's `saas:demo` lands a developer mid-journey
- * with no manual database step, and a seeder is a manual database step.
- *
- * The names are written literally rather than read from `App\Enums\Permission`
- * and `App\Enums\OrganizationRole`. A migration is a historical record: if the
- * enums are later renamed or a case is added, this file must keep describing
- * the database it actually built. `tests/Unit/PermissionCatalogTest.php` is
- * what stops the two drifting apart.
- *
- * Column types stay portable: Postgres is the documented path, SQLite is the
- * local default, and nothing here costs MySQL anything (D3).
+ * Role definitions are global while assignments require an organization. Team
+ * foreign keys cascade to prevent deleted organizations leaving grants behind.
+ * The catalog is seeded here so `migrate` alone produces a working system, and
+ * its literal values keep this historical migration independent of later enum
+ * changes.
  */
 return new class extends Migration
 {
     /**
-     * The permission catalog as of this migration.
-     *
-     * Every entry has a caller in M3 or M4. Nothing is added on speculation —
-     * D11's filter applies to permissions as much as to features.
-     *
      * @var array<string, string>
      */
     private const array PERMISSIONS = [
@@ -69,11 +31,6 @@ return new class extends Migration
     ];
 
     /**
-     * Which permissions each role carries.
-     *
-     * The keys match `App\Enums\MembershipRole`, because D31 makes the
-     * assignment a projection of rank rather than a second thing to write.
-     *
      * @var array<string, list<string>>
      */
     private const array ROLES = [
@@ -110,8 +67,7 @@ return new class extends Migration
 
         Schema::create($tables['roles'], function (Blueprint $table) use ($team): void {
             $table->id();
-            // Nullable, and null is the normal case: a role definition belongs to
-            // every organization until somebody defines one of their own (D30).
+            // Null makes a built-in role definition available to every organization.
             $table->foreignId($team)->nullable()->constrained('organizations')->cascadeOnDelete();
             $table->string('name');
             $table->string('guard_name');
@@ -200,7 +156,7 @@ return new class extends Migration
      * `organization_id` is passed explicitly on every row. The package's `Role`
      * model fills that column from the *currently resolved* team when the key
      * is absent, so omitting it would scope the catalog to whichever
-     * organization happened to be resolved when the migration ran (D30).
+     * organization happened to be resolved when the migration ran.
      *
      * @param  array<string, string>  $tables
      */

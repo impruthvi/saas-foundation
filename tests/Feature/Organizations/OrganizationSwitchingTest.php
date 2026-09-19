@@ -10,17 +10,6 @@ use App\Models\User;
 use App\Tenancy\TenantContext;
 use Inertia\Testing\AssertableInertia;
 
-/*
-|--------------------------------------------------------------------------
-| Which organization a request is acting for
-|--------------------------------------------------------------------------
-|
-| The current organization lives in the session and moves through an explicit
-| switch (D26). Membership decides what the session is allowed to name, so
-| these assert the refusals as hard as the happy path.
-|
-*/
-
 it('resolves the personal organization and hides the switcher for a solo user', function (): void {
     $user = User::factory()->create();
     $organization = resolve(CreatePersonalOrganization::class)->handle($user);

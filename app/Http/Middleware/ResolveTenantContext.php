@@ -13,31 +13,11 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Resolves which organization the request is acting for.
- *
- * The current organization is held in the session and changed through an
- * explicit switch, rather than carried in a URL prefix (D26). Resolution is
- * membership-driven: the session only ever names an organization, and this
- * decides whether the user may still act for it.
- *
- *   session names one? ──yes──► still an active member of it? ──yes──► resolve
- *          │ no                          │ no
- *          └──────────────┬──────────────┘
- *                         ▼
- *              their first usable organization (personal first)
- *                         │ none
- *                         ▼
- *                    resolve nothing
- *
- * Resolving nothing is deliberate rather than a failure: an unauthenticated
- * request has no tenant, and a tenant-owned query made without one raises at
- * the model boundary, where the scoping rule lives (D3).
+ * Resolves the session's organization when membership still allows it, or
+ * falls back to the user's first active organization.
  */
 final readonly class ResolveTenantContext
 {
-    /**
-     * The session key naming the current organization.
-     */
     public const string SESSION_KEY = 'current_organization_id';
 
     public function __construct(

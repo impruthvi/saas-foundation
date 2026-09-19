@@ -8,12 +8,6 @@ use App\Models\Organization;
 use Illuminate\Support\Collection;
 use RuntimeException;
 
-/**
- * Raised when an account cannot be deleted without orphaning an organization.
- *
- * The remedy is named in the message because there is one: transfer ownership,
- * then delete (D25).
- */
 final class OwnershipTransferRequired extends RuntimeException
 {
     /**

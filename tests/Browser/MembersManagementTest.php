@@ -7,16 +7,6 @@ use App\Enums\MembershipRole;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\User;
 
-/*
-|--------------------------------------------------------------------------
-| The members screen does what its name says
-|--------------------------------------------------------------------------
-|
-| The two flows a feature test cannot reach: whether the controls are on the
-| page at all, and whether the confirmation actually removes somebody.
-|
-*/
-
 it('shows removal to an administrator and not to a plain member', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     $member = User::factory()->create();

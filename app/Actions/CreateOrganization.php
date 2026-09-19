@@ -15,23 +15,12 @@ use Illuminate\Support\Str;
 /**
  * Creates an organization and the membership that makes its owner a member of it.
  *
- * Ownership is `organizations.owner_id`; the membership carries rank, which for
- * an owner is Admin, because MembershipRole has no Owner case (D23).
- *
- * The membership is written by `AddOrganizationMember` rather than here. From
- * M3 a membership also implies a role assignment, and two places creating
- * memberships would be two places to keep that projection true — which is the
- * drift D23 warns about, arriving through the back door (D31).
- *
- * Slug uniqueness is settled by the unique index rather than by a lookup first.
- * Two people registering at the same moment with the same name is the ordinary
- * case, not the exotic one, and check-then-insert loses that race.
+ * Membership creation is delegated so its rank and RBAC role remain atomic.
+ * Slug collisions are resolved after the unique index rejects an insert,
+ * avoiding a check-then-insert race.
  */
 final readonly class CreateOrganization
 {
-    /**
-     * The number of suffixed slugs to try before giving the collision back.
-     */
     private const int SLUG_ATTEMPTS = 5;
 
     public function __construct(private AddOrganizationMember $members) {}
@@ -63,9 +52,6 @@ final readonly class CreateOrganization
         }
     }
 
-    /**
-     * The first attempt reads from the name; later ones earn a suffix.
-     */
     private function slug(string $name, int $attempt): string
     {
         $base = Str::slug($name);

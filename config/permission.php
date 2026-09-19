@@ -112,7 +112,7 @@ return [
          * foreign key is other than `team_id`.
          */
 
-        /** The organization is the team, and the codebase has one word for it (D29). */
+        /** The organization is the permission team. */
         'team_foreign_key' => 'organization_id',
     ],
 
@@ -121,7 +121,7 @@ return [
      * Set this to false if you want to implement custom logic for checking permissions.
      */
 
-    /** Off: policies are the one place an ability is answered, never a Gate::before (D29). */
+    /** Policies answer abilities; the package must not bypass them through Gate::before. */
     'register_permission_check_method' => false,
 
     /*

@@ -25,27 +25,6 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 
-/*
-|--------------------------------------------------------------------------
-| The refusal ladder
-|--------------------------------------------------------------------------
-|
-| M2 is done when expiry, revoke-then-accept, accept-as-wrong-user and re-invite
-| are each rejected with a DISTINCT error. Distinctness is the point: a single
-| exception carrying a reason string would pass a test that asserted "it threw",
-| and would leave the recipient reading one message for four situations.
-|
-| So each case here asserts the exception CLASS. If two of them ever collapse
-| into one, these fail.
-|
-|   issue ──► Pending ──► accept ──► Accepted
-|               │  │                    ▲
-|      revoke   │  │  decline           │ only from Pending, in date,
-|               ▼  ▼                    │ by the addressee, into a usable org
-|         Revoked  Declined ────────────┘
-|
-*/
-
 it('mints a token that resolves to the invitation and is never stored in the clear', function (): void {
     $organization = Organization::factory()->create();
 
@@ -64,9 +43,8 @@ it('resolves an invitation for a stranger who has no organization of their own',
     $organization = Organization::factory()->create();
     $token = issueInvitation($organization, 'stranger@example.com');
 
-    // What an unauthenticated request looks like: no tenant, so the global scope
-    // would throw and the retrieved guard would raise. The audited door is the
-    // only reason this returns a row at all (D27).
+    // A stranger has no tenant context, so token lookup must use the explicit
+    // cross-tenant path.
     resolve(TenantContext::class)->forget();
 
     expect(findInvitation($token))

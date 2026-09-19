@@ -14,24 +14,6 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| The backfill
-|--------------------------------------------------------------------------
-|
-| A role assignment is a projection of a membership's rank (D31). That holds
-| for memberships written after the package arrives because one action writes
-| both; it holds for the ones already in the database only because the
-| migration goes back and writes them.
-|
-| Without it, an application upgraded in place keeps every membership and
-| loses every ability attached to it — each administrator and each owner drops
-| to zero permissions on deploy. So the test rolls the migration back, which
-| drops the assignments, and runs it forward against memberships that already
-| exist. That is the upgrade, performed.
-|
-*/
-
 /**
  * Re-run the migration that owns the RBAC tables, the way a deploy does.
  */

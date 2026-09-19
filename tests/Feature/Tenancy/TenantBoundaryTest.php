@@ -10,16 +10,6 @@ use Illuminate\Support\Facades\Schema;
 use Tests\Fixtures\TenantOwnedFixture;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| The tenant boundary, asserted before the models it protects
-|--------------------------------------------------------------------------
-|
-| These run against a fixture table rather than Organization or Project, so
-| that what is under test is the rule and not one model's compliance with it.
-|
-*/
-
 beforeEach(function (): void {
     Schema::create('tenant_owned_fixtures', function ($table): void {
         $table->id();
@@ -105,23 +95,6 @@ it('lets deliberately cross-tenant work run without a tenant, then restores it',
     expect($all)->toBe(2)
         ->and($tenant->id())->toBe(1);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Route model binding happens after the tenant is resolved
-|--------------------------------------------------------------------------
-|
-| `SubstituteBindings` ships inside the web group ahead of anything appended to
-| it, and binding queries the model. A tenant-owned model's global scope raises
-| when no organization is resolved (D3), so in its stock position binding
-| `{invitation}` or `{project}` is a 500 — and a cross-tenant request gets a
-| server error instead of the 404 it deserves.
-|
-| bootstrap/app.php therefore pulls SubstituteBindings out and puts it back after
-| ResolveTenantContext. These lock that ordering: it is a one-line edit in a file
-| nobody reads twice, and M5 binds Project the same way.
-|
-*/
 
 it('resolves a bound tenant-owned model for a member of its organization', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();

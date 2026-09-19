@@ -16,22 +16,6 @@ use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
-/*
-|--------------------------------------------------------------------------
-| The way out
-|--------------------------------------------------------------------------
-|
-| M2 built the way into an organization and left none out. The rules are the
-| ones M3 introduces: who may remove whom, and what happens to the last
-| administrator.
-|
-| The assertion that matters most is never "the row is gone". It is that the
-| grants went with it — `model_has_roles` is keyed to organizations and users,
-| not to memberships, so a removal that only deletes the membership leaves
-| somebody holding every permission they had, with nothing left to notice.
-|
-*/
-
 function stillAMember(Membership $membership, Organization $organization): bool
 {
     return resolve(TenantContext::class)->runFor(

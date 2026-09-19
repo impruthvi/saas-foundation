@@ -7,22 +7,6 @@ use App\Tenancy\TenantContext;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Fixtures\RecordAuthorizationTeam;
 
-/*
-|--------------------------------------------------------------------------
-| The team tracks the tenant, including into nothing
-|--------------------------------------------------------------------------
-|
-| `spatie/laravel-permission` holds its active team on a registrar. Nothing
-| dehydrates that into a queue payload, so unless `TenantContext` writes it,
-| a worker answers `can()` for whichever organization the previous job
-| resolved — while every query it makes stays correctly scoped.
-|
-| That is the failure this file exists for, and it is invisible to the D20
-| query guard by construction: the guard watches SQL, and this leak produces
-| none. So the assertions here read the registrar directly.
-|
-*/
-
 /**
  * The organization every role assignment would currently be read against.
  */

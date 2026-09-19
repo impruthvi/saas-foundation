@@ -14,36 +14,9 @@ use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| "Invite a teammate" — M2's segment of the ten-minute journey
-|--------------------------------------------------------------------------
-|
-| D8's sentence, second clause. A milestone is not done when its code exists; it
-| is done when its segment of this journey runs. Everything else in M2 is a unit
-| of this test.
-|
-|   register ──► personal organization exists (D1)
-|        │
-|        ▼
-|   invite b@example.com ──► email queued, carrying the only usable token
-|        │
-|        ▼
-|   B opens the link as a stranger ──► token parked in the session
-|        │
-|        ▼
-|   B registers ──► gets their OWN personal organization (D1 is unconditional)
-|        │           and the parked invitation is spent
-|        ▼
-|   B is an active member of two organizations, which is exactly when the
-|   workspace switcher stops being hidden.
-|
-*/
-
 it('takes a stranger from an invitation link to membership of two organizations', function (): void {
     Mail::fake();
 
-    // A registers, and D1 gives them somewhere to own.
     $this->post(route('register.store'), [
         'name' => 'Ada',
         'email' => 'ada@example.com',
@@ -56,7 +29,6 @@ it('takes a stranger from an invitation link to membership of two organizations'
 
     expect($acme->personal)->toBeTrue();
 
-    // A invites B.
     $this->actingAs($ada)
         ->post(route('organizations.invitations.store'), [
             'email' => 'grace@example.com',
@@ -77,7 +49,6 @@ it('takes a stranger from an invitation link to membership of two organizations'
 
     expect($token)->toBeString();
 
-    // B opens the link with no account and nobody signed in.
     $this->post(route('logout'));
 
     throughTheAuditedDoor(fn () => $this->get(route('invitations.show', ['token' => $token]))
@@ -89,7 +60,6 @@ it('takes a stranger from an invitation link to membership of two organizations'
 
     expect(session(ConsumePendingInvitation::SESSION_KEY))->toBe($token);
 
-    // B registers. The parked invitation is spent on the way through.
     throughTheAuditedDoor(fn () => $this->post(route('register.store'), [
         'name' => 'Grace',
         'email' => 'grace@example.com',
@@ -102,11 +72,9 @@ it('takes a stranger from an invitation link to membership of two organizations'
     $organizations = resolve(MembershipRepository::class)->organizationsFor($grace);
 
     expect($organizations)->toHaveCount(2)
-        // D1 is unconditional: being invited somewhere does not replace having
-        // somewhere of your own.
+        // An invitation never replaces the user's personal organization.
         ->and($organizations->firstWhere('personal', true))->not->toBeNull()
         ->and($organizations->pluck('id'))->toContain($acme->id)
-        // Two organizations is the moment the switcher stops being hidden.
         ->and($organizations->count())->toBeGreaterThan(1);
 
     $invitation = resolve(TenantContext::class)->runFor(

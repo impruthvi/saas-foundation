@@ -14,22 +14,9 @@ use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 
 /**
- * Fails any test whose SQL reads or writes a tenant-owned table unscoped.
+ * Fails when SQL reads or writes a tenant-owned table without organization scope.
  *
- * The milestone's promise — "no tenant-owned model is queried without an
- * `organization_id` scope" — is a property of queries, and `arch()` reads
- * classes. So the static rules in `tests/Unit/TenantScopingTest.php` are backed
- * by this listener, installed for every test in the suite (D20). Tests that
- * mean to read across tenants say so with `allowUnscoped()`, which is the only
- * way past it and is itself visible in a diff.
- *
- *   DB::listen ──► is it a select/update/delete?
- *                        │ yes
- *                        ▼
- *                  does it touch a tenant-owned table?
- *                        │ yes
- *                        ▼
- *                  does the SQL mention organization_id? ──no──► fail the test
+ * Deliberate cross-tenant reads must use the explicit `allowUnscoped()` path.
  */
 final class TenantQueryGuard
 {

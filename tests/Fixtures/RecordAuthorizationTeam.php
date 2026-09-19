@@ -15,11 +15,8 @@ use Spatie\Permission\PermissionRegistrar;
 /**
  * Records the team every role assignment would be read against, once run.
  *
- * Deliberately separate from `RecordResolvedTenant`: that fixture answers
- * "which organization did the job resolve", and this one answers "which
- * organization would `can()` have answered for". The whole point of D29 is
- * that those two can disagree, so a fixture that reported them as one value
- * could not show the disagreement.
+ * Kept separate from `RecordResolvedTenant` because the resolved tenant and
+ * permission team can disagree.
  */
 final class RecordAuthorizationTeam implements ShouldQueue
 {

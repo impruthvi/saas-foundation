@@ -56,8 +56,6 @@ final class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user()?->withoutRelations(),
             ],
-            // The switcher is hidden for a solo user rather than absent (D1), so
-            // the list is shared either way and the count decides the chrome.
             'organization' => fn (): ?array => $this->present($this->tenant->current()),
             'organizations' => fn (): array => $this->availableOrganizations($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

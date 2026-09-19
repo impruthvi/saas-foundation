@@ -9,19 +9,6 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\Finder\Finder;
 
-/*
-|--------------------------------------------------------------------------
-| Tenant scoping, declared
-|--------------------------------------------------------------------------
-|
-| These are the static half of D20: they check what a class says about itself.
-| They cannot check what a query does, which is why they are paired with the
-| suite-wide guard in tests/Support/TenantQueryGuard.php. Neither half is
-| sufficient; a model can declare the interface and still be read unscoped, and
-| a query can look scoped while the model never opted in.
-|
-*/
-
 /**
  * @return list<class-string<Model>>
  */
@@ -79,13 +66,10 @@ it('makes every model carrying an organization_id declare itself tenant-owned', 
 
 it('keeps the way around the scope to the places that are allowed it', function (): void {
     $allowed = [
-        // The one query that cannot be scoped: which organizations does this user
-        // belong to, asked before any organization is resolved (D22).
+        // Membership discovery runs before an organization is resolved.
         'app/Tenancy/MembershipRepository.php',
-        // The second, and for the same reason: which invitation does this token
-        // name, asked by a stranger who is outside the tenant by definition (D27).
+        // Token lookup runs before the invitation's organization is known.
         'app/Tenancy/InvitationRepository.php',
-        // The mechanism itself.
         'app/Tenancy/TenantContext.php',
         'app/Exceptions/TenantContextMissing.php',
         'app/Tenancy/TenantScope.php',

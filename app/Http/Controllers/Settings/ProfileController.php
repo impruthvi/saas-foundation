@@ -18,9 +18,6 @@ use Inertia\Response;
 
 final class ProfileController extends Controller
 {
-    /**
-     * Show the user's profile settings page.
-     */
     public function edit(Request $request): Response
     {
         return Inertia::render('settings/Profile', [
@@ -29,9 +26,6 @@ final class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $request->user()->fill($request->validated());
@@ -50,10 +44,8 @@ final class ProfileController extends Controller
     /**
      * Delete the user's profile.
      *
-     * Refused while the user solely owns an organization other people are in:
-     * deleting them would orphan that organization and, from M4, its
-     * subscription. The remedy is ownership transfer, so the refusal names it
-     * rather than just failing (D25).
+     * Refused while the user solely owns a shared organization because deletion
+     * would orphan its data and subscription.
      */
     public function destroy(ProfileDeleteRequest $request, DeleteUser $deleteUser): RedirectResponse
     {

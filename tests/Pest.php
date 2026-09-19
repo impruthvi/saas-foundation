@@ -2,16 +2,6 @@
 
 declare(strict_types=1);
 
-/*
-|--------------------------------------------------------------------------
-| Test Case
-|--------------------------------------------------------------------------
-|
-| The closure you provide to your test functions is always bound to a specific PHPUnit test
-| case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
-| need to change it using the "pest()" function to bind a different classes or traits.
-|
-*/
 use App\Actions\CreateOrganization;
 use App\Actions\InviteOrganizationMember;
 use App\Enums\MembershipRole;
@@ -42,23 +32,16 @@ pest()->extend(TestCase::class)
         // The framework makes the same call itself in Factory::createChildren().
         Model::automaticallyEagerLoadRelationships(false);
 
-        // The tenant boundary is a property of queries, so it is asserted against
-        // queries, for every test in the suite rather than for the handful written
-        // with tenancy in mind. See tests/Support/TenantQueryGuard.php and D20.
+        // Assert the tenant boundary at the query layer for every test.
         TenantQueryGuard::flush();
 
-        // The role and permission assignments are tenant-owned in everything but
-        // name: they carry an organization_id and are meaningless without one.
-        // No model declares them, so they are registered by hand (D29).
+        // These tenant-owned pivot tables have no application models to discover.
         TenantQueryGuard::register('model_has_roles');
         TenantQueryGuard::register('model_has_permissions');
 
         TenantQueryGuard::install();
 
-        // The authorization boundary needs its own guard, because it does not
-        // leak through SQL the way the tenant boundary does: a stale permissions
-        // team answers can() for the wrong organization while every query stays
-        // correctly scoped. See tests/Support/AuthorizationTeamGuard.php and D29.
+        // A stale permissions team can cross tenants without issuing unscoped SQL.
         AuthorizationTeamGuard::flush();
         AuthorizationTeamGuard::install();
 
@@ -71,47 +54,13 @@ pest()->extend(TestCase::class)
     })
     ->in('Browser', 'Feature', 'Unit');
 
-/*
-|--------------------------------------------------------------------------
-| Expectations
-|--------------------------------------------------------------------------
-|
-| When you're writing tests, you often need to check that values meet certain conditions. The
-| "expect()" function gives you access to a set of "expectations" methods that you can use
-| to assert different things. Of course, you may extend the Expectation API at any time.
-|
-*/
-
 expect()->extend('toBeOne', fn () => $this->toBe(1));
-
-/*
-|--------------------------------------------------------------------------
-| Functions
-|--------------------------------------------------------------------------
-|
-| While Pest is very powerful out-of-the-box, you may have some testing code specific to your
-| project that you don't want to repeat in every file. Here you can also expose helpers as
-| global functions to help you to reduce the number of lines of code in your test files.
-|
-*/
-
-/*
-|--------------------------------------------------------------------------
-| Invitations
-|--------------------------------------------------------------------------
-|
-| Shared by the invitation tests. They live here rather than in one file
-| because three files need them and Pest helpers are file-scoped.
-|
-*/
 
 /**
  * Make a request or a read that resolves an invitation by its token.
  *
- * Those reads hit `invitations` with no organization_id, which is D27's audited
- * door and exactly what the suite-wide guard is built to flag. Standing the
- * guard down lives in this one named helper, so a test that needs it says so and
- * every other test keeps full protection.
+ * Token lookup intentionally has no organization scope. Keeping the guard
+ * exemption in one named helper makes every cross-tenant read explicit.
  *
  * @template TReturn
  *
@@ -126,9 +75,8 @@ function throughTheAuditedDoor(Closure $work): mixed
 /**
  * What the user may do inside one organization, asked as a policy asks it.
  *
- * `hasPermissionTo()` and not `can()`: D29 turns off the package's gate hook,
- * so Laravel's gate knows nothing of a permission name. The relations are unset
- * because they cache per instance and this asks about several organizations.
+ * Laravel's gate does not know package permission names, so this uses
+ * `hasPermissionTo()`. Relations are cleared because they cache per instance.
  */
 function mayWithin(User $user, int $organizationId, Permission $permission): bool
 {

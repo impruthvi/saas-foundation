@@ -23,32 +23,9 @@ use Illuminate\Support\Facades\DB;
 /**
  * Turns an offer into a membership, for the person it was addressed to.
  *
- * The only action in the application that crosses a tenant boundary on purpose,
- * and the reason D27 exists. The invitation was resolved outside any tenant, by
- * `InvitationRepository`; everything this writes has to happen inside the
- * invitation's own organization.
- *
- *   no tenant resolved (the invitee's own org, or none)
- *            │
- *            ▼
- *   refusal ladder — six reasons, six exception classes
- *            │ passes
- *            ▼
- *   runForId($invitation->organization_id)     ◄── the integer, never the relation
- *            │                                     (ShouldBeStrict is on app-wide,
- *            ▼                                      so reading it would throw)
- *   DB::transaction
- *     ├── lockForUpdate + re-read status   ◄── the atomic part
- *     ├── AddOrganizationMember
- *     └── stamp accepted_at / accepted_by
- *
- * The lock is what makes a double-click safe. Two requests both pass the ladder,
- * both enter the transaction, and one waits: it re-reads the row, finds it
- * `Accepted`, and raises `InvitationAlreadyAccepted` rather than inserting a
- * second membership against the unique index on `(organization_id, user_id)`.
- * The caught constraint violation below is the belt to that lock's braces —
- * unreachable if the lock does its job, and a 500 turned into a clear answer if
- * it ever does not.
+ * The invitation is resolved before its tenant is known, so every write runs
+ * inside the invitation's organization. A row lock serializes concurrent
+ * accepts; the unique-constraint catch remains a final safety net.
  */
 final readonly class AcceptOrganizationInvitation
 {
@@ -74,7 +51,7 @@ final readonly class AcceptOrganizationInvitation
      * state first, then whether it is theirs, then whether the organization is
      * still open. Each reason is a distinct class, because "too late", "not for
      * you" and "not right now" are three different answers and collapsing them
-     * into one is the failure M2 exists to avoid.
+     * into one would lose information the recipient needs.
      *
      * Public because the accept screen asks the same question without acting on
      * the answer: it renders the reason instead of throwing it. One ladder, so

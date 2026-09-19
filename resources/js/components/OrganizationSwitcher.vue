@@ -23,8 +23,7 @@ const { isMobile, state } = useSidebar();
 const current = computed(() => page.props.organization);
 const organizations = computed(() => page.props.organizations ?? []);
 
-// A solo user has one organization, so the switcher is hidden for them rather
-// than absent: the moment they are in a second one, it appears (D1).
+// Keep the switcher mounted so it appears as soon as a second organization exists.
 const canSwitch = computed(() => organizations.value.length > 1);
 </script>
 

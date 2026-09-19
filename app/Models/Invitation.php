@@ -19,28 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * An offer of membership, made to an email address rather than to a user.
- *
- * Tenant-owned like every other row, which is what makes it awkward: the person
- * who reads an invitation is the one person guaranteed to be *outside* the
- * tenant. That read goes through `App\Tenancy\InvitationRepository`, the second
- * and last audited way around the scope (D27, after D22's first).
- *
- *   issued inside the tenant          read from outside it
- *   ────────────────────────          ────────────────────
- *   InviteOrganizationMember   ──►    InvitationRepository::findByToken()
- *   (scope applies normally)          (the audited door: both the scope and
- *                                      the retrieved guard stand down there)
- *
- * Two attributes are not what they look like:
- *
- * `token_hash` holds a digest. The token itself is generated once, handed to the
- * mailer, and never stored — `issueToken()` is the only place both halves exist
- * at the same time.
- *
- * `status` does not know about expiry. `Pending` and past `expires_at` is the
- * ordinary state of a stale invitation, and `isAcceptable()` is the question
- * callers actually mean.
+ * The plaintext token is returned once and only its digest is stored. Expiry is
+ * derived from `expires_at`, independently of the persisted status.
  *
  * @property int $id
  * @property int $organization_id
@@ -126,32 +106,17 @@ final class Invitation extends Model implements TenantOwned
         return $token;
     }
 
-    /**
-     * Whether the clock has run out on this invitation.
-     */
     public function hasExpired(): bool
     {
         return $this->expires_at->isPast();
     }
 
-    /**
-     * Whether this invitation could be taken right now, by the right person.
-     *
-     * Says nothing about who is asking — that is a separate refusal with its own
-     * exception, because "too late" and "not for you" are different answers.
-     */
+    /** Says nothing about the recipient, which has a distinct refusal. */
     public function isAcceptable(): bool
     {
         return $this->status->isOpen() && ! $this->hasExpired();
     }
 
-    /**
-     * Whether the given address is the one this invitation names.
-     *
-     * Addresses are stored lower-cased, so a recipient who registers as
-     * `B@Example.com` against an invitation to `b@example.com` is the same
-     * person and is treated as such.
-     */
     public function wasAddressedTo(string $email): bool
     {
         return $this->email === Str::lower($email);
