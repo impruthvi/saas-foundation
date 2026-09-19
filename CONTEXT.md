@@ -15,8 +15,20 @@ entitlement question. A solo user gets one containing only themselves.
 _Avoid_: team, workspace (acceptable as UI copy only), account, tenant
 
 **Membership**:
-The link between a user and an organization, carrying role and status.
+The link between a user and an organization, carrying rank and status.
 _Avoid_: team member, seat (a seat is a billed quantity, not a person)
+
+**Rank**:
+What a membership says a person is: Admin or Member, and never Owner, because
+ownership is `organizations.owner_id` (D23). The one writable fact about standing
+inside an organization. `MembershipRole` is its enum, kept for the column it casts.
+_Avoid_: role (that is the RBAC bundle below), level, tier
+
+**Role**:
+A named bundle of permissions granted inside one organization, held in the RBAC
+tables. Derived from rank and never written on its own (D31). `OrganizationRole` is
+its enum.
+_Avoid_: group, rank (that is the membership fact above)
 
 **User**:
 A human identity. Never the subject of billing or entitlements.

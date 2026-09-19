@@ -268,6 +268,98 @@ permanent tax on every route the foundation will grow.
 **Cost accepted:** the middleware order is now something this project owns rather than
 inherits, so an upgrade that reshuffles the web group has to be read rather than merged.
 
+## D29 — The permissions team is `organization_id`, and the invariant is asserted directly
+
+`spatie/laravel-permission` runs team-scoped with the organization as the team.
+`column_names.team_foreign_key` is `organization_id`, because this codebase has one word
+for the tenant. `register_permission_check_method` is **`false`**: the package default
+installs a `Gate::before` that answers every ability ahead of every policy, which is a
+second authorization idiom and can short-circuit a policy's own rules. Policies stay the
+only place an ability is answered, which means permissions are asked with
+`hasPermissionTo()` and never with `can('some.permission')` — the latter is false for
+everybody, administrators included.
+
+The team is held on a registrar, not in `Illuminate\Log\Context`, so nothing carries it
+into a queue payload. `App\Tenancy\TenantContext` is its one writer: `setId()` pushes it
+and `forget()` nulls it. The second half is the one that matters. A registrar left
+holding the previous organization answers `can()` for a tenant nobody resolved while
+every query stays correctly scoped — an authorization leak with no query leak.
+
+**D20's guard cannot see that, and cannot see this package at all.**
+`TenantQueryGuard` returns early on any SQL containing the string `organization_id`,
+before it checks which table was touched, so team-scoped queries pass it
+unconditionally — including `organization_id is null` when no team is resolved. M3
+therefore supplies its own invariant, asserted for every test in the suite:
+`getPermissionsTeamId()` equals `TenantContext::id()`, null included. The assignment
+tables are registered with the query guard as well, which is what makes the cross-team
+detach on account deletion visible enough to need a named door.
+
+**Cost accepted:** a published `config/permission.php` this project now owns, so a
+package upgrade that reshapes it has to be read rather than merged. The same cost D28
+accepted for the middleware order.
+
+## D30 — Role definitions are global; only assignments are team-scoped
+
+`roles` rows carry a null `organization_id` and are seeded once, by the migration that
+creates the tables. The per-organization fact lives in `model_has_roles` and
+`model_has_permissions`, which are never null and which cascade when an organization is
+deleted — foreign keys the package's own stub omits, and without which a later
+organization reusing an id inherits grants nobody gave it.
+
+**Why:** per-team role rows would have `CreateOrganization` write a role catalog for
+every organization that will ever exist, including every personal one, on a path whose
+failure the registering user cannot act on. Global definitions isolate identically,
+because isolation lives in the assignment.
+
+**Two package behaviours this binds.** `Role::create()` fills the team key from whatever
+team is resolved unless the key is passed explicitly, so every seed statement passes
+`'organization_id' => null`. And the package's unique index is
+`(organization_id, name, guard_name)`, which both Postgres and MySQL treat as
+non-constraining when the first column is null — safe only because roles are created
+once by a migration and never at runtime. A runtime role-creation path may not be added
+without solving that first.
+
+**Extension point (D15's requirement, decided now):** a customer-defined role is the same
+row with an organization in that column. The swap is `config('permission.models.role')`
+to a subclass — which will trip `tests/Unit/TenantScopingTest.php`, since a model in
+`app/Models` carrying `organization_id` must be `TenantOwned` and a global role cannot
+be. The subclass belongs outside `app/Models`, or that test gains a recorded exemption
+at the same time.
+
+## D31 — Rank is the writable fact; the role assignment is a projection of it
+
+`memberships.role` is written; the `model_has_roles` row is derived from it in the same
+transaction, by the same action, with `syncRoles` so a promotion replaces rather than
+accumulates. `OrganizationRole::forRank()` is the only translation between the two, and
+`AddOrganizationMember` is the only place a membership comes into being — which is what
+makes it the only place an assignment does.
+
+Three things this decision does **not** claim.
+
+**Rank is not the only fact that gates access.** `memberships.status` is the other, and no
+permission can express it. Every organization policy climbs the same ladder, extracted
+into `App\Concerns\ChecksOrganizationPermissions` so it cannot be copied wrongly: no
+organization resolved, then active membership, then the `owner_id` floor, then the
+permission.
+
+**`organizations.owner_id` remains the floor.** A single missing assignment would
+otherwise lock an owner out of inviting, out of promoting anybody, and out of every
+in-app path back. The floor sits _after_ the membership check, not before it: it exists
+for a drifted assignment, not for a suspended membership, and suspending an owner is a
+deliberate act that should hold.
+
+**A projection is not self-proving.** Under `RefreshDatabase` every membership was
+created by the code under test, so "they match" is vacuous. The assertions that earn
+their keep are the backfill — migrating a database that already had memberships — and
+the reverse direction, an assignment whose membership is gone.
+
+**Consequences.** Removing a membership must revoke explicitly: `model_has_roles` is
+keyed to organizations and users, never to memberships, so a delete on its own leaves the
+person holding everything they had. That revocation is a `deleted` hook on `Membership`
+rather than a line in one action. And ownership and rank must not disagree — the owner
+can be neither removed nor demoted, and the last _active_ administrator can be neither,
+because a suspended administrator holds the rank and grants nothing.
+
 ---
 
 ## Numbers not reproduced here
