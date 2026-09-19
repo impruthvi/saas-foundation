@@ -15,6 +15,7 @@ declare(strict_types=1);
 use App\Actions\CreateOrganization;
 use App\Actions\InviteOrganizationMember;
 use App\Enums\MembershipRole;
+use App\Enums\Permission;
 use App\Models\Invitation;
 use App\Models\Organization;
 use App\Models\User;
@@ -120,6 +121,22 @@ expect()->extend('toBeOne', fn () => $this->toBe(1));
 function throughTheAuditedDoor(Closure $work): mixed
 {
     return TenantQueryGuard::allowUnscoped($work);
+}
+
+/**
+ * What the user may do inside one organization, asked as a policy asks it.
+ *
+ * `hasPermissionTo()` and not `can()`: D29 turns off the package's gate hook,
+ * so Laravel's gate knows nothing of a permission name. The relations are unset
+ * because they cache per instance and this asks about several organizations.
+ */
+function mayWithin(User $user, int $organizationId, Permission $permission): bool
+{
+    return resolve(TenantContext::class)->runForId(
+        $organizationId,
+        fn (): bool => $user->unsetRelation('roles')->unsetRelation('permissions')
+            ->hasPermissionTo($permission->value),
+    );
 }
 
 /**
