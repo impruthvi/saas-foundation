@@ -27,9 +27,8 @@ final class ChangeMemberRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Never Owner: ownership is a column, not a rank (D23). The cases
-            // are listed rather than taken wholesale so one added later has to
-            // be considered here before it is assignable.
+            // Listing allowed ranks explicitly forces new enum cases to be
+            // considered before they become assignable.
             'role' => ['required', new Enum(MembershipRole::class), Rule::in([
                 MembershipRole::Member->value,
                 MembershipRole::Admin->value,

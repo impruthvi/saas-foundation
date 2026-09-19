@@ -23,9 +23,8 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 /**
  * What a stranger holding a token sees, and what happens when they act on it.
  *
- * Keyed by token rather than by key, and deliberately NOT route-model-bound:
- * binding would query `invitations` outside the audited repository and the
- * request has no tenant to scope it by (D27).
+ * Keyed by token rather than route-model-bound because the request has no tenant
+ * until the invitation is resolved.
  *
  *   GET /invitations/{token}
  *        │

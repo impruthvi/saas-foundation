@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -65,23 +64,12 @@ final class User extends Authenticatable implements PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
-    /**
-     * Roles are read against the organization `TenantContext` has resolved (D29).
-     *
-     * A membership's rank is still the writable fact; the assignment this trait
-     * reads is a projection of it, and never the other way round (D23, D31).
-     */
     use HasRoles;
-
     use Notifiable;
     use PasskeyAuthenticatable;
     use TwoFactorAuthenticatable;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

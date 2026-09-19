@@ -8,25 +8,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| Assignments do not outlive the organization that scoped them
-|--------------------------------------------------------------------------
-|
-| The package's migration stub constrains `role_id` and `permission_id` and
-| stops, so an organization could be deleted while its assignments stayed. That
-| is not a tidiness problem: keys auto-increment, so a later organization can
-| be handed the same id and inherit grants nobody gave it. The migration adds
-| the constraint (D29); these are the tests that keep it.
-|
-| The role rows here are the real ones — creating an organization now writes an
-| assignment for its owner (D31). Direct permission rows are still written by
-| hand, because the application grants permissions through roles and never
-| attaches one to a person; the foreign key is worth holding anyway, since the
-| column exists and the package would use it.
-|
-*/
-
 it('deletes the role assignments held in an organization when it is deleted', function (): void {
     $organization = resolve(CreateOrganization::class)->handle(User::factory()->create(), 'Acme');
 

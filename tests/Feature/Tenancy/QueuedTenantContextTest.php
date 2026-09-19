@@ -8,31 +8,6 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Tests\Fixtures\RecordResolvedTenant;
 
-/*
-|--------------------------------------------------------------------------
-| The tenant across a real queue roundtrip
-|--------------------------------------------------------------------------
-|
-| M1's definition-of-done: "a job resolves the correct organization across a
-| real queue roundtrip, and the next job on that worker inherits nothing."
-|
-| These deliberately do not use the sync driver or Queue::fake(). Sync runs the
-| job inline with the tenant still ambiently resolved, so the same assertions
-| would pass with every line of propagation deleted — a test that cannot fail
-| is worse than no test. The payload is written to the jobs table, the
-| singleton is dropped the way a fresh worker process would not have it, and
-| the job is then worked out of the database.
-|
-|   dispatch inside runFor ──► jobs.payload carries illuminate:log:context
-|            │
-|            ▼
-|   forget()  (what a worker booting fresh looks like)
-|            │
-|            ▼
-|   queue:work --once ──► JobProcessing ──► Context::hydrate ──► tenant resolved
-|
-*/
-
 beforeEach(function (): void {
     config()->set('queue.default', 'database');
 });

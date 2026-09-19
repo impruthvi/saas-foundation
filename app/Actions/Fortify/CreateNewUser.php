@@ -26,17 +26,10 @@ final readonly class CreateNewUser implements CreatesNewUsers
     /**
      * Validate and create a newly registered user.
      *
-     * A user without an organization is a state this application does not have
-     * (D1), so the organization is created in the same transaction rather than
-     * by an event listener firing afterwards: a registration that half-succeeds
-     * would leave an account that can log in and own nothing.
+     * The personal organization is created in the same transaction so a
+     * partially completed registration cannot leave an account owning nothing.
      *
-     * Someone who arrived holding an invitation gets their personal organization
-     * too. D1 is unconditional: the organization that invited them is somewhere
-     * they belong, not a replacement for somewhere they own. Belonging to two is
-     * also the moment the workspace switcher stops being hidden.
-     *
-     * Acceptance runs OUTSIDE the transaction, and is allowed to fail. An
+     * Invitation acceptance runs outside the transaction and may fail. An
      * invitation that lapsed while the form was being filled in must not cost
      * somebody their account — they can ask for a new one; they cannot ask for
      * their registration back.

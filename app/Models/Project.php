@@ -14,13 +14,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * The first genuinely tenant-owned model (D21).
- *
- * Deliberately almost empty. Its job at M1 is to be the thing the tenant
- * boundary protects, so that the boundary has a consumer in the milestone that
- * writes it. M5 gives it the `projects` limit, the usage meter and the upgrade
- * prompt.
- *
  * @property int $id
  * @property int $organization_id
  * @property string $name

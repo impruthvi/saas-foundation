@@ -24,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // SubstituteBindings is pulled out of its default position and put back
         // after the tenant is resolved. Route model binding queries the model,
         // and a tenant-owned model's global scope raises when no organization is
-        // resolved (D3) — so binding `{project}` or `{invitation}` in its stock
+        // resolved, so binding `{project}` or `{invitation}` in its stock
         // position is a 500 rather than the 404 a cross-tenant request deserves.
         $middleware->web(
             append: [

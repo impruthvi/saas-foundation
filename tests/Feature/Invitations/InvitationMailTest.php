@@ -13,24 +13,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| The invitation email, and the tenant riding along with it
-|--------------------------------------------------------------------------
-|
-| Two separate concerns, tested separately: what the message says, and whether
-| the job that sends it survives a real queue.
-|
-| The propagation tests do not use Queue::fake() or the sync driver. phpunit.xml
-| pins QUEUE_CONNECTION=sync, and sync runs the mailable inline with the sending
-| organization still ambiently resolved — every assertion here would pass with
-| M1's propagation deleted. So the payload goes to the jobs table, the tenant is
-| changed to somebody else's, and the job is worked out of the database. If
-| hydration does not overwrite the resolved tenant, `SerializesModels` restores
-| this row under the wrong organization and the retrieved guard raises (D24).
-|
-*/
-
 /**
  * Issue an invitation and queue its email, the way a request would.
  *
@@ -102,15 +84,15 @@ describe('across a real queue roundtrip', function (): void {
 
         inviteAndMail($sender, 'crosstenant@example.com');
 
-        // The worst case M1 exists to prevent: a long-lived worker that already
-        // has another organization resolved. If hydration does not replace it,
+        // Simulate a long-lived worker that already has another organization
+        // resolved. If hydration does not replace it,
         // restoring the invitation raises CrossTenantAccess and the job fails.
         resolve(TenantContext::class)->set($other);
 
         // `SerializesModels` restores through `newQueryForRestoration()`, which
         // calls `newQueryWithoutScopes()` — so the restoring SELECT carries no
         // organization_id and the suite-wide guard fails the job on sight. That
-        // is the framework behaviour D24 names, not a leak: the row is addressed
+        // is expected framework behavior, not a leak: the row is addressed
         // by primary key from a payload the application wrote, and the
         // `retrieved` guard is what checks it landed in the right tenant. The
         // test below proves that guard still bites.
@@ -130,7 +112,7 @@ describe('across a real queue roundtrip', function (): void {
 
         // Propagation is what normally prevents this. Standing it down leaves
         // the worker holding the wrong organization, which is the exact
-        // condition the retrieved guard exists for (D24). Without it, an
+        // condition the retrieved guard exists for. Without it, an
         // unscoped restoration would hand one tenant another tenant's row.
         resolve(TenantContext::class)->set($other);
 

@@ -15,32 +15,9 @@ use Spatie\Permission\PermissionRegistrar;
 /**
  * Deletes a user account without orphaning anything that belongs to it.
  *
- *   sole owner of a shared organization? ──yes──► refuse, name the remedy
- *                 │ no
- *                 ▼
- *   delete the organizations they alone own (memberships and projects cascade)
- *                 │
- *                 ▼
- *   delete the user (their remaining memberships cascade)
- *
- * Before M1 this was a one-line delete. From M4 the organization holds a live
- * subscription, so silent orphaning would be discovered by whoever is still
- * being billed (D25). `organizations.owner_id` restricts on delete, so the
- * database refuses the orphan even if this rule is ever bypassed.
- *
- * Deleting the row also revokes every role the user held, in every
- * organization at once: `HasRoles` registers a `deleting` hook that turns team
- * scoping off, detaches across all teams, and turns it back on. That crossing
- * is correct — an account being closed should not keep grants anywhere — but
- * it is a crossing, and it is the reason the suite needs a named door to let
- * the resulting unscoped deletes past the query guard.
- *
- * The hook turns scoping back on as its last statement rather than in a
- * `finally`, so a detach that throws leaves it off for the rest of the
- * process. On a queue worker that is every later `can()` answered with the
- * organization ignored, which is the widest failure this milestone can
- * produce. Restoring it here costs one line and does not depend on the
- * package changing.
+ * Shared organizations require ownership transfer first. The permission
+ * package temporarily disables team scoping while revoking cross-team grants,
+ * so this action restores the previous setting even when deletion fails.
  */
 final readonly class DeleteUser
 {

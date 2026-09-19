@@ -19,13 +19,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * The link between a user and an organization, carrying role and status.
- *
- * Tenant-owned like everything else, which means the question "which
- * organizations does this user belong to" cannot be asked of it directly: that
- * question is asked before any organization is resolved. It lives in
- * `App\Tenancy\MembershipRepository`, the one audited way around the scope (D22).
- *
  * @property int $id
  * @property int $organization_id
  * @property int $user_id

@@ -14,19 +14,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Takes somebody out of an organization.
  *
- * The other half of M2: invitations built the way in and left no way out.
- *
- *   removing the owner? ──────────────► OwnerCannotBeRemoved
- *              │ no
- *              ▼
- *   the last active administrator? ───► LastAdministrator
- *              │ no
- *              ▼
- *   delete the membership ──► the deleted hook revokes the role and any
- *                             direct permissions, in this organization only
- *
- * The two refusals are separate classes because they have different remedies:
- * one says transfer ownership, the other says promote somebody first.
+ * Owners and the last active administrator are refused for different reasons;
+ * deleting an allowed membership also revokes its tenant-scoped grants.
  */
 final readonly class RemoveOrganizationMember
 {

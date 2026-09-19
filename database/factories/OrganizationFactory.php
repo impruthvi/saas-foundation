@@ -31,9 +31,6 @@ final class OrganizationFactory extends Factory
         ];
     }
 
-    /**
-     * A solo user's own organization, for which the switcher is hidden (D1).
-     */
     public function personal(): static
     {
         return $this->state(fn (array $attributes): array => [

@@ -17,26 +17,9 @@ use Illuminate\Support\Facades\DB;
 /**
  * Promotes or demotes a member, moving rank and the role it implies together.
  *
- * Exists as its own action from M3 because changing rank became two writes.
- * Doing it as one statement on the members screen is how the projection (D31)
- * starts drifting, and the drift is silent: the row says Admin and the person
- * cannot invite anyone.
- *
- *   already at this rank? ──yes──► nothing to do, return the membership
- *              │ no
- *              ▼
- *   demoting the owner? ─────────────► OwnerCannotBeDemoted
- *              │ no
- *              ▼
- *   demoting the last administrator? ──yes──► LastAdministrator
- *              │ no
- *              ▼
- *   rank ──► role, one transaction, inside the organization's own tenant
- *
  * The count is taken under `lockForUpdate`, so two administrators demoting
  * each other at the same moment cannot both read "there are two of us" and
- * both proceed. SQLite ignores the lock, so the concurrent case is proven
- * against PostgreSQL only — see the test.
+ * both proceed.
  */
 final readonly class ChangeOrganizationMemberRole
 {
@@ -70,8 +53,7 @@ final readonly class ChangeOrganizationMemberRole
      * Refuse a demotion that would strand the organization.
      *
      * Two refusals, and the order matters: the owner is refused whatever the
-     * administrator count says, because ownership and rank are separate facts
-     * that must not disagree (D23).
+     * administrator count says, because ownership and rank must not disagree.
      *
      * @throws OwnerCannotBeDemoted|LastAdministrator
      */

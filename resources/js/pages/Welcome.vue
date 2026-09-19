@@ -148,7 +148,6 @@ import { register } from '@/routes';
                 <div
                     class="relative -mb-px aspect-[335/364] w-full shrink-0 overflow-hidden rounded-t-lg bg-[#fff2f2] lg:mb-0 lg:-ml-px lg:aspect-auto lg:w-[438px] lg:rounded-t-none lg:rounded-r-lg dark:bg-[#1D0002]"
                 >
-                    <!-- Laravel Logo -->
                     <svg
                         class="w-full max-w-none translate-y-0 text-[#F53003] opacity-100 transition-all duration-750 dark:text-[#F61500] starting:opacity-0 motion-safe:starting:translate-y-6"
                         viewBox="0 0 438 104"
@@ -185,7 +184,6 @@ import { register } from '@/routes';
                         />
                     </svg>
 
-                    <!-- 13 -->
                     <svg
                         class="relative -mt-[6.6rem] -ml-8 w-[438px] max-w-none [--stroke-color:#1B1B18] lg:ml-0 dark:[--stroke-color:#FF750F]"
                         viewBox="0 0 440 392"

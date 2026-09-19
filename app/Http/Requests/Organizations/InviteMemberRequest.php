@@ -25,9 +25,8 @@ final class InviteMemberRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email', 'max:255'],
-            // Never Owner: ownership is a column, not a rank (D23). Listing the
-            // cases explicitly rather than accepting the enum wholesale means a
-            // case added later has to be considered here before it is invitable.
+            // Listing allowed ranks explicitly forces new enum cases to be
+            // considered before they become invitable.
             'role' => ['required', new Enum(MembershipRole::class), Rule::in([
                 MembershipRole::Member->value,
                 MembershipRole::Admin->value,

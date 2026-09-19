@@ -59,11 +59,6 @@ final readonly class MembershipPolicy
             && $membership->mayBeRemovedFrom($organization, $this->otherActiveAdministrators($membership));
     }
 
-    /**
-     * Changing somebody's rank. The owner's rank is not negotiable (D23), and
-     * the last administrator cannot be demoted for the same reason they cannot
-     * be removed.
-     */
     public function update(User $user, Membership $membership): bool
     {
         $organization = $this->tenant->current();

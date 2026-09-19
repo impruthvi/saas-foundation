@@ -9,17 +9,6 @@ use App\Models\Organization;
 use App\Models\User;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| Register -> personal organization auto-created
-|--------------------------------------------------------------------------
-|
-| The first clause of the ten-minute journey (D8), and the reason D1 says the
-| organization is always the tenant: a solo user is an organization of one
-| rather than a second billing subject threaded through the product.
-|
-*/
-
 it('gives a newly registered user exactly one personal organization', function (): void {
     $response = $this->post(route('register.store'), [
         'name' => 'Ada Lovelace',

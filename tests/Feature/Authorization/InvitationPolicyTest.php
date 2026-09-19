@@ -11,18 +11,6 @@ use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
-/*
-|--------------------------------------------------------------------------
-| Who may manage invitations, now that the answer comes from the role
-|--------------------------------------------------------------------------
-|
-| The policy asks three questions in order, and each covers something the
-| others cannot: ownership survives a role assignment that went missing,
-| status is not expressible as a permission, and the permission is the part
-| M3 made configurable. These are the cases that tell them apart.
-|
-*/
-
 function mayManageInvitations(User $user, Organization $organization): bool
 {
     return resolve(TenantContext::class)->runFor(

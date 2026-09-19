@@ -22,9 +22,6 @@ use RuntimeException;
 /**
  * Who is in this organization, who has been asked, and what may be done about it.
  *
- * Both lists are scoped by the global scope rather than by anything written
- * here — that is the point of enforcing tenancy at the model boundary (D3).
- *
  * Both are also eager-loaded and paginated deliberately. Under
  * `ShouldBeStrict`, which `config/essentials.php` enables for every
  * environment and not only for tests, reading `$membership->user` without
@@ -93,9 +90,6 @@ final class MemberController extends Controller
         ]);
     }
 
-    /**
-     * Change somebody's rank, and the role it implies with it.
-     */
     public function update(
         ChangeMemberRoleRequest $request,
         Membership $membership,
@@ -112,13 +106,7 @@ final class MemberController extends Controller
         return back();
     }
 
-    /**
-     * Take somebody out of the organization.
-     *
-     * Removing yourself is allowed, so the redirect cannot assume the members
-     * screen is still readable afterwards — the next request resolves whatever
-     * organization is left, usually the person's own.
-     */
+    /** Removing yourself requires redirecting through tenant resolution again. */
     public function destroy(
         Request $request,
         Membership $membership,

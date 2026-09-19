@@ -13,9 +13,7 @@ use Illuminate\Database\Eloquent\Scope;
 /**
  * Constrains every query on a tenant-owned model to the resolved organization.
  *
- * Missing context raises rather than falling back to an unconstrained query:
- * scoping is enforced at the model boundary, so the boundary is the place that
- * has to fail (D3, D20).
+ * Missing context raises rather than falling back to an unconstrained query.
  */
 /**
  * @implements Scope<Model>

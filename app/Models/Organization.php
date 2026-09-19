@@ -16,16 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * The tenant: owner of data, holder of the subscription, subject of every
- * entitlement question. Never a user (D1).
- *
- * It is not itself tenant-owned — it is the tenant — so it carries no
- * organization_id and no global scope. What bounds access to it is membership.
- *
- *   User ──┬─ Membership ─┬── Organization ──┬── Project (tenant-owned)
- *          │              │       │
- *          └─ owner_id ───────────┘
- *             one writable fact for ownership (D23)
+ * The tenant, data owner, subscription holder, and entitlement subject.
+ * It is bounded by membership rather than a tenant scope of its own.
  *
  * @property int $id
  * @property string $name
@@ -54,9 +46,6 @@ final class Organization extends Model
     /** @use HasFactory<OrganizationFactory> */
     use HasFactory;
 
-    /**
-     * Organizations are addressed by slug in links and forms (D26).
-     */
     public function getRouteKeyName(): string
     {
         return 'slug';
@@ -88,10 +77,6 @@ final class Organization extends Model
         return $this->hasMany(Project::class);
     }
 
-    /**
-     * Whether this is a solo user's own organization, for which the workspace
-     * switcher is hidden rather than absent (D1).
-     */
     public function isPersonal(): bool
     {
         return $this->personal;

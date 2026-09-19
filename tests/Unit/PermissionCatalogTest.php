@@ -7,22 +7,6 @@ use App\Enums\OrganizationRole;
 use App\Enums\Permission;
 use Illuminate\Support\Facades\DB;
 
-/*
-|--------------------------------------------------------------------------
-| The catalog the enums describe is the catalog in the database
-|--------------------------------------------------------------------------
-|
-| The migration seeds role and permission names literally, because a migration
-| has to keep describing the database it built even after an enum is renamed.
-| That is the right call and it buys a drift problem: two statements of the
-| same catalog, either of which can move without the other.
-|
-| This is the seam that refuses to let them. It reads the rows and compares
-| them with the enums in both directions, so a permission added to code and not
-| to the database fails here, and so does a row nobody declares.
-|
-*/
-
 it('has a row for every permission the application names, and no others', function (): void {
     $stored = DB::table('permissions')->pluck('name')->sort()->values()->all();
 

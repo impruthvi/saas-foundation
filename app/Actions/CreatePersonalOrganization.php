@@ -8,13 +8,8 @@ use App\Models\Organization;
 use App\Models\User;
 
 /**
- * Gives a newly registered user the organization they already implicitly have.
- *
- * D1's consequence: there are no personal subscriptions, so a solo user is an
- * organization of one rather than a special case threaded through billing and
- * entitlements. The workspace switcher is hidden for them, not absent.
- *
- * "Workspace" is UI copy only; the domain word stays organization (CONTEXT.md).
+ * Gives every newly registered user a personal organization, avoiding a second
+ * billing and entitlement path for solo users.
  */
 final readonly class CreatePersonalOrganization
 {

@@ -14,17 +14,6 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Mail;
 use Tests\Fixtures\RecordPermissionInJob;
 
-/*
-|--------------------------------------------------------------------------
-| A role granted in organization A grants nothing in organization B
-|--------------------------------------------------------------------------
-|
-| M3's definition of done, in one sentence, asserted four ways: directly,
-| across an explicit switch inside one request, over HTTP, and across a real
-| queue roundtrip. Each is a different way the team the package answers for can
-| come loose from the tenant the request resolved.
-|
-*/
 /**
  * @return array{0: User, 1: Organization, 2: Organization}
  */

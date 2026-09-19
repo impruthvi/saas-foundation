@@ -14,16 +14,6 @@ use App\Models\User;
 use App\Tenancy\TenantContext;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| Ownership, transfer, and refusing to orphan
-|--------------------------------------------------------------------------
-|
-| Ownership is one column (D23). Transfer exists because account deletion has
-| to be able to name a remedy when it refuses (D25).
-|
-*/
-
 it('makes the creating user the owner and a member', function (): void {
     $user = User::factory()->create();
 

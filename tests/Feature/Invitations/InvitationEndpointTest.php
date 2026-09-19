@@ -15,21 +15,6 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Mail;
 use Tests\Support\TenantQueryGuard;
 
-/*
-|--------------------------------------------------------------------------
-| The invitation endpoints
-|--------------------------------------------------------------------------
-|
-| The management routes are tenant-scoped by the model boundary, so a
-| cross-tenant request is a 404 rather than a 403: a 403 would confirm that the
-| other organization's invitation exists (see the endpoint-test rules).
-|
-| The acceptance routes are reachable by a stranger and keyed by token. Their
-| authorization is holding the token AND being the addressee, which is why the
-| decline test below checks the second half separately.
-|
-*/
-
 describe('the members screen', function (): void {
     it('redirects a guest to sign in', function (): void {
         $this->get(route('organizations.members.index'))->assertRedirect(route('login'));

@@ -22,17 +22,8 @@ use Laravel\Fortify\Fortify;
 
 final class FortifyServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
+    public function register(): void {}
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         $this->configureActions();
@@ -40,18 +31,12 @@ final class FortifyServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
     }
 
-    /**
-     * Configure Fortify actions.
-     */
     private function configureActions(): void
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
     }
 
-    /**
-     * Configure Fortify views.
-     */
     private function configureViews(): void
     {
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/Login', [
@@ -87,9 +72,6 @@ final class FortifyServiceProvider extends ServiceProvider
         Fortify::confirmPasswordView(fn () => Inertia::render('auth/ConfirmPassword'));
     }
 
-    /**
-     * Configure rate limiting.
-     */
     private function configureRateLimiting(): void
     {
         RateLimiter::for('two-factor', fn (Request $request) => Limit::perMinute(5)->by($request->session()->get('login.id')));
@@ -108,8 +90,8 @@ final class FortifyServiceProvider extends ServiceProvider
     /**
      * The invitation whose token this visitor is carrying, if any.
      *
-     * Read through the audited repository (D27): the visitor is unauthenticated,
-     * so there is no tenant to scope the lookup by. A token that no longer
+     * The visitor is unauthenticated, so there is no tenant to scope the lookup
+     * by. A token that no longer
      * resolves, or an invitation that has lapsed, simply produces nothing — the
      * register form then behaves normally rather than refusing to load.
      *

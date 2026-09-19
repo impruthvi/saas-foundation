@@ -15,20 +15,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Makes a model's rows belong to one organization, and keeps them there.
- *
- * Three hooks, because one is not enough:
- *
- *   query     ──► TenantScope          constrains select, update and delete
- *   creating  ──► fill organization_id inserts never reach the scope
- *   retrieved ──► CrossTenantAccess    the paths that bypass the scope entirely
- *
- * That third one carries the weight the other two cannot. `Model::
- * newQueryForRestoration()` calls `newQueryWithoutScopes()`, so a queued job
- * carrying a serialized tenant-owned model restores it with the scope switched
- * off. The row still arrives through `retrieved`, which is where a mismatch
- * between the row's organization and the resolved one is turned into a failed
- * job rather than a silent cross-tenant read (D24).
+ * Applies tenant scoping on reads, fills the tenant on inserts, and rejects
+ * cross-tenant models restored through paths that bypass global scopes.
  *
  * @phpstan-require-extends Model
  */
@@ -128,8 +116,7 @@ trait BelongsToOrganization
      * Eloquent addresses a loaded model by primary key alone, so `$model->save()`
      * and `$model->delete()` never reach the global scope. Adding the tenant
      * predicate here means an instance carrying one organization's key cannot
-     * write to another's row, and it keeps every statement the application emits
-     * against a tenant-owned table carrying an organization_id (D20).
+     * write to another's row.
      *
      * @param  Builder<static>  $query
      * @return Builder<static>
@@ -155,8 +142,7 @@ trait BelongsToOrganization
     /**
      * Read or write across organizations, deliberately and visibly.
      *
-     * Call sites are restricted by `tests/Unit/TenantScopingTest.php`; reaching
-     * for this in the product surface fails that test by design (D22).
+     * Call sites are restricted by an architecture test.
      *
      * @param  Builder<static>  $query
      * @return Builder<static>

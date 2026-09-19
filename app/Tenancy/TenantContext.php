@@ -11,35 +11,9 @@ use Illuminate\Support\Facades\Context;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * The resolved tenant for the current unit of work.
- *
- * Registered as a singleton, never read from a static, so a test, a queue worker
- * and a scheduled command each get their own. The identifier is mirrored into
- * `Illuminate\Log\Context`, which the framework dehydrates into every queue
- * payload and hydrates on `JobProcessing` before the payload is unserialized —
- * that is the whole propagation mechanism (D24).
- *
- * It is also mirrored into `spatie/laravel-permission`, whose active team is
- * held on a registrar and is **not** carried by `Context` — nothing dehydrates
- * it into a payload. So this class is the one writer of it (D29), and the line
- * that matters most is the one in `forget()`: a registrar left holding the
- * previous organization answers `can()` for a tenant that is no longer
- * resolved, while every query stays correctly scoped. That is an authorization
- * leak with no query leak, and the D20 guard is built to watch queries.
- *
- *   setId(id) ──┬──► Context::add(tenant.organization_id)
- *               │            │
- *               │            ▼
- *               │    Queue::createPayloadUsing ──► payload
- *               │            │
- *               │            ▼
- *               │    JobProcessing ──► Context::hydrate ──► listener
- *               │            │                                 │
- *               │            │           key present ──► setId(id)
- *               │            │           key ABSENT  ──► forget()
- *               │            │                                 │
- *               └──► PermissionRegistrar ◄─────────────────────┘
- *                    ::setPermissionsTeamId(id | null)
+ * Keeps the resolved organization synchronized with queue context and the
+ * permission registrar. Clearing all three stores prevents a long-lived worker
+ * from authorizing against the previous job's organization.
  */
 final class TenantContext
 {
@@ -153,7 +127,7 @@ final class TenantContext
      *
      * The entry point for work with no ambient tenant of its own: scheduled
      * commands, webhook processing, and anything else that knows which
-     * organization it is acting for and must not inherit one (D24).
+     * organization it is acting for and must not inherit one.
      *
      * @template TReturn
      *
@@ -170,7 +144,7 @@ final class TenantContext
      *
      * For work that is legitimately cross-tenant: console commands, the admin
      * console, and the one membership lookup that answers "which organizations
-     * does this user belong to" (D22).
+     * does this user belong to".
      *
      * @template TReturn
      *

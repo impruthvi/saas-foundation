@@ -9,12 +9,8 @@ use Illuminate\Support\Facades\Schema;
 /**
  * The link between a user and an organization, carrying role and status.
  *
- * Never a seat: a seat is a billed quantity, not a person (CONTEXT.md).
- *
- * The table is tenant-owned like any other, and the one question it answers
- * that cannot be scoped — which organizations does this user belong to, asked
- * before any organization is resolved — goes through a single audited
- * repository (D22). That query drives the `user_id` index.
+ * The `user_id` index supports resolving a user's organizations before a tenant
+ * is known. A membership is a person relationship, never a billed seat.
  */
 return new class extends Migration
 {
