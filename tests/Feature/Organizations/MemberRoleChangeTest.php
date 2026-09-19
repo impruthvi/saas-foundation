@@ -24,27 +24,6 @@ use App\Tenancy\TenantContext;
 |
 */
 
-/**
- * What the user may do, asked the way a policy will ask it.
- *
- * `hasPermissionTo()` and not `can()`. D29 turns off the package's
- * `Gate::before`, so Laravel's gate knows nothing about a permission name and
- * `can('organization.invite')` is false for everybody — including an
- * administrator. Policies stay the only place an ability is answered; they
- * consult the permission store through the package's own API.
- *
- * The relations are unset first because they are cached per model instance and
- * this asks the same user about two organizations in a row.
- */
-function mayWithin(User $user, int $organizationId, Permission $permission): bool
-{
-    return resolve(TenantContext::class)->runForId(
-        $organizationId,
-        fn (): bool => $user->unsetRelation('roles')->unsetRelation('permissions')
-            ->hasPermissionTo($permission->value),
-    );
-}
-
 it('promotes a member, and the promotion is what lets them invite', function (): void {
     $owner = User::factory()->create();
     $member = User::factory()->create();
