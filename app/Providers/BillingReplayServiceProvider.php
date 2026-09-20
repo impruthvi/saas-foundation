@@ -13,11 +13,6 @@ final class BillingReplayServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        config()->set(
-            'cashier-dunning.fixtures.path',
-            base_path('tests/Fixtures/billing'),
-        );
-
         CashierDunning::createBillableUsing(function (): Organization {
             $owner = User::factory()->create([
                 'email' => 'replay@example.test',
