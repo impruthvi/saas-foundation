@@ -24,20 +24,20 @@ no projection of it at M4.
 
 ## What already exists and is not rebuilt
 
-| Existing                                                                 | What M4 does with it                                                                                                                                                              |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `App\Enums\Permission::ManageBilling` (`organization.manage_billing`)    | **Nothing.** The permission exists, the migration seeds it, and `OrganizationRole::Admin` already grants it. M4 adds no permission migration.                                      |
-| `App\Models\Organization` — not `TenantOwned`, bounded by membership     | Becomes the Cashier customer. `Cashier::findBillable()` queries it with no tenant resolved, which is legal today and needs no new audited door.                                    |
-| `organizations.owner_id` (D23)                                           | Read to decide who is billed, exactly as D23 anticipated. Never written by M4.                                                                                                    |
-| `App\Tenancy\TenantContext::runFor()`                                    | The webhook's tenant resolver. No second middleware, no second resolver.                                                                                                          |
-| `HandleInertiaRequests::present()` — projects an organization to 4 keys  | Already immune to leaking `stripe_id` / `pm_last_four` into every page payload. Left exactly as it is, and a test locks that.                                                      |
-| `App\Concerns\ChecksOrganizationPermissions`                             | `SubscriptionPolicy` uses the same ladder — resolved tenant, active membership, owner floor, then the permission. No new authorization idiom.                                      |
-| `App\Actions\DeleteUser` + `OwnershipTransferRequired` (D25)             | Gains a second named refusal in the same shape: an account with unresolved billing cannot be closed (D34).                                                                         |
-| `tests/Support/TenantQueryGuard`                                         | Extended to watch `subscriptions`, with the limits D32 records.                                                                                                                   |
-| `app/Actions/RemoveOrganizationMember::wouldLeaveNobodyInCharge()`       | The house pattern for "two requests must not both read the same stale answer". The checkout action reuses its `lockForUpdate()` shape rather than inventing one.                   |
-| `phpunit.xml` — `QUEUE_CONNECTION=sync`, `MAIL_MAILER=array`            | Already what `cashier-dunning` requires of a replay host. Nothing to change for the suite; the CI shell environment needs the same.                                                |
+| Existing                                                                | What M4 does with it                                                                                                                                             |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `App\Enums\Permission::ManageBilling` (`organization.manage_billing`)   | **Nothing.** The permission exists, the migration seeds it, and `OrganizationRole::Admin` already grants it. M4 adds no permission migration.                    |
+| `App\Models\Organization` — not `TenantOwned`, bounded by membership    | Becomes the Cashier customer. `Cashier::findBillable()` queries it with no tenant resolved, which is legal today and needs no new audited door.                  |
+| `organizations.owner_id` (D23)                                          | Read to decide who is billed, exactly as D23 anticipated. Never written by M4.                                                                                   |
+| `App\Tenancy\TenantContext::runFor()`                                   | The webhook's tenant resolver. No second middleware, no second resolver.                                                                                         |
+| `HandleInertiaRequests::present()` — projects an organization to 4 keys | Already immune to leaking `stripe_id` / `pm_last_four` into every page payload. Left exactly as it is, and a test locks that.                                    |
+| `App\Concerns\ChecksOrganizationPermissions`                            | `SubscriptionPolicy` uses the same ladder — resolved tenant, active membership, owner floor, then the permission. No new authorization idiom.                    |
+| `App\Actions\DeleteUser` + `OwnershipTransferRequired` (D25)            | Gains a second named refusal in the same shape: an account with unresolved billing cannot be closed (D34).                                                       |
+| `tests/Support/TenantQueryGuard`                                        | Extended to watch `subscriptions`, with the limits D32 records.                                                                                                  |
+| `app/Actions/RemoveOrganizationMember::wouldLeaveNobodyInCharge()`      | The house pattern for "two requests must not both read the same stale answer". The checkout action reuses its `lockForUpdate()` shape rather than inventing one. |
+| `phpunit.xml` — `QUEUE_CONNECTION=sync`, `MAIL_MAILER=array`            | Already what `cashier-dunning` requires of a replay host. Nothing to change for the suite; the CI shell environment needs the same.                              |
 
-Nothing above is rewritten. The only existing file whose *behaviour* changes is
+Nothing above is rewritten. The only existing file whose _behaviour_ changes is
 `app/Actions/DeleteUser.php`, and only by adding a refusal before the work it already does.
 
 ## Decisions this milestone proposes
@@ -275,7 +275,7 @@ catalog offered again.
 - `App\Providers\BillingServiceProvider` and `App\Providers\BillingReplayServiceProvider`.
 - `App\Actions\{StartBillingCheckout, CancelSubscription, ResumeSubscription}`.
 - `App\Http\Controllers\Billing\{BillingController, CheckoutController, SubscriptionController,
-  StripeWebhookController}`; `App\Http\Requests\Billing\{CheckoutRequest, SubscriptionActionRequest}`.
+StripeWebhookController}`; `App\Http\Requests\Billing\{CheckoutRequest, SubscriptionActionRequest}`.
 - `App\Policies\SubscriptionPolicy`; four exceptions in `App\Exceptions\Billing\`.
 - `failed_webhook_events` table (D36); `BillingMustBeResolved` and the `DeleteUser`
   refusal (D34).
@@ -386,20 +386,20 @@ TARGET: 61/61 paths tested (100%)  |  Code paths: 37  |  User flows: 24
 
 ### Test files
 
-| File                                                | Covers                                                     |
-| --------------------------------------------------- | ---------------------------------------------------------- |
-| `tests/Unit/BillingCatalogTest.php`                 | `PlanCatalog`, duplicate and malformed configuration        |
-| `tests/Unit/ArchTest.php` (extended)                | `user_id` ban, `subscribed(` confinement, provider list     |
-| `tests/Unit/TenantScopingTest.php` (extended)       | `Subscription` is `TenantOwned`; no new escape callers      |
-| `tests/Feature/Billing/BillingScreenTest.php`       | Four rendered states; props carry no Stripe columns         |
-| `tests/Feature/Billing/CheckoutTest.php`            | Validation, 409 location, mismatch 409, Stripe failure      |
-| `tests/Feature/Billing/SubscriptionLifecycleTest.php` | Cancel, grace, resume, refusals                           |
-| `tests/Feature/Billing/BillingAuthorizationTest.php`| The ladder, the owner floor, the member refusal             |
-| `tests/Feature/Billing/BillingBoundaryTest.php`     | Cross-tenant reads and writes on `Subscription`             |
-| `tests/Feature/Billing/StripeWebhookTest.php`       | Both id shapes, tenant resolution, retention, retry policy  |
-| `tests/Feature/Billing/CheckoutConcurrencyTest.php` | Parallel checkout, one customer, stable idempotency key     |
-| `tests/Feature/Authorization/AccountClosureTest.php` (extended) | D34's refusals                                   |
-| `tests/Browser/BillingTest.php`                     | Subscribe actually navigates away from the app              |
+| File                                                            | Covers                                                     |
+| --------------------------------------------------------------- | ---------------------------------------------------------- |
+| `tests/Unit/BillingCatalogTest.php`                             | `PlanCatalog`, duplicate and malformed configuration       |
+| `tests/Unit/ArchTest.php` (extended)                            | `user_id` ban, `subscribed(` confinement, provider list    |
+| `tests/Unit/TenantScopingTest.php` (extended)                   | `Subscription` is `TenantOwned`; no new escape callers     |
+| `tests/Feature/Billing/BillingScreenTest.php`                   | Four rendered states; props carry no Stripe columns        |
+| `tests/Feature/Billing/CheckoutTest.php`                        | Validation, 409 location, mismatch 409, Stripe failure     |
+| `tests/Feature/Billing/SubscriptionLifecycleTest.php`           | Cancel, grace, resume, refusals                            |
+| `tests/Feature/Billing/BillingAuthorizationTest.php`            | The ladder, the owner floor, the member refusal            |
+| `tests/Feature/Billing/BillingBoundaryTest.php`                 | Cross-tenant reads and writes on `Subscription`            |
+| `tests/Feature/Billing/StripeWebhookTest.php`                   | Both id shapes, tenant resolution, retention, retry policy |
+| `tests/Feature/Billing/CheckoutConcurrencyTest.php`             | Parallel checkout, one customer, stable idempotency key    |
+| `tests/Feature/Authorization/AccountClosureTest.php` (extended) | D34's refusals                                             |
+| `tests/Browser/BillingTest.php`                                 | Subscribe actually navigates away from the app             |
 
 ### Test traps this suite will hit
 
@@ -422,17 +422,17 @@ TARGET: 61/61 paths tested (100%)  |  Code paths: 37  |  User flows: 24
 
 ## Failure modes
 
-| Codepath | Realistic production failure | Test? | Handled? | User sees |
-| --- | --- | --- | --- | --- |
-| `StartBillingCheckout` | Stripe rate-limits or times out | yes | yes (D10) | "Payment provider unavailable, try again" |
-| `StartBillingCheckout` | Transaction rolls back after Stripe created the customer | yes | yes (D37) | nothing; the retry reuses the same customer |
-| `CheckoutController` | User submits a form from a stale tab | yes | yes (D33) | 409, "this organization changed elsewhere" |
-| `StripeWebhookController` | Event for an organization since deleted | yes | yes (D36) | nothing; row retained, Stripe not retried |
-| `StripeWebhookController` | `customer.updated` with the `data.object.id` shape | yes | yes (D32) | nothing; tenant resolves correctly |
-| `StripeWebhookController` | Out-of-order `active` after `deleted` restores stale state | **no** | **no** | stale plan until the next event corrects it |
-| `Subscription::cancel()` | `$this->owner` lazy-loads on a retrieved model | yes | yes (D35) | nothing; relation set explicitly |
-| `DeleteUser` | Account closed while Stripe still charges | yes | yes (D34) | refusal naming the remedy |
-| `BillingFacts` | Organization has no subscription at all | yes | yes | catalog offered |
+| Codepath                  | Realistic production failure                               | Test?  | Handled?  | User sees                                   |
+| ------------------------- | ---------------------------------------------------------- | ------ | --------- | ------------------------------------------- |
+| `StartBillingCheckout`    | Stripe rate-limits or times out                            | yes    | yes (D10) | "Payment provider unavailable, try again"   |
+| `StartBillingCheckout`    | Transaction rolls back after Stripe created the customer   | yes    | yes (D37) | nothing; the retry reuses the same customer |
+| `CheckoutController`      | User submits a form from a stale tab                       | yes    | yes (D33) | 409, "this organization changed elsewhere"  |
+| `StripeWebhookController` | Event for an organization since deleted                    | yes    | yes (D36) | nothing; row retained, Stripe not retried   |
+| `StripeWebhookController` | `customer.updated` with the `data.object.id` shape         | yes    | yes (D32) | nothing; tenant resolves correctly          |
+| `StripeWebhookController` | Out-of-order `active` after `deleted` restores stale state | **no** | **no**    | stale plan until the next event corrects it |
+| `Subscription::cancel()`  | `$this->owner` lazy-loads on a retrieved model             | yes    | yes (D35) | nothing; relation set explicitly            |
+| `DeleteUser`              | Account closed while Stripe still charges                  | yes    | yes (D34) | refusal naming the remedy                   |
+| `BillingFacts`            | Organization has no subscription at all                    | yes    | yes       | catalog offered                             |
 
 **One critical gap, accepted and named: out-of-order webhook convergence.** No test, no
 error handling, and the failure is silent — a stale plan until a later event corrects it.
@@ -443,21 +443,21 @@ no test claims a guarantee that does not exist.
 
 ## Parallelization
 
-| Step | Modules touched | Depends on |
-| --- | --- | --- |
-| T1 Playwright + Browser suite | `package.json`, `phpunit.xml`, `.github/` | — |
-| T2 Cashier install, migrations, models, provider | `composer.json`, `database/migrations/`, `app/Models/`, `app/Providers/` | — |
-| T3 Boundary + arch tests for the new models | `tests/` | T2 |
-| T4 Catalog: config + value objects | `config/`, `app/Billing/` | — |
-| T5 `BillingFacts` + its arch test | `app/Billing/`, `tests/` | T2, T4 |
-| T6 Policy, routes, read-only billing screen | `app/Policies/`, `routes/`, `app/Http/Controllers/Billing/` | T5 |
-| T7 Checkout: request, action, controller | `app/Actions/`, `app/Http/`, `app/Exceptions/Billing/` | T6 |
-| T8 Cancel and resume | `app/Actions/`, `app/Http/` | T7 |
-| T9 Webhook + `failed_webhook_events` | `app/Http/Controllers/Billing/`, `database/migrations/` | T2 |
-| T10 `DeleteUser` refusal | `app/Actions/`, `app/Exceptions/` | T5 |
-| T11 Vue billing screen + browser test | `resources/js/`, `tests/Browser/` | T1, T7, T8 |
-| T12 Dunning wiring, `test:billing`, CI | `app/Providers/`, `composer.json`, `.github/` | T2, T4 |
-| T13 Decision records and docs | `docs/` | everything |
+| Step                                             | Modules touched                                                          | Depends on |
+| ------------------------------------------------ | ------------------------------------------------------------------------ | ---------- |
+| T1 Playwright + Browser suite                    | `package.json`, `phpunit.xml`, `.github/`                                | —          |
+| T2 Cashier install, migrations, models, provider | `composer.json`, `database/migrations/`, `app/Models/`, `app/Providers/` | —          |
+| T3 Boundary + arch tests for the new models      | `tests/`                                                                 | T2         |
+| T4 Catalog: config + value objects               | `config/`, `app/Billing/`                                                | —          |
+| T5 `BillingFacts` + its arch test                | `app/Billing/`, `tests/`                                                 | T2, T4     |
+| T6 Policy, routes, read-only billing screen      | `app/Policies/`, `routes/`, `app/Http/Controllers/Billing/`              | T5         |
+| T7 Checkout: request, action, controller         | `app/Actions/`, `app/Http/`, `app/Exceptions/Billing/`                   | T6         |
+| T8 Cancel and resume                             | `app/Actions/`, `app/Http/`                                              | T7         |
+| T9 Webhook + `failed_webhook_events`             | `app/Http/Controllers/Billing/`, `database/migrations/`                  | T2         |
+| T10 `DeleteUser` refusal                         | `app/Actions/`, `app/Exceptions/`                                        | T5         |
+| T11 Vue billing screen + browser test            | `resources/js/`, `tests/Browser/`                                        | T1, T7, T8 |
+| T12 Dunning wiring, `test:billing`, CI           | `app/Providers/`, `composer.json`, `.github/`                            | T2, T4     |
+| T13 Decision records and docs                    | `docs/`                                                                  | everything |
 
 ```
 Lane A:  T1                                    (independent, no app code)
@@ -480,57 +480,57 @@ touch `.github/workflows/tests.yml` if T12 lands early; keep T12 last to avoid i
 Synthesized from this review's findings. Each derives from a specific decision above.
 
 - [ ] **T1 (P2, human: ~1d / CC: ~1h)** — test infra — Make `tests/Browser` actually run
-  - Surfaced by: Test review D13; pre-existing `TODOS.md` entry
-  - Files: `package.json`, `phpunit.xml`, `.github/workflows/tests.yml`
-  - Verify: `vendor/bin/pest tests/Browser` runs `WelcomeTest` and `MembersManagementTest` green
+    - Surfaced by: Test review D13; pre-existing `TODOS.md` entry
+    - Files: `package.json`, `phpunit.xml`, `.github/workflows/tests.yml`
+    - Verify: `vendor/bin/pest tests/Browser` runs `WelcomeTest` and `MembersManagementTest` green
 - [ ] **T2 (P1, human: ~1d / CC: ~50min)** — billing core — Cashier on `Organization`
-  - Surfaced by: D32, D35 (`stripeEmail`), D8 (no published config)
-  - Files: `composer.json`, 3 published migrations, `app/Models/{Subscription,SubscriptionItem}.php`, `app/Models/Organization.php`, `app/Providers/BillingServiceProvider.php`
-  - Verify: `php artisan migrate:fresh`; `subscriptions` has `organization_id` and the composite index
+    - Surfaced by: D32, D35 (`stripeEmail`), D8 (no published config)
+    - Files: `composer.json`, 3 published migrations, `app/Models/{Subscription,SubscriptionItem}.php`, `app/Models/Organization.php`, `app/Providers/BillingServiceProvider.php`
+    - Verify: `php artisan migrate:fresh`; `subscriptions` has `organization_id` and the composite index
 - [ ] **T3 (P1, human: ~6h / CC: ~35min)** — tenancy — Prove the subscription boundary directly
-  - Surfaced by: D32 — the query guard cannot prove this table
-  - Files: `tests/Feature/Billing/BillingBoundaryTest.php`, `tests/Unit/{ArchTest,TenantScopingTest}.php`
-  - Verify: `vendor/bin/pest tests/Feature/Billing tests/Unit`
+    - Surfaced by: D32 — the query guard cannot prove this table
+    - Files: `tests/Feature/Billing/BillingBoundaryTest.php`, `tests/Unit/{ArchTest,TenantScopingTest}.php`
+    - Verify: `vendor/bin/pest tests/Feature/Billing tests/Unit`
 - [ ] **T4 (P1, human: ~5h / CC: ~30min)** — catalog — `config/billing.php` and its value objects
-  - Surfaced by: D35
-  - Files: `config/billing.php`, `app/Billing/{PlanCatalog,Plan,Price}.php`, `tests/Unit/BillingCatalogTest.php`
-  - Verify: `vendor/bin/pest --filter=BillingCatalog`
+    - Surfaced by: D35
+    - Files: `config/billing.php`, `app/Billing/{PlanCatalog,Plan,Price}.php`, `tests/Unit/BillingCatalogTest.php`
+    - Verify: `vendor/bin/pest --filter=BillingCatalog`
 - [ ] **T5 (P1, human: ~5h / CC: ~35min)** — billing reads — `BillingFacts` and the loading guarantees
-  - Surfaced by: D35; outside voice #7 (inverse `owner` is not loaded by `subscriptions.items`)
-  - Files: `app/Billing/BillingFacts.php`, `tests/Unit/ArchTest.php`
-  - Verify: a feature test reading a subscription raises no `LazyLoadingViolationException`
+    - Surfaced by: D35; outside voice #7 (inverse `owner` is not loaded by `subscriptions.items`)
+    - Files: `app/Billing/BillingFacts.php`, `tests/Unit/ArchTest.php`
+    - Verify: a feature test reading a subscription raises no `LazyLoadingViolationException`
 - [ ] **T6 (P1, human: ~6h / CC: ~35min)** — authorization + screen — Policy, routes, read-only billing page
-  - Surfaced by: Code quality C5 (one `can()` call, derived props)
-  - Files: `app/Policies/SubscriptionPolicy.php`, `routes/billing.php`, `app/Http/Controllers/Billing/BillingController.php`
-  - Verify: `vendor/bin/pest tests/Feature/Billing/BillingAuthorizationTest.php`
+    - Surfaced by: Code quality C5 (one `can()` call, derived props)
+    - Files: `app/Policies/SubscriptionPolicy.php`, `routes/billing.php`, `app/Http/Controllers/Billing/BillingController.php`
+    - Verify: `vendor/bin/pest tests/Feature/Billing/BillingAuthorizationTest.php`
 - [ ] **T7 (P1, human: ~1.5d / CC: ~1h15)** — checkout — Start a subscription
-  - Surfaced by: D3, D9, D33, D37, D10
-  - Files: `app/Http/Requests/Billing/CheckoutRequest.php`, `app/Actions/StartBillingCheckout.php`, `app/Http/Controllers/Billing/CheckoutController.php`, `app/Exceptions/Billing/*`
-  - Verify: `vendor/bin/pest tests/Feature/Billing/{CheckoutTest,CheckoutConcurrencyTest}.php`
+    - Surfaced by: D3, D9, D33, D37, D10
+    - Files: `app/Http/Requests/Billing/CheckoutRequest.php`, `app/Actions/StartBillingCheckout.php`, `app/Http/Controllers/Billing/CheckoutController.php`, `app/Exceptions/Billing/*`
+    - Verify: `vendor/bin/pest tests/Feature/Billing/{CheckoutTest,CheckoutConcurrencyTest}.php`
 - [ ] **T8 (P1, human: ~6h / CC: ~35min)** — lifecycle — Cancel and resume
-  - Surfaced by: D1 scope (the way out); D35 (set the owner relation first)
-  - Files: `app/Actions/{CancelSubscription,ResumeSubscription}.php`, `app/Http/Controllers/Billing/SubscriptionController.php`
-  - Verify: `vendor/bin/pest tests/Feature/Billing/SubscriptionLifecycleTest.php`
+    - Surfaced by: D1 scope (the way out); D35 (set the owner relation first)
+    - Files: `app/Actions/{CancelSubscription,ResumeSubscription}.php`, `app/Http/Controllers/Billing/SubscriptionController.php`
+    - Verify: `vendor/bin/pest tests/Feature/Billing/SubscriptionLifecycleTest.php`
 - [ ] **T9 (P1, human: ~1d / CC: ~50min)** — webhook — Resolve the tenant, retain what cannot be placed
-  - Surfaced by: D32, D36; outside voice #6 (two customer id shapes)
-  - Files: `app/Http/Controllers/Billing/StripeWebhookController.php`, `database/migrations/*_create_failed_webhook_events_table.php`, `routes/billing.php`
-  - Verify: `vendor/bin/pest tests/Feature/Billing/StripeWebhookTest.php`
+    - Surfaced by: D32, D36; outside voice #6 (two customer id shapes)
+    - Files: `app/Http/Controllers/Billing/StripeWebhookController.php`, `database/migrations/*_create_failed_webhook_events_table.php`, `routes/billing.php`
+    - Verify: `vendor/bin/pest tests/Feature/Billing/StripeWebhookTest.php`
 - [ ] **T10 (P1, human: ~4h / CC: ~25min)** — account closure — Refuse while billing is unresolved
-  - Surfaced by: D34; outside voice #3
-  - Files: `app/Actions/DeleteUser.php`, `app/Exceptions/BillingMustBeResolved.php`, `tests/Feature/Authorization/AccountClosureTest.php`
-  - Verify: `vendor/bin/pest tests/Feature/Authorization/AccountClosureTest.php`
+    - Surfaced by: D34; outside voice #3
+    - Files: `app/Actions/DeleteUser.php`, `app/Exceptions/BillingMustBeResolved.php`, `tests/Feature/Authorization/AccountClosureTest.php`
+    - Verify: `vendor/bin/pest tests/Feature/Authorization/AccountClosureTest.php`
 - [ ] **T11 (P2, human: ~1d / CC: ~50min)** — frontend — The billing screen and its browser test
-  - Surfaced by: D13; D3 (only a browser can prove the navigation)
-  - Files: `resources/js/pages/billing/Index.vue`, `tests/Browser/BillingTest.php`
-  - Verify: `php artisan wayfinder:generate && npm run build && vendor/bin/pest tests/Browser/BillingTest.php`
+    - Surfaced by: D13; D3 (only a browser can prove the navigation)
+    - Files: `resources/js/pages/billing/Index.vue`, `tests/Browser/BillingTest.php`
+    - Verify: `php artisan wayfinder:generate && npm run build && vendor/bin/pest tests/Browser/BillingTest.php`
 - [ ] **T12 (P1, human: ~1d / CC: ~50min)** — proof — Dunning replay as a CI gate
-  - Surfaced by: D6, D11, D18
-  - Files: `app/Providers/BillingReplayServiceProvider.php`, `bootstrap/providers.php`, `composer.json`, `.github/workflows/tests.yml`
-  - Verify: `composer test:billing` green; ordered and `--shuffle --duplicate --seed=7` both pass
+    - Surfaced by: D6, D11, D18
+    - Files: `app/Providers/BillingReplayServiceProvider.php`, `bootstrap/providers.php`, `composer.json`, `.github/workflows/tests.yml`
+    - Verify: `composer test:billing` green; ordered and `--shuffle --duplicate --seed=7` both pass
 - [ ] **T13 (P2, human: ~5h / CC: ~30min)** — docs — Record D32-D37 and mark M4 against its proof
-  - Surfaced by: repository convention (`git log` cites decision numbers)
-  - Files: `docs/decisions/0001-architecture-decisions.md`, `docs/plans/0001-vertical-slice.md`, `docs/sandbox-validation.md`, `TODOS.md`
-  - Verify: M4's paragraph in `0001-vertical-slice.md` matches what shipped, including the allowance deferral
+    - Surfaced by: repository convention (`git log` cites decision numbers)
+    - Files: `docs/decisions/0001-architecture-decisions.md`, `docs/plans/0001-vertical-slice.md`, `docs/sandbox-validation.md`, `TODOS.md`
+    - Verify: M4's paragraph in `0001-vertical-slice.md` matches what shipped, including the allowance deferral
 
 ## Inline diagrams the implementation should carry
 
@@ -540,20 +540,20 @@ Synthesized from this review's findings. Each derives from a specific decision a
 - `app/Models/Subscription.php` — the state machine above. Four states reach the screen and
   the transitions are not obvious from Cashier's column names.
 - `app/Actions/StartBillingCheckout.php` — the ordering of lock, Stripe call and local
-  transaction, because D37's whole point is that the Stripe call sits *outside* the
+  transaction, because D37's whole point is that the Stripe call sits _outside_ the
   transaction and a future refactor will want to move it back in.
 - `app/Billing/BillingFacts.php` — which relations are loaded where, per D35's three paths.
 
 ## GSTACK REVIEW REPORT
 
-| Review | Trigger | Why | Runs | Status | Findings |
-|--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
-| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 20 issues, 1 critical gap |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
-| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
-| Outside Voice | `/plan-eng-review` | Cross-model plan challenge | 3 | issues_found | 8 findings, 5 folded, 2 accepted as corrections, 1 already covered |
+| Review        | Trigger               | Why                             | Runs | Status       | Findings                                                           |
+| ------------- | --------------------- | ------------------------------- | ---- | ------------ | ------------------------------------------------------------------ |
+| CEO Review    | `/plan-ceo-review`    | Scope & strategy                | 0    | —            | —                                                                  |
+| Codex Review  | `/codex review`       | Independent 2nd opinion         | 0    | —            | —                                                                  |
+| Eng Review    | `/plan-eng-review`    | Architecture & tests (required) | 1    | CLEAR        | 20 issues, 1 critical gap                                          |
+| Design Review | `/plan-design-review` | UI/UX gaps                      | 0    | —            | —                                                                  |
+| DX Review     | `/plan-devex-review`  | Developer experience gaps       | 0    | —            | —                                                                  |
+| Outside Voice | `/plan-eng-review`    | Cross-model plan challenge      | 3    | issues_found | 8 findings, 5 folded, 2 accepted as corrections, 1 already covered |
 
 - **CROSS-MODEL:** Codex raised two P0s the four review sections missed, both at the seam
   where billing meets an existing subsystem: a stale browser tab billing the wrong
