@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use App\Concerns\BelongsToOrganization;
 use App\Contracts\TenantOwned;
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Cashier;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -93,4 +95,26 @@ it('keeps the way around the scope to the places that are allowed it', function 
     }
 
     expect($offenders)->toBe([], 'Escaping the tenant scope is an audited act: '.implode(', ', $offenders));
+});
+
+it('bills the organization and never the user', function (): void {
+    expect(Cashier::$customerModel)->toBe(Organization::class);
+});
+
+it('keeps user_id out of every query that reaches a subscription', function (): void {
+    $offenders = [];
+
+    foreach (Finder::create()->files()->in(app_path())->name('*.php') as $file) {
+        $contents = (string) file_get_contents($file->getRealPath());
+
+        if (! str_contains($contents, 'ubscription')) {
+            continue;
+        }
+
+        if (str_contains($contents, 'user_id')) {
+            $offenders[] = 'app/'.str_replace(DIRECTORY_SEPARATOR, '/', $file->getRelativePathname());
+        }
+    }
+
+    expect($offenders)->toBe([], 'A subscription belongs to an organization, never to a user: '.implode(', ', $offenders));
 });

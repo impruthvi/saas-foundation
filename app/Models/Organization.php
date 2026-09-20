@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Cashier\Billable;
 
 /**
  * The tenant, data owner, subscription holder, and entitlement subject.
@@ -25,6 +26,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $personal
  * @property int $owner_id
  * @property OrganizationStatus $status
+ * @property string|null $stripe_id
+ * @property string|null $pm_type
+ * @property string|null $pm_last_four
+ * @property CarbonImmutable|null $trial_ends_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read User $owner
@@ -32,6 +37,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read int|null $memberships_count
  * @property-read Collection<int, Project> $projects
  * @property-read int|null $projects_count
+ * @property-read Collection<int, Subscription> $subscriptions
+ * @property-read int|null $subscriptions_count
  *
  * @method static OrganizationFactory factory($count = null, $state = [])
  * @method static Builder<static>|Organization newModelQuery()
@@ -43,6 +50,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['name', 'slug', 'personal', 'owner_id', 'status'])]
 final class Organization extends Model
 {
+    use Billable;
+
     /** @use HasFactory<OrganizationFactory> */
     use HasFactory;
 
@@ -83,6 +92,18 @@ final class Organization extends Model
     }
 
     /**
+     * The address Stripe sends receipts to.
+     *
+     * An organization has no address of its own, and a customer created without
+     * one is identifiable in Stripe only by its key. The owner is loaded rather
+     * than read, because lazy loading raises everywhere in this application.
+     */
+    public function stripeEmail(): string
+    {
+        return $this->loadMissing('owner')->owner->email;
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -90,6 +111,7 @@ final class Organization extends Model
         return [
             'personal' => 'boolean',
             'status' => OrganizationStatus::class,
+            'trial_ends_at' => 'datetime',
         ];
     }
 }
