@@ -43,9 +43,16 @@ final readonly class BillingFacts
 
     public function hasOpenSubscription(Organization $organization): bool
     {
+        return $this->openSubscription($organization) instanceof Subscription;
+    }
+
+    public function openSubscription(Organization $organization): ?Subscription
+    {
         $subscription = $this->currentSubscription($organization);
 
-        return $subscription instanceof Subscription && ! $subscription->ended();
+        return $subscription instanceof Subscription && ! $subscription->ended()
+            ? $subscription
+            : null;
     }
 
     /** @return self::STATE_* */
