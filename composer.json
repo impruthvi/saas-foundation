@@ -115,9 +115,10 @@
             "./vendor/bin/pint --parallel --test",
             "./vendor/bin/rector --dry-run"
         ],
+        "test:browser": "pest --testsuite=Browser",
         "test:types": "./vendor/bin/phpstan analyse --memory-limit=-1",
-        "test:type-coverage": "php -d memory_limit=-1 vendor/bin/pest --type-coverage",
-        "test:unit": "pest"
+        "test:type-coverage": "php -d memory_limit=-1 vendor/bin/pest --testsuite=Unit,Feature --type-coverage",
+        "test:unit": "pest --testsuite=Unit,Feature"
     },
     "extra": {
         "laravel": {
