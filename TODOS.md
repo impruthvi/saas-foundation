@@ -73,7 +73,7 @@ two things a feature test cannot reach, that the controls are on the page and th
 confirmation actually removes somebody. M7 makes the whole ten-minute journey one browser
 test (D8), so this has to work before the milestone that depends on it entirely.
 
-**Cons:** `npm install playwright@latest && npx playwright install` downloads browser
+**Cons:** `bun add --dev playwright@latest && bunx playwright install` downloads browser
 binaries, which is a real cost on CI and on a fresh clone, and it is the kind of thing
 that should be a deliberate choice rather than a side effect of someone running a test.
 

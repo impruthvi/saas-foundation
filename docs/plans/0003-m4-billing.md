@@ -522,7 +522,7 @@ Synthesized from this review's findings. Each derives from a specific decision a
 - [ ] **T11 (P2, human: ~1d / CC: ~50min)** — frontend — The billing screen and its browser test
     - Surfaced by: D13; D3 (only a browser can prove the navigation)
     - Files: `resources/js/pages/billing/Index.vue`, `tests/Browser/BillingTest.php`
-    - Verify: `php artisan wayfinder:generate && npm run build && vendor/bin/pest tests/Browser/BillingTest.php`
+    - Verify: `php artisan wayfinder:generate && bun run build && vendor/bin/pest tests/Browser/BillingTest.php`
 - [ ] **T12 (P1, human: ~1d / CC: ~50min)** — proof — Dunning replay as a CI gate
     - Surfaced by: D6, D11, D18
     - Files: `app/Providers/BillingReplayServiceProvider.php`, `bootstrap/providers.php`, `composer.json`, `.github/workflows/tests.yml`

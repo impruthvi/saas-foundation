@@ -54,10 +54,8 @@ jobs:
                   tools: composer:v2
                   coverage: none
 
-            - name: Setup Node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-              with:
-                  node-version: '22'
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
             - name: Setup Application
               run: composer setup
@@ -93,16 +91,21 @@ jobs:
                   tools: composer:v2
                   coverage: none
 
+            # Pest Browser invokes Playwright's Node shebang directly, even though Bun
+            # owns dependency installation and package scripts.
             - name: Setup Node
               uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
               with:
                   node-version: '22'
 
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
             - name: Setup Application
               run: composer setup
 
             - name: Install Chromium
-              run: npx playwright install --with-deps chromium
+              run: bunx playwright install --with-deps chromium
 
             - name: Run Browser Tests
               run: composer test:browser

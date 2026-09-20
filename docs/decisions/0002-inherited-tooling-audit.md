@@ -72,7 +72,7 @@ misreading of it.
 
 ## Finding not on the list — CI failed on a clean checkout
 
-`composer ci:check` runs `npm run format:check`, and it failed on a fresh clone: nine
+`composer ci:check` runs `bun run format:check`, and it failed on a fresh clone: nine
 inherited files did not satisfy the oxfmt configuration shipped beside them, including
 `.oxfmtrc.json` and `.oxlintrc.json` themselves, the CI workflow and the dependabot
 config. Not version drift — `package.json` declares `oxfmt ^0.64.0` and 0.64.0 is
