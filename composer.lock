@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "abb4e4624d91f0cbfbe03716b5825ef1",
+    "content-hash": "20802b8cd808862413dd18084d2c045d",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -4678,16 +4678,16 @@
         },
         {
             "name": "stripe/stripe-php",
-            "version": "v21.3.2",
+            "version": "v20.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/stripe/stripe-php.git",
-                "reference": "0d8b075e1a97d15c5324353a5277d0ea686ea525"
+                "reference": "bf2c6caf886a88e35f831a68f3b6a49ac85cb357"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/stripe/stripe-php/zipball/0d8b075e1a97d15c5324353a5277d0ea686ea525",
-                "reference": "0d8b075e1a97d15c5324353a5277d0ea686ea525",
+                "url": "https://api.github.com/repos/stripe/stripe-php/zipball/bf2c6caf886a88e35f831a68f3b6a49ac85cb357",
+                "reference": "bf2c6caf886a88e35f831a68f3b6a49ac85cb357",
                 "shasum": ""
             },
             "require": {
@@ -4734,9 +4734,9 @@
             ],
             "support": {
                 "issues": "https://github.com/stripe/stripe-php/issues",
-                "source": "https://github.com/stripe/stripe-php/tree/v21.3.2"
+                "source": "https://github.com/stripe/stripe-php/tree/v20.3.1"
             },
-            "time": "2026-09-09T20:40:43+00:00"
+            "time": "2026-07-09T17:57:50+00:00"
         },
         {
             "name": "symfony/clock",
@@ -10234,6 +10234,98 @@
                 "source": "https://github.com/iamcal/SQLParser/tree/v0.7"
             },
             "time": "2026-01-28T22:20:33+00:00"
+        },
+        {
+            "name": "impruthvi/cashier-dunning",
+            "version": "v0.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/impruthvi/cashier-dunning.git",
+                "reference": "50212ce508834e07cca47a28a0520ac385105cbc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/impruthvi/cashier-dunning/zipball/50212ce508834e07cca47a28a0520ac385105cbc",
+                "reference": "50212ce508834e07cca47a28a0520ac385105cbc",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/console": "^11.0||^12.0||^13.0",
+                "illuminate/container": "^11.0||^12.0||^13.0",
+                "illuminate/contracts": "^11.0||^12.0||^13.0",
+                "illuminate/database": "^11.0||^12.0||^13.0",
+                "illuminate/http": "^11.0||^12.0||^13.0",
+                "illuminate/mail": "^11.0||^12.0||^13.0",
+                "illuminate/notifications": "^11.0||^12.0||^13.0",
+                "illuminate/queue": "^11.0||^12.0||^13.0",
+                "illuminate/support": "^11.0||^12.0||^13.0",
+                "laravel/cashier": "^16.0",
+                "nesbot/carbon": "^2.72||^3.0",
+                "php": "^8.3",
+                "spatie/laravel-package-tools": "^1.16",
+                "stripe/stripe-php": "^17.4||^18.0||^19.0||^20.0",
+                "symfony/console": "^7.0||^8.0",
+                "symfony/http-foundation": "^7.0||^8.0",
+                "symfony/mime": "^7.0||^8.0"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.14",
+                "nunomaduro/collision": "^8.8",
+                "orchestra/testbench": "^9.13||^10.0.0||^11.0.0",
+                "pestphp/pest": "^4.0",
+                "pestphp/pest-plugin-arch": "^4.0",
+                "pestphp/pest-plugin-laravel": "^4.0",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan-deprecation-rules": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Impruthvi\\CashierDunning\\CashierDunningServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Impruthvi\\CashierDunning\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "impruthvi",
+                    "email": "pruthvirajput97@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Prove your Laravel dunning actually works: replay real Stripe billing lifecycles with no Stripe account.",
+            "homepage": "https://github.com/impruthvi/cashier-dunning",
+            "keywords": [
+                "billing",
+                "cashier",
+                "dunning",
+                "laravel",
+                "stripe",
+                "subscriptions",
+                "testing"
+            ],
+            "support": {
+                "issues": "https://github.com/impruthvi/cashier-dunning/issues",
+                "source": "https://github.com/impruthvi/cashier-dunning/tree/v0.2.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/Impruthvi",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-09-06T14:37:49+00:00"
         },
         {
             "name": "jean85/pretty-package-versions",

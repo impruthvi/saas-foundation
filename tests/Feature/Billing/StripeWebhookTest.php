@@ -11,7 +11,6 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\TestResponse;
 use Laravel\Cashier\Events\WebhookReceived;
-use Stripe\WebhookSignature;
 
 beforeEach(function (): void {
     config(['cashier.webhook.secret' => 'whsec_testing']);
@@ -25,8 +24,9 @@ beforeEach(function (): void {
 function postStripeWebhook(array $payload, bool $validSignature = true): TestResponse
 {
     $json = json_encode($payload, JSON_THROW_ON_ERROR);
+    $timestamp = time();
     $signature = $validSignature
-        ? WebhookSignature::generateSignatureHeader($json, 'whsec_testing')
+        ? 't='.$timestamp.',v1='.hash_hmac('sha256', "{$timestamp}.{$json}", 'whsec_testing')
         : 't=1,v1=invalid';
 
     return test()->call(

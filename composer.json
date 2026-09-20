@@ -29,6 +29,7 @@
         "barryvdh/laravel-ide-helper": "^3.7",
         "driftingly/rector-laravel": "^2.5",
         "fakerphp/faker": "^1.24",
+        "impruthvi/cashier-dunning": "^0.2.1",
         "larastan/larastan": "^3.9",
         "laravel/boost": "^2.9",
         "laravel/pail": "^1.2.5",
@@ -82,6 +83,7 @@
             "bun run lint:check",
             "bun run format:check",
             "bun run types:check",
+            "@test:billing",
             "@test"
         ],
         "types:check": [
@@ -114,6 +116,11 @@
         "test:lint": [
             "./vendor/bin/pint --parallel --test",
             "./vendor/bin/rector --dry-run"
+        ],
+        "test:billing": [
+            "@php artisan billing:doctor",
+            "@php artisan billing:simulate trial-dunning-cancel-reactivate",
+            "@php artisan billing:simulate trial-dunning-cancel-reactivate --shuffle --duplicate --seed=7"
         ],
         "test:browser": "pest --testsuite=Browser",
         "test:types": "./vendor/bin/phpstan analyse --memory-limit=-1",

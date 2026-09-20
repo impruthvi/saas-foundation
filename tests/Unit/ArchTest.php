@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Providers\BillingReplayServiceProvider;
 use Symfony\Component\Finder\Finder;
 
 arch()->preset()->php();
@@ -30,4 +31,18 @@ it('keeps Cashier subscription reads behind the billing facts boundary', functio
     }
 
     expect($offenders)->toBe([], 'Cashier subscription reads belong in BillingFacts: '.implode(', ', $offenders));
+});
+
+it('excludes the billing replay provider from production', function (): void {
+    $environment = app()->environment();
+
+    app()->detectEnvironment(fn (): string => 'production');
+
+    try {
+        $providers = require base_path('bootstrap/providers.php');
+    } finally {
+        app()->detectEnvironment(fn (): string => $environment);
+    }
+
+    expect($providers)->not->toContain(BillingReplayServiceProvider::class);
 });
