@@ -21,12 +21,23 @@ use Laravel\Cashier\Cashier;
  */
 final class BillingServiceProvider extends ServiceProvider
 {
+    /**
+     * Cashier decides whether to register its routes while booting, and package
+     * providers boot before application ones, so declining has to happen here.
+     * Doing it in boot() leaves Cashier's payment page routed and lets this
+     * application's webhook win only by shadowing the same URI.
+     */
+    public function register(): void
+    {
+        Cashier::ignoreRoutes();
+    }
+
     public function boot(): void
     {
         Cashier::useCustomerModel(Organization::class);
         Cashier::useSubscriptionModel(Subscription::class);
         Cashier::useSubscriptionItemModel(SubscriptionItem::class);
 
-        Cashier::ignoreRoutes();
+        $this->loadRoutesFrom(base_path('routes/billing.php'));
     }
 }
