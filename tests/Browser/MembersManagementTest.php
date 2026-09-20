@@ -12,17 +12,19 @@ it('shows removal to an administrator and not to a plain member', function (): v
     $member = User::factory()->create();
     resolve(AddOrganizationMember::class)->handle($organization, $member);
 
-    $asOwner = visit('/organizations/members')
-        ->actingAs($owner)
+    $this->actingAs($owner)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id]);
+
+    $asOwner = visit('/organizations/members');
 
     $asOwner->assertSee($member->name)
         ->assertSee('Remove')
         ->assertNoJavaScriptErrors();
 
+    $this->actingAs($member)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id]);
+
     visit('/organizations/members')
-        ->actingAs($member)
-        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
         ->assertSee($member->name)
         ->assertDontSee('Remove')
         ->assertNoJavaScriptErrors();
@@ -33,14 +35,15 @@ it('removes a member through the confirmation', function (): void {
     $member = User::factory()->create();
     resolve(AddOrganizationMember::class)->handle($organization, $member, MembershipRole::Admin);
 
-    $page = visit('/organizations/members')
-        ->actingAs($owner)
+    $this->actingAs($owner)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id]);
+
+    $page = visit('/organizations/members');
 
     $page->assertSee($member->name)
         ->press('Remove')
         ->assertSee('Remove this member?')
-        ->press('Remove')
+        ->click('[role="dialog"] button[type="submit"]')
         ->assertDontSee($member->email)
         ->assertNoJavaScriptErrors();
 });

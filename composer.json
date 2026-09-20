@@ -16,6 +16,7 @@
     "require": {
         "php": "^8.4",
         "inertiajs/inertia-laravel": "^3.0",
+        "laravel/cashier": "^16.8",
         "laravel/chisel": "^0.1.0",
         "laravel/fortify": "^1.37.2",
         "laravel/framework": "^13.17",
@@ -28,6 +29,7 @@
         "barryvdh/laravel-ide-helper": "^3.7",
         "driftingly/rector-laravel": "^2.5",
         "fakerphp/faker": "^1.24",
+        "impruthvi/cashier-dunning": "^0.2.2",
         "larastan/larastan": "^3.9",
         "laravel/boost": "^2.9",
         "laravel/pail": "^1.2.5",
@@ -62,8 +64,8 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
-            "npm install",
-            "npm run build"
+            "bun install --frozen-lockfile",
+            "bun run build"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
@@ -78,9 +80,10 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
-            "npm run lint:check",
-            "npm run format:check",
-            "npm run types:check",
+            "bun run lint:check",
+            "bun run format:check",
+            "bun run types:check",
+            "@test:billing",
             "@test"
         ],
         "types:check": [
@@ -114,9 +117,15 @@
             "./vendor/bin/pint --parallel --test",
             "./vendor/bin/rector --dry-run"
         ],
+        "test:billing": [
+            "@php artisan billing:doctor",
+            "@php artisan billing:simulate trial-dunning-cancel-reactivate",
+            "@php artisan billing:simulate trial-dunning-cancel-reactivate --shuffle --duplicate --seed=7"
+        ],
+        "test:browser": "pest --testsuite=Browser",
         "test:types": "./vendor/bin/phpstan analyse --memory-limit=-1",
-        "test:type-coverage": "php -d memory_limit=-1 vendor/bin/pest --type-coverage",
-        "test:unit": "pest"
+        "test:type-coverage": "php -d memory_limit=-1 vendor/bin/pest --testsuite=Unit,Feature --type-coverage",
+        "test:unit": "pest --testsuite=Unit,Feature"
     },
     "extra": {
         "laravel": {

@@ -88,7 +88,7 @@ This foundation is their first consumer, not their replacement.
 ## Requirements
 
 PHP 8.4+ · Laravel 13 · PostgreSQL (the documented path; SQLite works for local
-development) · Node 22+
+development) · Bun 1.3+ · Node 22+ for browser tests
 
 CI runs the full gate — Pint, Rector, Larastan, Pest and the frontend checks — against
 both PostgreSQL and SQLite on every push.

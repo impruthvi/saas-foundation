@@ -21,7 +21,8 @@ and an AI platform.
 
 ## Getting set up
 
-Requires PHP 8.4+, Node 22+, and Composer.
+Requires PHP 8.4+, Bun 1.3+, and Composer. The browser test suite also requires Node
+22+ because Playwright is launched through its Node executable.
 
 ```bash
 git clone https://github.com/impruthvi/saas-foundation.git
@@ -45,7 +46,7 @@ That is the same gate CI runs: oxlint, oxfmt, `vue-tsc`, Pest, Pest type coverag
 Rector and PHPStan. **It should pass on a clean checkout before you change anything.**
 If it does not, that is a bug worth reporting on its own.
 
-Most style questions are answered by running `composer lint` and `npm run format`
+Most style questions are answered by running `composer lint` and `bun run format`
 instead of discussing them.
 
 ## What a good pull request looks like

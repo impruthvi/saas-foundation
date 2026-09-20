@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Settings;
 
 use App\Actions\DeleteUser;
+use App\Exceptions\BillingMustBeResolved;
 use App\Exceptions\OwnershipTransferRequired;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
@@ -44,8 +45,7 @@ final class ProfileController extends Controller
     /**
      * Delete the user's profile.
      *
-     * Refused while the user solely owns a shared organization because deletion
-     * would orphan its data and subscription.
+     * Refused while deletion would orphan organization data or live billing.
      */
     public function destroy(ProfileDeleteRequest $request, DeleteUser $deleteUser): RedirectResponse
     {
@@ -53,8 +53,8 @@ final class ProfileController extends Controller
 
         try {
             $deleteUser->handle($user);
-        } catch (OwnershipTransferRequired $ownershipTransferRequired) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => $ownershipTransferRequired->getMessage()]);
+        } catch (BillingMustBeResolved|OwnershipTransferRequired $accountDeletionRefused) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $accountDeletionRefused->getMessage()]);
 
             return to_route('profile.edit');
         }

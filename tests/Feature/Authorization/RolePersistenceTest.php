@@ -19,8 +19,14 @@ use Tests\Support\TenantQueryGuard;
  */
 function replayTheRbacMigration(): void
 {
-    Artisan::call('migrate:rollback', ['--step' => 1, '--force' => true]);
-    Artisan::call('migrate', ['--force' => true]);
+    // Named rather than counted: rolling back a fixed number of steps replays
+    // whichever migration happens to be last, so any migration added later
+    // silently turns this helper into a no-op and the tests below pass for the
+    // wrong reason.
+    $migration = 'database/migrations/2026_09_18_131132_create_permission_tables.php';
+
+    Artisan::call('migrate:rollback', ['--path' => $migration, '--force' => true]);
+    Artisan::call('migrate', ['--path' => $migration, '--force' => true]);
 }
 
 /**

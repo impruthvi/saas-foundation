@@ -115,7 +115,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Frontend Bundling
 
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `bun run build`, `bun run dev`, or `composer run dev`. Ask them.
 
 ## Documentation Files
 
@@ -247,7 +247,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Vite Error
 
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `bun run build` or ask the user to run `bun run dev` or `composer run dev`.
 
 === wayfinder/core rules ===
 
@@ -316,8 +316,8 @@ If `visit()` is undefined (or the package is not installed), **do not install it
 
 ```bash
 composer require pestphp/pest-plugin-browser --dev   # the browser plugin (needs Node.js)
-npm install playwright@latest                         # Playwright driver
-npx playwright install                                # download the browser binaries
+bun add --dev playwright@latest                       # Playwright driver
+bunx playwright install                               # download the browser binaries
 ```
 
 Once the user approves and it's installed, add `tests/Browser/Screenshots` to `.gitignore` so captured screenshots aren't committed. Browser assertions then run through the same `vendor/bin/pest --agent='…'` flow:
