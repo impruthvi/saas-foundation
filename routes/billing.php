@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Billing\BillingController;
+use App\Http\Controllers\Billing\CheckoutController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,4 +15,7 @@ Route::post(config('cashier.path', 'stripe').'/webhook', StripeWebhookController
 Route::middleware(['web', 'auth', 'verified'])->group(function (): void {
     Route::get('organizations/billing', [BillingController::class, 'index'])
         ->name('organizations.billing.index');
+
+    Route::post('organizations/billing/checkout', [CheckoutController::class, 'store'])
+        ->name('organizations.billing.checkout.store');
 });

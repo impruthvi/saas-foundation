@@ -35,6 +35,11 @@ final readonly class SubscriptionPolicy
         return $this->allows($user, Permission::ManageBilling);
     }
 
+    public function create(User $user): bool
+    {
+        return $this->manage($user);
+    }
+
     private function tenant(): TenantContext
     {
         return $this->tenant;
