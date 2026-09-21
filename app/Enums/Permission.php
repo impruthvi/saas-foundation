@@ -16,6 +16,7 @@ enum Permission: string
     case InviteMembers = 'organization.invite';
     case ManageMembers = 'organization.manage_members';
     case ManageBilling = 'organization.manage_billing';
+    case ManageProjects = 'organization.manage_projects';
 
     /** @return list<string> */
     public static function names(): array
@@ -30,6 +31,7 @@ enum Permission: string
             self::InviteMembers => __('Invite people'),
             self::ManageMembers => __('Manage members'),
             self::ManageBilling => __('Manage billing'),
+            self::ManageProjects => __('Create and manage projects'),
         };
     }
 }
