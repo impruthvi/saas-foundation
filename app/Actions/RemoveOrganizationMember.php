@@ -57,13 +57,12 @@ final readonly class RemoveOrganizationMember
 
         // The ids rather than a count or an exists: PostgreSQL refuses FOR
         // UPDATE alongside an aggregate, and holding the rows is the point.
-        $remaining = Membership::query()
+        $activeAdministratorIds = Membership::query()
             ->lockForUpdate()
             ->administrators()
-            ->whereKeyNot($membership->id)
             ->orderBy('id')
             ->pluck('id');
 
-        return $remaining->isEmpty();
+        return $activeAdministratorIds->diff([$membership->id])->isEmpty();
     }
 }

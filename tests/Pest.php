@@ -12,7 +12,9 @@ use App\Models\User;
 use App\Tenancy\InvitationRepository;
 use App\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
@@ -53,6 +55,23 @@ pest()->extend(TestCase::class)
         $this->freezeTime();
     })
     ->in('Browser', 'Feature', 'Unit');
+
+/*
+ * Concurrency tests need committed rows, because the processes they fork read
+ * through their own connections and cannot see an open transaction. That rules
+ * out RefreshDatabase, and with it the transaction the rest of the suite relies
+ * on to undo itself, so the tables are truncated between tests instead.
+ */
+pest()->extend(TestCase::class)
+    ->use(DatabaseTruncation::class)
+    ->beforeEach(function (): void {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('Concurrency tests need PostgreSQL: every SQLite connection opens its own database.');
+        }
+
+        Model::automaticallyEagerLoadRelationships(false);
+    })
+    ->in('Concurrency');
 
 expect()->extend('toBeOne', fn () => $this->toBe(1));
 

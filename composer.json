@@ -84,6 +84,7 @@
             "bun run format:check",
             "bun run types:check",
             "@test:billing",
+            "@test:concurrency",
             "@test"
         ],
         "types:check": [
@@ -123,6 +124,7 @@
             "@php artisan billing:simulate trial-dunning-cancel-reactivate --shuffle --duplicate --seed=7"
         ],
         "test:browser": "pest --testsuite=Browser",
+        "test:concurrency": "pest --testsuite=Concurrency",
         "test:types": "./vendor/bin/phpstan analyse --memory-limit=-1",
         "test:type-coverage": "php -d memory_limit=-1 vendor/bin/pest --testsuite=Unit,Feature --type-coverage",
         "test:unit": "pest --testsuite=Unit,Feature"
