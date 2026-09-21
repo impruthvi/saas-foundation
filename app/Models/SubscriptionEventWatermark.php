@@ -7,8 +7,10 @@ namespace App\Models;
 use App\Concerns\BelongsToOrganization;
 use App\Contracts\TenantOwned;
 use Carbon\CarbonImmutable;
+use Database\Factories\SubscriptionEventWatermarkFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -22,6 +24,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property CarbonImmutable|null $updated_at
  * @property-read Organization $organization
  *
+ * @method static SubscriptionEventWatermarkFactory factory($count = null, $state = [])
  * @method static Builder<static>|SubscriptionEventWatermark newModelQuery()
  * @method static Builder<static>|SubscriptionEventWatermark newQuery()
  * @method static Builder<static>|SubscriptionEventWatermark query()
@@ -32,6 +35,9 @@ use Illuminate\Database\Eloquent\Model;
 final class SubscriptionEventWatermark extends Model implements TenantOwned
 {
     use BelongsToOrganization;
+
+    /** @use HasFactory<SubscriptionEventWatermarkFactory> */
+    use HasFactory;
 
     /**
      * @return array<string, string>

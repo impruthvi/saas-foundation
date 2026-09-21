@@ -28,19 +28,19 @@ overwrite.
 
 ## What already exists and is not rebuilt
 
-| Existing                                                          | What M5 does with it                                                                                                                                   |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `App\Models\Project` (M1, D21) — tenant-owned, has a factory       | Gains a controller, a policy, a request and two screens. The model itself is unchanged.                                                                 |
-| `config/billing.php` — `plans.*.prices.*.allowances.projects`      | **Is** the entitlement catalog, and also the floor (D45). M5 adds no second source of allowances.                                                       |
-| `App\Billing\PlanCatalog` — reads that config, exposes `features()` | The adapter input for both `PriceCatalog` and the floor. Not re-parsed.                                                                                 |
-| `App\Concerns\ChecksOrganizationPermissions`                        | `ProjectPolicy` uses the same ladder — resolved tenant, active membership, owner floor, then permission. No new authorization idiom.                    |
-| `App\Actions\RemoveOrganizationMember::wouldLeaveNobodyInCharge()` | The house "two requests must not both read the same stale answer" pattern. M5 does **not** copy it — `admit()` supplies the serialization (D40).        |
-| `App\Tenancy\TenantContext::runForId()`                             | The tenant resolver for background and console entitlement work (D41). No second resolver, no second middleware.                                        |
-| `App\Http\Requests\Billing\CheckoutRequest` (D33)                   | The organization-naming pattern. Project creation adopts it (D40) — a create permanently spends an allowance that cannot be released (D44).             |
-| `App\Models\FailedWebhookEvent` (D36)                               | Already retains raw payloads. D42's guard is validated against them rather than against synthesized fixtures.                                           |
-| `App\Actions\DeleteUser` + `BillingMustBeResolved` (D34)            | Unchanged. Entitlement rows survive a deleted organization, and that is safe — see D44.                                                                  |
+| Existing                                                            | What M5 does with it                                                                                                                                       |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `App\Models\Project` (M1, D21) — tenant-owned, has a factory        | Gains a controller, a policy, a request and two screens. The model itself is unchanged.                                                                    |
+| `config/billing.php` — `plans.*.prices.*.allowances.projects`       | **Is** the entitlement catalog, and also the floor (D45). M5 adds no second source of allowances.                                                          |
+| `App\Billing\PlanCatalog` — reads that config, exposes `features()` | The adapter input for both `PriceCatalog` and the floor. Not re-parsed.                                                                                    |
+| `App\Concerns\ChecksOrganizationPermissions`                        | `ProjectPolicy` uses the same ladder — resolved tenant, active membership, owner floor, then permission. No new authorization idiom.                       |
+| `App\Actions\RemoveOrganizationMember::wouldLeaveNobodyInCharge()`  | The house "two requests must not both read the same stale answer" pattern. M5 does **not** copy it — `admit()` supplies the serialization (D40).           |
+| `App\Tenancy\TenantContext::runForId()`                             | The tenant resolver for background and console entitlement work (D41). No second resolver, no second middleware.                                           |
+| `App\Http\Requests\Billing\CheckoutRequest` (D33)                   | The organization-naming pattern. Project creation adopts it (D40) — a create permanently spends an allowance that cannot be released (D44).                |
+| `App\Models\FailedWebhookEvent` (D36)                               | Already retains raw payloads. D42's guard is validated against them rather than against synthesized fixtures.                                              |
+| `App\Actions\DeleteUser` + `BillingMustBeResolved` (D34)            | Unchanged. Entitlement rows survive a deleted organization, and that is safe — see D44.                                                                    |
 | `tests/Support/TenantQueryGuard`                                    | Extended with the package's owner-keyed tables, which it cannot discover — they key on `owner_id`, not `organization_id`. Necessary, not sufficient (D40). |
-| `phpunit.xml` — `QUEUE_CONNECTION=sync`, SQLite `:memory:`          | Both become traps rather than conveniences. See "Test traps this suite will hit".                                                                        |
+| `phpunit.xml` — `QUEUE_CONNECTION=sync`, SQLite `:memory:`          | Both become traps rather than conveniences. See "Test traps this suite will hit".                                                                          |
 
 Nothing above is rewritten. Three existing files change behaviour:
 `app/Http/Controllers/Billing/StripeWebhookController.php` (D42),
@@ -464,15 +464,15 @@ commit ──▶ 303 redirect to projects.index
 
 ### Subscription states the projects screen must render
 
-| Resolved state                     | `ResolveAllowance` for `projects` | Screen                                                     |
-| ---------------------------------- | --------------------------------- | ---------------------------------------------------------- |
-| Brand new, never refreshed         | free floor (2) — D45              | Counter `n / 2`; prompt at the boundary naming Pro         |
-| No subscription                    | free floor (2)                    | Same                                                        |
-| Active paid                        | paid allowance (10)               | Counter `n / 10`; no prompt below the boundary             |
-| On grace period (`ends_at` future) | paid allowance                    | Paid allowance resolves; a banner names the end date       |
-| Ended                              | free floor (2)                    | Counter `n / 2`, `n` possibly above it — see below         |
-| Observation stale > 1h (D43)       | free floor (2)                    | Same as ended, plus `doctor` reports the staleness          |
-| Catalog version mismatch           | free floor (2)                    | Same, until a refresh lands                                 |
+| Resolved state                     | `ResolveAllowance` for `projects` | Screen                                               |
+| ---------------------------------- | --------------------------------- | ---------------------------------------------------- |
+| Brand new, never refreshed         | free floor (2) — D45              | Counter `n / 2`; prompt at the boundary naming Pro   |
+| No subscription                    | free floor (2)                    | Same                                                 |
+| Active paid                        | paid allowance (10)               | Counter `n / 10`; no prompt below the boundary       |
+| On grace period (`ends_at` future) | paid allowance                    | Paid allowance resolves; a banner names the end date |
+| Ended                              | free floor (2)                    | Counter `n / 2`, `n` possibly above it — see below   |
+| Observation stale > 1h (D43)       | free floor (2)                    | Same as ended, plus `doctor` reports the staleness   |
+| Catalog version mismatch           | free floor (2)                    | Same, until a refresh lands                          |
 
 **Over the limit after a downgrade is a real state, not an error.** An organization with six
 projects that lapses to Free keeps its six projects and can create none. The screen says so
@@ -525,7 +525,7 @@ CODE PATHS                                              USER FLOWS
   ├── stale paid → floor ───── [★★★ planned] Pt8        [+] Create within allowance
   ├── version mismatch → floor  [★★  planned] Pt6         ├── [★★★ planned] counter increments — Pt1
   └── zero-allowance plan ───── [★★  planned] Pt13        └── [★★★ planned] prompt absent below limit — Pt7
-                                                        
+
 [+] App\Actions\CreateProject                           [+] Refused at the limit
   ├── admit() happy ────────── [★★★ planned] Pt1          ├── [★★★ planned] 422 + named plan — Pt2
   ├── LimitExceeded ────────── [★★★ planned] Pt2          ├── [→E2E] button hidden, endpoint refuses — Pb1
@@ -551,7 +551,7 @@ CODE PATHS                                              USER FLOWS
   ├── reconcile --apply ────── [★★★ planned] Pt5        [+] Migration
   ├── reconcile dry-run ────── [★★  planned] Pt5          └── [★★★ planned] backfill from count(projects) — Pt14
   └── absent wrapper raises ── [★★  planned] Pt5
-                                                        
+
 [+] D42 event-age guard
   ├── older skipped ────────── [★★★ planned] Pt11
   ├── newer applied ────────── [★★★ planned] Pt11
@@ -566,22 +566,22 @@ COVERAGE: 0/40 today — 40/40 planned (2 E2E, 1 PostgreSQL-only)
 
 ### Test files
 
-| File                                                            | Proves                                                          |
-| --------------------------------------------------------------- | --------------------------------------------------------------- |
-| `tests/Feature/Projects/CreateProjectTest.php` (Pt1, Pt2, Pt3)   | Happy path, `limit()` shapes, receipt reuse, same-key-new-name    |
-| `tests/Concurrency/ProjectLimitConcurrencyTest.php` (Pt4)        | **PostgreSQL only.** Two processes, one remaining, one project    |
-| `tests/Feature/Entitlements/RefreshOwnerTest.php` (Pt5)          | D41: queue, `reconcile --apply`, dry-run, absent wrapper raises   |
-| `tests/Feature/Entitlements/CatalogTest.php` (Pt6)               | D38: morph map both halves, derived version both ways             |
-| `tests/Feature/Projects/ProjectScreenTest.php` (Pt7)             | Counter, prompt presence, over-limit-after-downgrade              |
-| `tests/Feature/Entitlements/FreshnessTest.php` (Pt8)             | D43: stale falls to the floor; sweep threshold precedes expiry    |
-| `tests/Feature/Entitlements/EntitlementBoundaryTest.php` (Pt9)   | A's usage invisible to B; `CreateProject` refuses another tenant  |
-| `tests/Feature/Projects/ProjectAuthorizationTest.php` (Pt10)     | Policy ladder (`hasPermissionTo`, never `can('...')`), 409 on slug |
-| `tests/Feature/Billing/WebhookEventAgeTest.php` (Pt11)           | D42 including delete-before-create                                |
-| `tests/Feature/Billing/DunningReplayConvergenceTest.php` (Pt12)  | Shuffled + duplicated replay, identical **subscription facts**    |
-| `tests/Feature/Entitlements/PostReplayResolutionTest.php` (Pt12b)| The state the replay leaves resolves identically — outside the transaction |
-| `tests/Feature/Entitlements/AllowanceFloorTest.php` (Pt13)       | D45: every path that yields `[]`, and the zero-allowance guard     |
-| `tests/Feature/Entitlements/UsageBackfillTest.php` (Pt14)        | Pre-existing projects produce the correct remaining value          |
-| `tests/Browser/ProjectLimitTest.php` (Pb1)                       | Refused → checkout → allowed, in a real browser                    |
+| File                                                              | Proves                                                                     |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `tests/Feature/Projects/CreateProjectTest.php` (Pt1, Pt2, Pt3)    | Happy path, `limit()` shapes, receipt reuse, same-key-new-name             |
+| `tests/Concurrency/ProjectLimitConcurrencyTest.php` (Pt4)         | **PostgreSQL only.** Two processes, one remaining, one project             |
+| `tests/Feature/Entitlements/RefreshOwnerTest.php` (Pt5)           | D41: queue, `reconcile --apply`, dry-run, absent wrapper raises            |
+| `tests/Feature/Entitlements/CatalogTest.php` (Pt6)                | D38: morph map both halves, derived version both ways                      |
+| `tests/Feature/Projects/ProjectScreenTest.php` (Pt7)              | Counter, prompt presence, over-limit-after-downgrade                       |
+| `tests/Feature/Entitlements/FreshnessTest.php` (Pt8)              | D43: stale falls to the floor; sweep threshold precedes expiry             |
+| `tests/Feature/Entitlements/EntitlementBoundaryTest.php` (Pt9)    | A's usage invisible to B; `CreateProject` refuses another tenant           |
+| `tests/Feature/Projects/ProjectAuthorizationTest.php` (Pt10)      | Policy ladder (`hasPermissionTo`, never `can('...')`), 409 on slug         |
+| `tests/Feature/Billing/WebhookEventAgeTest.php` (Pt11)            | D42 including delete-before-create                                         |
+| `tests/Feature/Billing/DunningReplayConvergenceTest.php` (Pt12)   | Shuffled + duplicated replay, identical **subscription facts**             |
+| `tests/Feature/Entitlements/PostReplayResolutionTest.php` (Pt12b) | The state the replay leaves resolves identically — outside the transaction |
+| `tests/Feature/Entitlements/AllowanceFloorTest.php` (Pt13)        | D45: every path that yields `[]`, and the zero-allowance guard             |
+| `tests/Feature/Entitlements/UsageBackfillTest.php` (Pt14)         | Pre-existing projects produce the correct remaining value                  |
+| `tests/Browser/ProjectLimitTest.php` (Pb1)                        | Refused → checkout → allowed, in a real browser                            |
 
 ### Test traps this suite will hit
 
@@ -597,23 +597,23 @@ COVERAGE: 0/40 today — 40/40 planned (2 E2E, 1 PostgreSQL-only)
 
 ## Failure modes
 
-| Codepath                  | Realistic production failure                          | Test  | Error handling | User sees                                          |
-| ------------------------- | ----------------------------------------------------- | ----- | -------------- | -------------------------------------------------- |
-| `ResolveAllowance`        | Package returns `[]` on a brand-new organization      | Pt13  | Yes (floor)    | The free allowance, not a refusal                   |
-| `ResolveAllowance`        | A zero-allowance plan is added and silently raised    | Pt13  | Yes (test fails) | Nothing — the build breaks first                  |
-| `CreateProject`           | `LimitExceeded` at the boundary                       | Pt2   | Yes            | 422 + upgrade prompt naming the plan                |
-| `CreateProject`           | Two tabs, double submit                               | Pt3   | Yes            | One project; the retry returns the original         |
-| `CreateProject`           | Stale tab, session moved to another organization      | Pt10  | Yes            | 409 naming the change                               |
-| `CreateProject`           | Deadlock retry re-runs the callback                   | Pt4   | Package (3×)   | Nothing; the insert is transactional                |
-| `OwnerLocator::reference` | Morph map missing after a provider edit               | Pt6   | Yes            | 503 + logged `owner_context_mismatch`               |
-| `RefreshOwner` / console  | Wrapper absent → `TenantContextMissing`               | Pt5   | Yes (loud)     | Nothing immediately; `doctor` reports the backlog   |
-| Refresh                   | Stripe unreachable → observation ages past an hour    | Pt8   | Yes            | Free allowance + upgrade prompt while paying        |
-| Sweep                     | Threshold equals expiry → refresh only after the fact | Pt8   | Yes            | Bounded by `stale_after` at half the expiry         |
-| Webhook                   | `active` delivered after `deleted`                    | Pt11  | Yes            | Nothing; the stale event is skipped and recorded    |
-| Webhook                   | `deleted` delivered before `created`                  | Pt11  | Yes            | Watermark survives the missing row; no resurrection |
-| Webhook                   | Two events in the same second, conflicting            | —     | **No**         | Arrival order wins — accepted, recorded in D42      |
-| Projects screen           | Six projects, lapsed to Free                          | Pt7   | Yes            | Counter `6 / 2`, create refused, nothing deleted    |
-| Migration                 | Pre-existing projects unmetered                       | Pt14  | Yes (backfill) | Correct remaining value from the first request      |
+| Codepath                  | Realistic production failure                          | Test | Error handling   | User sees                                           |
+| ------------------------- | ----------------------------------------------------- | ---- | ---------------- | --------------------------------------------------- |
+| `ResolveAllowance`        | Package returns `[]` on a brand-new organization      | Pt13 | Yes (floor)      | The free allowance, not a refusal                   |
+| `ResolveAllowance`        | A zero-allowance plan is added and silently raised    | Pt13 | Yes (test fails) | Nothing — the build breaks first                    |
+| `CreateProject`           | `LimitExceeded` at the boundary                       | Pt2  | Yes              | 422 + upgrade prompt naming the plan                |
+| `CreateProject`           | Two tabs, double submit                               | Pt3  | Yes              | One project; the retry returns the original         |
+| `CreateProject`           | Stale tab, session moved to another organization      | Pt10 | Yes              | 409 naming the change                               |
+| `CreateProject`           | Deadlock retry re-runs the callback                   | Pt4  | Package (3×)     | Nothing; the insert is transactional                |
+| `OwnerLocator::reference` | Morph map missing after a provider edit               | Pt6  | Yes              | 503 + logged `owner_context_mismatch`               |
+| `RefreshOwner` / console  | Wrapper absent → `TenantContextMissing`               | Pt5  | Yes (loud)       | Nothing immediately; `doctor` reports the backlog   |
+| Refresh                   | Stripe unreachable → observation ages past an hour    | Pt8  | Yes              | Free allowance + upgrade prompt while paying        |
+| Sweep                     | Threshold equals expiry → refresh only after the fact | Pt8  | Yes              | Bounded by `stale_after` at half the expiry         |
+| Webhook                   | `active` delivered after `deleted`                    | Pt11 | Yes              | Nothing; the stale event is skipped and recorded    |
+| Webhook                   | `deleted` delivered before `created`                  | Pt11 | Yes              | Watermark survives the missing row; no resurrection |
+| Webhook                   | Two events in the same second, conflicting            | —    | **No**           | Arrival order wins — accepted, recorded in D42      |
+| Projects screen           | Six projects, lapsed to Free                          | Pt7  | Yes              | Counter `6 / 2`, create refused, nothing deleted    |
+| Migration                 | Pre-existing projects unmetered                       | Pt14 | Yes (backfill)   | Correct remaining value from the first request      |
 
 **One accepted gap, not a critical one:** conflicting same-second events have no test and no
 handling, and the outcome is silent. It is accepted in D42 with its reason, and the
@@ -622,16 +622,16 @@ has a test, handling, and a visible consequence.
 
 ## Parallelization
 
-| Step | Modules touched | Depends on |
-| ---- | --------------- | ---------- |
-| S1 — package 0.2.0: `lifetime` in `MeterPeriods` **and** the provider validator | (separate repo) | — |
-| S2 — morph map, catalog binding, `ResolveAllowance`, config | `app/Providers/`, `app/Entitlements/`, `config/` | S1 |
-| S3 — create path, request, policy, routes, receipt column, backfill | `app/Actions/`, `app/Http/`, `app/Policies/`, `routes/`, `database/migrations/` | S2 |
-| S4 — projects UI | `resources/js/pages/projects/` | S3 |
-| S5 — tenant wrapper for queue **and** console | `app/Jobs/`, `app/Console/`, `app/Providers/` | S2 |
-| S6 — watermark table + event-age guard | `app/Http/Controllers/Billing/`, `database/migrations/` | — |
-| S7 — permission + catalog migration | `app/Enums/`, `database/migrations/` | — |
-| S8 — PostgreSQL `Concurrency` suite + CI job | `phpunit.xml`, `.github/workflows/`, `tests/Concurrency/` | — (harness), S3 (subject) |
+| Step                                                                            | Modules touched                                                                 | Depends on                |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------- |
+| S1 — package 0.2.0: `lifetime` in `MeterPeriods` **and** the provider validator | (separate repo)                                                                 | —                         |
+| S2 — morph map, catalog binding, `ResolveAllowance`, config                     | `app/Providers/`, `app/Entitlements/`, `config/`                                | S1                        |
+| S3 — create path, request, policy, routes, receipt column, backfill             | `app/Actions/`, `app/Http/`, `app/Policies/`, `routes/`, `database/migrations/` | S2                        |
+| S4 — projects UI                                                                | `resources/js/pages/projects/`                                                  | S3                        |
+| S5 — tenant wrapper for queue **and** console                                   | `app/Jobs/`, `app/Console/`, `app/Providers/`                                   | S2                        |
+| S6 — watermark table + event-age guard                                          | `app/Http/Controllers/Billing/`, `database/migrations/`                         | —                         |
+| S7 — permission + catalog migration                                             | `app/Enums/`, `database/migrations/`                                            | —                         |
+| S8 — PostgreSQL `Concurrency` suite + CI job                                    | `phpunit.xml`, `.github/workflows/`, `tests/Concurrency/`                       | — (harness), S3 (subject) |
 
 ```
 Lane A: S1 → S2 → S3 → S4        (sequential — each needs the previous shape)
@@ -652,53 +652,53 @@ and the RBAC catalog replay helper must name its file with `--path` (trap 8).
 ## Implementation tasks
 
 - [ ] **T1 (P1, human: ~1d / CC: ~40min)** — `cashier-entitlements` — add `lifetime` to `MeterPeriods` **and** the provider validator; release 0.2.0
-  - Surfaced by: Outside voice #9 — `CashierEntitlementsServiceProvider.php:203` rejects unknown rules independently of `MeterPeriods.php:31`
-  - Files: `src/Usage/MeterPeriods.php`, `src/CashierEntitlementsServiceProvider.php`, tests, `CHANGELOG.md`
-  - Verify: `composer release-gate`
+    - Surfaced by: Outside voice #9 — `CashierEntitlementsServiceProvider.php:203` rejects unknown rules independently of `MeterPeriods.php:31`
+    - Files: `src/Usage/MeterPeriods.php`, `src/CashierEntitlementsServiceProvider.php`, tests, `CHANGELOG.md`
+    - Verify: `composer release-gate`
 - [ ] **T2 (P1, human: ~3h / CC: ~15min)** — entitlements — `ResolveAllowance` with the free-plan floor, as the single reader
-  - Surfaced by: Outside voice #1 — `LocalResolver.php:67` returns `[]` and `OwnerAccess.php:42` turns that into `0`
-  - Files: `app/Entitlements/ResolveAllowance.php`, `app/Providers/AppServiceProvider.php`
-  - Verify: `vendor/bin/pest tests/Feature/Entitlements/AllowanceFloorTest.php`
+    - Surfaced by: Outside voice #1 — `LocalResolver.php:67` returns `[]` and `OwnerAccess.php:42` turns that into `0`
+    - Files: `app/Entitlements/ResolveAllowance.php`, `app/Providers/AppServiceProvider.php`
+    - Verify: `vendor/bin/pest tests/Feature/Entitlements/AllowanceFloorTest.php`
 - [ ] **T3 (P1, human: ~2h / CC: ~10min)** — providers — morph map + `PriceCatalog` from `PlanCatalog` with a content-hashed version
-  - Surfaced by: Architecture — `OwnerLocator.php:72` requires a registered alias
-  - Files: `app/Providers/AppServiceProvider.php`, `config/cashier-entitlements.php`
-  - Verify: `vendor/bin/pest tests/Feature/Entitlements/CatalogTest.php`
+    - Surfaced by: Architecture — `OwnerLocator.php:72` requires a registered alias
+    - Files: `app/Providers/AppServiceProvider.php`, `config/cashier-entitlements.php`
+    - Verify: `vendor/bin/pest tests/Feature/Entitlements/CatalogTest.php`
 - [ ] **T4 (P1, human: ~1.5d / CC: ~45min)** — actions/http — `CreateProject` with the tenant comparison, `admit()`, receipt→project association, slug-naming request
-  - Surfaced by: Architecture — `admit()` never consults `TenantContext`; Code quality — the fingerprint omits the project name (`NativeUsage.php:40`)
-  - Files: `app/Actions/CreateProject.php`, `app/Http/Controllers/Projects/`, `app/Http/Requests/Projects/StoreProjectRequest.php`, `app/Policies/ProjectPolicy.php`, `routes/web.php`, `database/migrations/*_add_usage_receipt_id_to_projects.php`
-  - Verify: `vendor/bin/pest tests/Feature/Projects`
+    - Surfaced by: Architecture — `admit()` never consults `TenantContext`; Code quality — the fingerprint omits the project name (`NativeUsage.php:40`)
+    - Files: `app/Actions/CreateProject.php`, `app/Http/Controllers/Projects/`, `app/Http/Requests/Projects/StoreProjectRequest.php`, `app/Policies/ProjectPolicy.php`, `routes/web.php`, `database/migrations/*_add_usage_receipt_id_to_projects.php`
+    - Verify: `vendor/bin/pest tests/Feature/Projects`
 - [ ] **T5 (P1, human: ~4h / CC: ~20min)** — jobs/console — tenant wrapper for `RefreshOwner` **and** the entitlements commands
-  - Surfaced by: Outside voice #8 — `ReconcileCommand.php:76` calls `refresh()` in-process, bypassing the job
-  - Files: `app/Jobs/ResolveTenantForRefresh.php`, `app/Console/`, `app/Providers/AppServiceProvider.php`
-  - Verify: `vendor/bin/pest tests/Feature/Entitlements/RefreshOwnerTest.php`
+    - Surfaced by: Outside voice #8 — `ReconcileCommand.php:76` calls `refresh()` in-process, bypassing the job
+    - Files: `app/Jobs/ResolveTenantForRefresh.php`, `app/Console/`, `app/Providers/AppServiceProvider.php`
+    - Verify: `vendor/bin/pest tests/Feature/Entitlements/RefreshOwnerTest.php`
 - [ ] **T6 (P1, human: ~1d / CC: ~30min)** — billing — watermark table keyed by Stripe subscription id + event-age guard
-  - Surfaced by: Outside voice #3 — Cashier's deletion handler writes nothing when no row exists, so a row-local watermark cannot survive delete-before-create
-  - Files: `database/migrations/*_create_subscription_event_watermarks_table.php`, `app/Http/Controllers/Billing/StripeWebhookController.php`
-  - Verify: `vendor/bin/pest tests/Feature/Billing/WebhookEventAgeTest.php`
+    - Surfaced by: Outside voice #3 — Cashier's deletion handler writes nothing when no row exists, so a row-local watermark cannot survive delete-before-create
+    - Files: `database/migrations/*_create_subscription_event_watermarks_table.php`, `app/Http/Controllers/Billing/StripeWebhookController.php`
+    - Verify: `vendor/bin/pest tests/Feature/Billing/WebhookEventAgeTest.php`
 - [ ] **T7 (P1, human: ~1d / CC: ~30min)** — tests/ci — PostgreSQL `Concurrency` suite and its CI job
-  - Surfaced by: Test review — `CheckoutConcurrencyTest.php` is a sequential retry test and `phpunit.xml:29-30` makes competing connections impossible
-  - Files: `phpunit.xml`, `.github/workflows/`, `tests/Concurrency/ProjectLimitConcurrencyTest.php`
-  - Verify: `vendor/bin/pest --testsuite=Concurrency` against PostgreSQL
+    - Surfaced by: Test review — `CheckoutConcurrencyTest.php` is a sequential retry test and `phpunit.xml:29-30` makes competing connections impossible
+    - Files: `phpunit.xml`, `.github/workflows/`, `tests/Concurrency/ProjectLimitConcurrencyTest.php`
+    - Verify: `vendor/bin/pest --testsuite=Concurrency` against PostgreSQL
 - [ ] **T8 (P1, human: ~4h / CC: ~20min)** — migrations — backfill one counter row per organization from `count(projects)`
-  - Surfaced by: Outside voice #10 — a lifetime counter equals stock only if every existing row is metered
-  - Files: `database/migrations/*_backfill_project_usage_counters.php`
-  - Verify: `vendor/bin/pest tests/Feature/Entitlements/UsageBackfillTest.php`
+    - Surfaced by: Outside voice #10 — a lifetime counter equals stock only if every existing row is metered
+    - Files: `database/migrations/*_backfill_project_usage_counters.php`
+    - Verify: `vendor/bin/pest tests/Feature/Entitlements/UsageBackfillTest.php`
 - [ ] **T9 (P2, human: ~1d / CC: ~30min)** — tests — split the replay claim: facts converge in-replay, resolution asserted after
-  - Surfaced by: Test review — `ReplayRunner.php:82` wraps the replay in a transaction and discards after-commit callbacks
-  - Files: `tests/Feature/Billing/DunningReplayConvergenceTest.php`, `tests/Feature/Entitlements/PostReplayResolutionTest.php`
-  - Verify: `vendor/bin/pest tests/Feature/Billing tests/Feature/Entitlements`
+    - Surfaced by: Test review — `ReplayRunner.php:82` wraps the replay in a transaction and discards after-commit callbacks
+    - Files: `tests/Feature/Billing/DunningReplayConvergenceTest.php`, `tests/Feature/Entitlements/PostReplayResolutionTest.php`
+    - Verify: `vendor/bin/pest tests/Feature/Billing tests/Feature/Entitlements`
 - [ ] **T10 (P2, human: ~3h / CC: ~15min)** — enums/migrations — `ManageProjects` permission, catalog row, role grant; RBAC replay helper uses `--path`
-  - Surfaced by: Prior learning `migration-replay-helper-breaks-when-migrations-are-appended` (9/10)
-  - Files: `app/Enums/Permission.php`, `database/migrations/*_add_manage_projects_permission.php`, `tests/Feature/Authorization/RolePersistenceTest.php`
-  - Verify: `vendor/bin/pest tests/Feature/Authorization`
+    - Surfaced by: Prior learning `migration-replay-helper-breaks-when-migrations-are-appended` (9/10)
+    - Files: `app/Enums/Permission.php`, `database/migrations/*_add_manage_projects_permission.php`, `tests/Feature/Authorization/RolePersistenceTest.php`
+    - Verify: `vendor/bin/pest tests/Feature/Authorization`
 - [ ] **T11 (P2, human: ~1d / CC: ~30min)** — frontend — projects index, create form, upgrade prompt from `ResolveAllowance` scalars
-  - Surfaced by: D40 — the prompt is a projection, never its own threshold; prior learning `wayfinder-actions-are-gitignored` (9/10)
-  - Files: `resources/js/pages/projects/Index.vue`, upgrade prompt component
-  - Verify: `php artisan wayfinder:generate && vendor/bin/pest tests/Feature/Projects/ProjectScreenTest.php tests/Browser/ProjectLimitTest.php`
+    - Surfaced by: D40 — the prompt is a projection, never its own threshold; prior learning `wayfinder-actions-are-gitignored` (9/10)
+    - Files: `resources/js/pages/projects/Index.vue`, upgrade prompt component
+    - Verify: `php artisan wayfinder:generate && vendor/bin/pest tests/Feature/Projects/ProjectScreenTest.php tests/Browser/ProjectLimitTest.php`
 - [ ] **T12 (P2, human: ~2h / CC: ~10min)** — tests — register the package's owner-keyed tables with `TenantQueryGuard`, assert the boundary directly
-  - Surfaced by: Architecture — the guard keys on `organization_id` and cannot discover `owner_id` tables
-  - Files: `tests/Support/TenantQueryGuard.php`, `tests/Feature/Entitlements/EntitlementBoundaryTest.php`
-  - Verify: `vendor/bin/pest tests/Feature/Entitlements`
+    - Surfaced by: Architecture — the guard keys on `organization_id` and cannot discover `owner_id` tables
+    - Files: `tests/Support/TenantQueryGuard.php`, `tests/Feature/Entitlements/EntitlementBoundaryTest.php`
+    - Verify: `vendor/bin/pest tests/Feature/Entitlements`
 
 ## Inline diagrams the implementation should carry
 
@@ -710,13 +710,13 @@ and the RBAC catalog replay helper must name its file with `--path` (trap 8).
 
 ## GSTACK REVIEW REPORT
 
-| Review | Trigger | Why | Runs | Status | Findings |
-|--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
-| Codex Review | `/codex review` | Independent 2nd opinion | 1 | issues_found | 10 findings, 10 folded |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | issues_open | 10 issues, 1 accepted critical gap |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
-| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+| Review        | Trigger               | Why                             | Runs | Status       | Findings                           |
+| ------------- | --------------------- | ------------------------------- | ---- | ------------ | ---------------------------------- |
+| CEO Review    | `/plan-ceo-review`    | Scope & strategy                | 0    | —            | —                                  |
+| Codex Review  | `/codex review`       | Independent 2nd opinion         | 1    | issues_found | 10 findings, 10 folded             |
+| Eng Review    | `/plan-eng-review`    | Architecture & tests (required) | 1    | issues_open  | 10 issues, 1 accepted critical gap |
+| Design Review | `/plan-design-review` | UI/UX gaps                      | 0    | —            | —                                  |
+| DX Review     | `/plan-devex-review`  | Developer experience gaps       | 0    | —            | —                                  |
 
 - **CODEX:** Ten findings, nine verified against source by the reviewing model before being accepted. Four reversed the first draft: the package cannot express a free tier (D45 added), the dunning replay cannot host an entitlement assertion (tests split), the named concurrency harness does not exist (PostgreSQL suite added), and the upstream release was under-scoped (provider validator added to T1). Two corrected it: `admit()` is not a tenant guard, and usage idempotency omits the domain payload.
 - **CROSS-MODEL:** Both reviewers agree on D38, D40's transaction shape, D41's scope, and D42's necessity. They disagree on D39: the eng review keeps the lifetime meter so the entitlement system remains the single enforcement path; the outside voice argues a locked `count(projects)` with the package supplying only the allowance number is simpler and that a future inspector should not dictate the product primitive. The user chose to keep D39. The counter-argument and the reversal path are recorded inside D39 rather than discarded.
