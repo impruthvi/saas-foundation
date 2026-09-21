@@ -11,9 +11,10 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\TestResponse;
 use Laravel\Cashier\Events\WebhookReceived;
+use Tests\Support\StripeWebhook;
 
 beforeEach(function (): void {
-    config(['cashier.webhook.secret' => 'whsec_testing']);
+    config(['cashier.webhook.secret' => StripeWebhook::SECRET]);
 });
 
 /**
@@ -23,21 +24,7 @@ beforeEach(function (): void {
  */
 function postStripeWebhook(array $payload, bool $validSignature = true): TestResponse
 {
-    $json = json_encode($payload, JSON_THROW_ON_ERROR);
-    $timestamp = time();
-    $signature = $validSignature
-        ? 't='.$timestamp.',v1='.hash_hmac('sha256', "{$timestamp}.{$json}", 'whsec_testing')
-        : 't=1,v1=invalid';
-
-    return test()->call(
-        'POST',
-        route('cashier.webhook'),
-        server: [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_STRIPE_SIGNATURE' => $signature,
-        ],
-        content: $json,
-    );
+    return StripeWebhook::post($payload, $validSignature);
 }
 
 /**
@@ -48,28 +35,7 @@ function subscriptionWebhookPayload(
     string $type = 'customer.subscription.created',
     string $customerId = 'cus_acme',
 ): array {
-    return [
-        'id' => $eventId,
-        'type' => $type,
-        'data' => [
-            'object' => [
-                'id' => 'sub_pro',
-                'customer' => $customerId,
-                'status' => 'active',
-                'metadata' => ['type' => 'default'],
-                'items' => [
-                    'data' => [[
-                        'id' => 'si_pro',
-                        'price' => [
-                            'id' => 'price_pro',
-                            'product' => 'prod_pro',
-                        ],
-                        'quantity' => 1,
-                    ]],
-                ],
-            ],
-        ],
-    ];
+    return StripeWebhook::subscriptionPayload($eventId, $type, $customerId);
 }
 
 it('creates a subscription inside the organization named by the customer', function (): void {
