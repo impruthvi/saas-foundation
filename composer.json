@@ -15,6 +15,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
+        "impruthvi/cashier-entitlements": "^0.2.0",
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/cashier": "^16.8",
         "laravel/chisel": "^0.1.0",
