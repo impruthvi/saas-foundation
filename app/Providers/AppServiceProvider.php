@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Billing\Plan;
 use App\Billing\PlanCatalog;
+use App\Entitlements\ResolveAllowance;
 use App\Models\Organization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -15,6 +17,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Impruthvi\CashierEntitlements\Billing\PriceCatalog;
 use Impruthvi\CashierEntitlements\Billing\PriceMapping;
+use Impruthvi\CashierEntitlements\Resolution\LocalResolver;
+use LogicException;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +28,14 @@ final class AppServiceProvider extends ServiceProvider
             PriceCatalog::class,
             fn (): PriceCatalog => $this->entitlementCatalog(
                 $this->app->make(PlanCatalog::class),
+            ),
+        );
+
+        $this->app->singleton(
+            ResolveAllowance::class,
+            fn (): ResolveAllowance => new ResolveAllowance(
+                $this->app->make(LocalResolver::class),
+                $this->freeAllowances($this->app->make(PlanCatalog::class)),
             ),
         );
     }
@@ -62,6 +74,27 @@ final class AppServiceProvider extends ServiceProvider
             providerContext: Config::string('cashier-entitlements.provider_context'),
             liveMode: Config::boolean('cashier-entitlements.live_mode'),
         );
+    }
+
+    /** @return array<string, bool|int|null> */
+    private function freeAllowances(PlanCatalog $catalog): array
+    {
+        $plan = $catalog->findPlan('free');
+
+        throw_unless($plan instanceof Plan, LogicException::class, 'Billing must declare the Free plan used as the entitlement floor.');
+
+        $allowances = null;
+
+        foreach ($plan->prices as $price) {
+            $priceAllowances = $price->allowances;
+            ksort($priceAllowances);
+
+            throw_if($allowances !== null && $allowances !== $priceAllowances, LogicException::class, 'Every Free-plan price must declare the same entitlement floor.');
+
+            $allowances = $priceAllowances;
+        }
+
+        return $allowances ?? throw new LogicException('The Free plan must declare an entitlement floor.');
     }
 
     private function configureDefaults(): void
