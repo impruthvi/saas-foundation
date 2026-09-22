@@ -53,6 +53,7 @@ final class StripeWebhook
         return array_filter([
             'id' => $eventId,
             'type' => $type,
+            'livemode' => false,
             'created' => $created,
             'data' => [
                 'object' => [
