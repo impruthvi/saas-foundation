@@ -99,6 +99,6 @@ it('refuses another organization before admitting usage', function (): void {
         fn (): Project => resolve(CreateProject::class)->handle($first, 'Crossed project', 'request-one'),
     ))->toThrow(CrossTenantAccess::class);
 
-    expect(DB::table('cashier_entitlement_usage_events')->count())->toBe(0)
+    expect(acrossEveryOwner(fn (): int => DB::table('cashier_entitlement_usage_events')->count()))->toBe(0)
         ->and(DB::table('projects')->whereIn('organization_id', [$first->id, $second->id])->count())->toBe(0);
 });

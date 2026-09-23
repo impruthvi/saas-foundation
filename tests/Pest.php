@@ -50,6 +50,24 @@ pest()->extend(TestCase::class)
         TenantQueryGuard::register('model_has_roles');
         TenantQueryGuard::register('model_has_permissions');
 
+        // The entitlement package keys on the owner, not on the organization,
+        // and reads its ledgers by a primary key hashed from that owner, so
+        // both columns count as narrowing. Work that genuinely spans owners --
+        // the reconciler sweeping for stale state -- has to say so through
+        // acrossEveryOwner(). `cashier_entitlement_audit_runs` is absent
+        // because it records runs rather than anything an owner holds.
+        foreach ([
+            'cashier_entitlement_states',
+            'cashier_entitlement_usage_counters',
+            'cashier_entitlement_usage_events',
+            'cashier_entitlement_receipts',
+            'cashier_entitlement_billing_periods',
+            'cashier_entitlement_overrides',
+            'cashier_entitlement_driver_bindings',
+        ] as $ownerKeyedTable) {
+            TenantQueryGuard::register($ownerKeyedTable, ['owner_id', 'id']);
+        }
+
         TenantQueryGuard::install();
 
         // A stale permissions team can cross tenants without issuing unscoped SQL.
@@ -148,6 +166,23 @@ function mayWithin(User $user, int $organizationId, Permission $permission): boo
  * @return TReturn
  */
 function whileClosingAnAccount(Closure $work): mixed
+{
+    return TenantQueryGuard::allowUnscoped($work);
+}
+
+/**
+ * Read the entitlement ledgers across every owner.
+ *
+ * The package keys on the owner rather than the organization, so a test that
+ * wants to say "nobody anywhere was charged" has to look past the tenant
+ * boundary to say it. That crossing is a test's, never the application's.
+ *
+ * @template TReturn
+ *
+ * @param  Closure(): TReturn  $work
+ * @return TReturn
+ */
+function acrossEveryOwner(Closure $work): mixed
 {
     return TenantQueryGuard::allowUnscoped($work);
 }

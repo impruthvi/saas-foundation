@@ -41,7 +41,7 @@ it('backfills lifetime usage and remaining allowance from existing projects', fu
         ->and($usage)->toBe(1)
         ->and($allowance - $usage)->toBe(1)
         ->and(resolve(LocalResolver::class)->for($emptyOwner, $at)->usage('projects'))->toBe(0)
-        ->and(DB::table('cashier_entitlement_usage_counters')->count())->toBe(2);
+        ->and(acrossEveryOwner(fn (): int => DB::table('cashier_entitlement_usage_counters')->count()))->toBe(2);
 });
 
 it('replaces the backfilled total instead of counting projects twice when replayed', function (): void {
@@ -59,5 +59,5 @@ it('replaces the backfilled total instead of counting projects twice when replay
     $at = Date::now()->toDateTimeImmutable();
 
     expect(resolve(LocalResolver::class)->for($owner, $at)->usage('projects'))->toBe(2)
-        ->and(DB::table('cashier_entitlement_usage_counters')->count())->toBeOne();
+        ->and(acrossEveryOwner(fn (): int => DB::table('cashier_entitlement_usage_counters')->count()))->toBeOne();
 });
