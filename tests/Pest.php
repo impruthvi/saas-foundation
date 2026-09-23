@@ -31,57 +31,87 @@ use Tests\Support\AuthorizationTeamGuard;
 use Tests\Support\TenantQueryGuard;
 use Tests\TestCase;
 
+/**
+ * The strictness every single-process test runs under, whichever lane it is in.
+ */
+$strictBoot = function (): void {
+    // Automatic relationship autoloading runs *before* the lazy-loading check in
+    // Model::getRelationValue(), and returns early when it succeeds. Left enabled
+    // under test, it silently satisfies every relation accessed on a model that came
+    // from a collection, so ShouldBeStrict's preventLazyLoading never fires for the
+    // one case it exists to catch. Disabled here, and only here: the convenience is
+    // real in development and production, but a guard that cannot fail is not a guard.
+    // The framework makes the same call itself in Factory::createChildren().
+    Model::automaticallyEagerLoadRelationships(false);
+
+    // Assert the tenant boundary at the query layer for every test.
+    TenantQueryGuard::flush();
+
+    // These tenant-owned pivot tables have no application models to discover.
+    TenantQueryGuard::register('model_has_roles');
+    TenantQueryGuard::register('model_has_permissions');
+
+    // The entitlement package keys on the owner, not on the organization,
+    // and reads its ledgers by a primary key hashed from that owner, so
+    // both columns count as narrowing. Work that genuinely spans owners --
+    // the reconciler sweeping for stale state -- has to say so through
+    // acrossEveryOwner(). `cashier_entitlement_audit_runs` is absent
+    // because it records runs rather than anything an owner holds.
+    foreach ([
+        'cashier_entitlement_states',
+        'cashier_entitlement_usage_counters',
+        'cashier_entitlement_usage_events',
+        'cashier_entitlement_receipts',
+        'cashier_entitlement_billing_periods',
+        'cashier_entitlement_overrides',
+        'cashier_entitlement_driver_bindings',
+    ] as $ownerKeyedTable) {
+        TenantQueryGuard::register($ownerKeyedTable, ['owner_id', 'id']);
+    }
+
+    TenantQueryGuard::install();
+
+    // A stale permissions team can cross tenants without issuing unscoped SQL.
+    AuthorizationTeamGuard::flush();
+    AuthorizationTeamGuard::install();
+
+    Str::createRandomStringsNormally();
+    Str::createUuidsNormally();
+    Http::preventStrayRequests();
+    Sleep::fake();
+};
+
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->beforeEach(function (): void {
-        // Automatic relationship autoloading runs *before* the lazy-loading check in
-        // Model::getRelationValue(), and returns early when it succeeds. Left enabled
-        // under test, it silently satisfies every relation accessed on a model that came
-        // from a collection, so ShouldBeStrict's preventLazyLoading never fires for the
-        // one case it exists to catch. Disabled here, and only here: the convenience is
-        // real in development and production, but a guard that cannot fail is not a guard.
-        // The framework makes the same call itself in Factory::createChildren().
-        Model::automaticallyEagerLoadRelationships(false);
-
-        // Assert the tenant boundary at the query layer for every test.
-        TenantQueryGuard::flush();
-
-        // These tenant-owned pivot tables have no application models to discover.
-        TenantQueryGuard::register('model_has_roles');
-        TenantQueryGuard::register('model_has_permissions');
-
-        // The entitlement package keys on the owner, not on the organization,
-        // and reads its ledgers by a primary key hashed from that owner, so
-        // both columns count as narrowing. Work that genuinely spans owners --
-        // the reconciler sweeping for stale state -- has to say so through
-        // acrossEveryOwner(). `cashier_entitlement_audit_runs` is absent
-        // because it records runs rather than anything an owner holds.
-        foreach ([
-            'cashier_entitlement_states',
-            'cashier_entitlement_usage_counters',
-            'cashier_entitlement_usage_events',
-            'cashier_entitlement_receipts',
-            'cashier_entitlement_billing_periods',
-            'cashier_entitlement_overrides',
-            'cashier_entitlement_driver_bindings',
-        ] as $ownerKeyedTable) {
-            TenantQueryGuard::register($ownerKeyedTable, ['owner_id', 'id']);
-        }
-
-        TenantQueryGuard::install();
-
-        // A stale permissions team can cross tenants without issuing unscoped SQL.
-        AuthorizationTeamGuard::flush();
-        AuthorizationTeamGuard::install();
-
-        Str::createRandomStringsNormally();
-        Str::createUuidsNormally();
-        Http::preventStrayRequests();
-        Sleep::fake();
+    ->beforeEach(function () use ($strictBoot): void {
+        $strictBoot();
 
         $this->freezeTime();
     })
     ->in('Browser', 'Feature', 'Unit');
+
+/*
+ * Committed tests need work that outlives a transaction, because the
+ * entitlement refresh refuses to run inside one: it reads a provider and then
+ * applies the result in a transaction of its own. That rules out
+ * RefreshDatabase, and truncating instead rules out `:memory:`, whose schema
+ * does not survive the reconnect. Truncation also empties the tables the RBAC
+ * catalog migration filled, so the catalog is rebuilt for each test.
+ */
+pest()->extend(TestCase::class)
+    ->use(DatabaseTruncation::class)
+    ->beforeEach(function () use ($strictBoot): void {
+        if (DB::connection()->getConfig('database') === ':memory:') {
+            $this->markTestSkipped('Committed tests need a database that survives reconnection; :memory: does not.');
+        }
+
+        $strictBoot();
+
+        seedAuthorizationCatalog();
+
+        $this->freezeTime();
+    })
+    ->in('Committed');
 
 /*
  * Concurrency tests need committed rows, because the processes they fork read
@@ -98,25 +128,33 @@ pest()->extend(TestCase::class)
 
         Model::automaticallyEagerLoadRelationships(false);
 
-        $permissions = resolve(PermissionRegistrar::class);
-        $permissions->setPermissionsTeamId(null);
-        $permissions->forgetCachedPermissions();
-
-        foreach (Permission::cases() as $permission) {
-            StoredPermission::findOrCreate($permission->value);
-        }
-
-        foreach (OrganizationRole::cases() as $organizationRole) {
-            Role::findOrCreate($organizationRole->value)
-                ->syncPermissions(array_map(
-                    fn (Permission $permission): string => $permission->value,
-                    $organizationRole->permissions(),
-                ));
-        }
-
-        $permissions->forgetCachedPermissions();
+        seedAuthorizationCatalog();
     })
     ->in('Concurrency');
+
+/**
+ * Rebuild the roles and permissions a truncating lane just emptied.
+ */
+function seedAuthorizationCatalog(): void
+{
+    $permissions = resolve(PermissionRegistrar::class);
+    $permissions->setPermissionsTeamId(null);
+    $permissions->forgetCachedPermissions();
+
+    foreach (Permission::cases() as $permission) {
+        StoredPermission::findOrCreate($permission->value);
+    }
+
+    foreach (OrganizationRole::cases() as $organizationRole) {
+        Role::findOrCreate($organizationRole->value)
+            ->syncPermissions(array_map(
+                fn (Permission $permission): string => $permission->value,
+                $organizationRole->permissions(),
+            ));
+    }
+
+    $permissions->forgetCachedPermissions();
+}
 
 expect()->extend('toBeOne', fn () => $this->toBe(1));
 

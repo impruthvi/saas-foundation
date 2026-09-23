@@ -318,3 +318,32 @@ published `create_cashier_entitlements_usage_tables` migration.
 
 **Depends on / blocked by:** M6, which owns the retention and replay surfaces that decide
 how old a record can usefully be.
+
+## Audit every owner from the console in one pass
+
+**What:** `entitlements:reconcile --all`, which currently refuses with `owner_scope_required`
+instead of auditing every organization the way the package's own command does.
+
+**Why:** The audit reads each owner's subscriptions through a tenant-scoped relation, and
+that scope raises rather than falling back. D41 resolves the tenant around the command from
+`--owner`, which works for one organization and cannot work for a loop that picks its own
+owners. The loop lives inside the package's `ReconcileCommand::audit()`, and the command is
+`final`, so there is nowhere from out here to resolve a tenant per iteration.
+
+**Pros:** Restores an operator tool that answers "is anything drifted anywhere" in one
+command. Today the answer needs one invocation per organization, which does not scale past
+a few dozen.
+
+**Cons:** Every option moves the tenant decision somewhere it does not belong — reaching
+into the package, reimplementing the merged report shape (including `unknown_customers`,
+which is computed from a Stripe-wide customer discovery rather than per owner), or teaching
+the tenant to resolve itself from whatever model is being read.
+
+**Context:** `entitlements:doctor` still reports across owners and is unaffected, because it
+reads the state table rather than any tenant-scoped relation. The per-owner form,
+`--owner-type=organization --owner=N`, works for both `--apply` and the dry run and is what
+the scheduled sweep and recovery rely on anyway. Start at
+`app/Console/Commands/ReconcileEntitlementsCommand.php` and D41.
+
+**Depends on / blocked by:** An upstream seam in `impruthvi/cashier-entitlements` — either a
+non-final audit command, or a per-owner callback the host can wrap.

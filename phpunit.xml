@@ -15,6 +15,13 @@
             <directory>tests/Browser</directory>
         </testsuite>
         <!--
+            Kept out of `test:unit` on purpose. The entitlement refresh refuses to
+            run inside a transaction, so these commit their work and truncate after.
+        -->
+        <testsuite name="Committed">
+            <directory>tests/Committed</directory>
+        </testsuite>
+        <!--
             Kept out of `test:unit` on purpose. These tests fork real processes onto
             separate connections, which SQLite cannot express: every connection to
             `:memory:` opens its own private database.

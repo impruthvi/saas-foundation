@@ -6,10 +6,13 @@ namespace App\Providers;
 
 use App\Billing\Plan;
 use App\Billing\PlanCatalog;
+use App\Console\Commands\ReconcileEntitlementsCommand;
 use App\Entitlements\ResolveAllowance;
 use App\Models\Organization;
+use App\Tenancy\ResolveTenantForRefresh;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +46,16 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Relation::morphMap(['organization' => Organization::class]);
+
+        // Entitlement work carries an owner reference and then reads that
+        // owner's subscriptions through a tenant-scoped relation, on the queue
+        // and on the console alike. Both entry points get the organization
+        // resolved from the reference the work already carries.
+        Bus::pipeThrough([ResolveTenantForRefresh::class]);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([ReconcileEntitlementsCommand::class]);
+        }
 
         $this->configureDefaults();
     }
