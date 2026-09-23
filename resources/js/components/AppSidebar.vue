@@ -4,6 +4,7 @@ import {
     BookOpen,
     CreditCard,
     FolderGit2,
+    FolderKanban,
     LayoutGrid,
     Users,
 } from '@lucide/vue';
@@ -24,6 +25,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as billing } from '@/routes/organizations/billing';
 import { index as members } from '@/routes/organizations/members';
+import { index as projects } from '@/routes/projects';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -31,6 +33,11 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Projects',
+        href: projects(),
+        icon: FolderKanban,
     },
     {
         title: 'Members',

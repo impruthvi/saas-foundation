@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Impruthvi\CashierEntitlements\Billing\BillingDecision;
+use Impruthvi\CashierEntitlements\Billing\OwnerReference;
+use Impruthvi\CashierEntitlements\Billing\PriceCatalog;
+use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
+use Impruthvi\CashierEntitlements\Reconciliation\OwnerLocator;
 use Spatie\Permission\Models\Permission as StoredPermission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -167,6 +172,43 @@ function issueInvitation(Organization $organization, string $email, ?User $by = 
         fn (): string => resolve(InviteOrganizationMember::class)
             ->handle($organization, $email, MembershipRole::Member, $by)['token'],
     );
+}
+
+/**
+ * The entitlement owner an organization is known by inside the package.
+ */
+function organizationEntitlementOwner(Organization $organization): OwnerReference
+{
+    return resolve(OwnerLocator::class)->reference($organization);
+}
+
+/**
+ * Land a billing decision the way a completed refresh would.
+ *
+ * Tests reach for this rather than writing the projection directly, because
+ * the request/claim/complete handshake is what decides whether the resolver
+ * will later trust the row at all.
+ */
+function applyAllowanceDecision(
+    OwnerReference $owner,
+    BillingDecision $decision,
+    DateTimeImmutable $observedAt,
+    ?string $catalogVersion = null,
+): void {
+    $store = resolve(NativeStateStore::class);
+
+    expect($store->request($owner, $observedAt))->toBeTrue();
+
+    $claim = $store->claim($owner, $observedAt);
+
+    expect($claim)->not->toBeNull()
+        ->and($store->complete(
+            $claim,
+            $decision,
+            $catalogVersion ?? resolve(PriceCatalog::class)->version,
+            $observedAt,
+            $observedAt,
+        ))->toBeTrue();
 }
 
 /**

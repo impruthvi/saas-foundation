@@ -18,15 +18,3 @@ export type PendingInvitation = {
     expiresAt: string;
     invitedBy: string | null;
 };
-
-export type PaginationLink = {
-    url: string | null;
-    label: string;
-    active: boolean;
-};
-
-export type Paginated<T> = {
-    data: T[];
-    links: PaginationLink[];
-    total: number;
-};

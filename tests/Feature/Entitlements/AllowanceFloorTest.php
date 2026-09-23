@@ -9,36 +9,6 @@ use DateTimeImmutable;
 use Illuminate\Support\Facades\Date;
 use Impruthvi\CashierEntitlements\Billing\BillingDecision;
 use Impruthvi\CashierEntitlements\Billing\OwnerReference;
-use Impruthvi\CashierEntitlements\Billing\PriceCatalog;
-use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
-use Impruthvi\CashierEntitlements\Reconciliation\OwnerLocator;
-
-function organizationEntitlementOwner(Organization $organization): OwnerReference
-{
-    return resolve(OwnerLocator::class)->reference($organization);
-}
-
-function applyAllowanceDecision(
-    OwnerReference $owner,
-    BillingDecision $decision,
-    DateTimeImmutable $observedAt,
-    ?string $catalogVersion = null,
-): void {
-    $store = resolve(NativeStateStore::class);
-
-    expect($store->request($owner, $observedAt))->toBeTrue();
-
-    $claim = $store->claim($owner, $observedAt);
-
-    expect($claim)->not->toBeNull()
-        ->and($store->complete(
-            $claim,
-            $decision,
-            $catalogVersion ?? resolve(PriceCatalog::class)->version,
-            $observedAt,
-            $observedAt,
-        ))->toBeTrue();
-}
 
 function arrangeAllowanceState(OwnerReference $owner, string $state, DateTimeImmutable $at): void
 {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Projects;
 
 use App\Actions\CreateProject;
+use App\Billing\BillingFacts;
 use App\Billing\PlanCatalog;
 use App\Entitlements\ResolveAllowance;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use App\Models\Project;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
 use Impruthvi\CashierEntitlements\Reconciliation\OwnerLocator;
@@ -28,11 +30,45 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 final class ProjectController extends Controller
 {
-    public function index(): Response
-    {
+    private const int PER_PAGE = 25;
+
+    public function index(
+        Request $request,
+        TenantContext $tenant,
+        OwnerLocator $owners,
+        ResolveAllowance $allowances,
+        LocalResolver $resolver,
+        PlanCatalog $catalog,
+        BillingFacts $facts,
+    ): Response {
         Gate::authorize('viewAny', Project::class);
 
-        return Inertia::render('projects/Index');
+        $organization = $tenant->current();
+        abort_unless($organization instanceof Organization, HttpResponse::HTTP_FORBIDDEN);
+
+        try {
+            $allowance = $this->allowance($organization, $owners, $allowances, $resolver, $catalog);
+        } catch (ReadFailure|FeatureTypeMismatch|UnknownFeature $configurationFailure) {
+            report($configurationFailure);
+
+            abort(HttpResponse::HTTP_SERVICE_UNAVAILABLE, __('Projects are temporarily unavailable.'));
+        }
+
+        return Inertia::render('projects/Index', [
+            'projects' => Project::query()
+                ->latest('id')
+                ->paginate(self::PER_PAGE)
+                ->through(fn (Project $project): array => [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'createdAt' => $project->created_at?->toFormattedDateString(),
+                ]),
+            'allowance' => $allowance,
+            'canCreate' => $request->user()?->can('create', Project::class) ?? false,
+            'accessEndsAt' => $facts->state($organization) === BillingFacts::STATE_GRACE_PERIOD
+                ? $facts->currentSubscription($organization)?->ends_at?->toFormattedDateString()
+                : null,
+        ]);
     }
 
     public function store(
@@ -54,7 +90,7 @@ final class ProjectController extends Controller
                 $request->idempotencyToken(),
             );
         } catch (LimitExceeded) {
-            $details = $this->limitDetails($organization, $owners, $allowances, $resolver, $catalog);
+            $details = $this->allowance($organization, $owners, $allowances, $resolver, $catalog);
             $message = $details['upgradePlan'] === null
                 ? __('This organization has used all :usage of its :limit projects.', $details)
                 : __('This organization has used all :usage of its :limit projects. Upgrade to :upgradePlan to create another.', $details);
@@ -82,9 +118,17 @@ final class ProjectController extends Controller
     }
 
     /**
-     * @return array{limit: int|null, usage: int, upgradePlan: string|null}
+     * The scalars the screen and the refusal message are both projections of.
+     *
+     * `remaining` is computed here rather than in the renderer so the screen
+     * never carries a threshold of its own: a hidden button is not a limit, and
+     * the endpoint refuses whatever the screen decided to show. It is clamped
+     * because usage above the limit is a real state after a downgrade, not an
+     * error — `null` means unlimited, and `0` means no allowance at all.
+     *
+     * @return array{limit: int|null, usage: int, remaining: int|null, upgradePlan: string|null}
      */
-    private function limitDetails(
+    private function allowance(
         Organization $organization,
         OwnerLocator $owners,
         ResolveAllowance $allowances,
@@ -99,6 +143,7 @@ final class ProjectController extends Controller
         return [
             'limit' => $limit,
             'usage' => $usage,
+            'remaining' => $limit === null ? null : max(0, $limit - $usage),
             'upgradePlan' => $this->cheapestPlanAbove($catalog, $usage),
         ];
     }
