@@ -69,7 +69,13 @@ final class Contenders
 
         try {
             return $attempt()->value;
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            fwrite(STDERR, sprintf(
+                "Concurrency contender failed: %s: %s\n",
+                $throwable::class,
+                $throwable->getMessage(),
+            ));
+
             return Outcome::Failed->value;
         }
     }

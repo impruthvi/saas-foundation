@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\CreateOrganization;
 use App\Actions\InviteOrganizationMember;
 use App\Enums\MembershipRole;
+use App\Enums\OrganizationRole;
 use App\Enums\Permission;
 use App\Models\Invitation;
 use App\Models\Organization;
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission as StoredPermission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\Support\AuthorizationTeamGuard;
 use Tests\Support\TenantQueryGuard;
 use Tests\TestCase;
@@ -70,6 +74,24 @@ pest()->extend(TestCase::class)
         }
 
         Model::automaticallyEagerLoadRelationships(false);
+
+        $permissions = resolve(PermissionRegistrar::class);
+        $permissions->setPermissionsTeamId(null);
+        $permissions->forgetCachedPermissions();
+
+        foreach (Permission::cases() as $permission) {
+            StoredPermission::findOrCreate($permission->value);
+        }
+
+        foreach (OrganizationRole::cases() as $organizationRole) {
+            Role::findOrCreate($organizationRole->value)
+                ->syncPermissions(array_map(
+                    fn (Permission $permission): string => $permission->value,
+                    $organizationRole->permissions(),
+                ));
+        }
+
+        $permissions->forgetCachedPermissions();
     })
     ->in('Concurrency');
 

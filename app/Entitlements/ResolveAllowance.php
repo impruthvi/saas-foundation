@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Entitlements;
 
 use DateTimeImmutable;
+use Illuminate\Database\Connection;
 use Impruthvi\CashierEntitlements\Billing\OwnerReference;
 use Impruthvi\CashierEntitlements\Resolution\FeatureTypeMismatch;
 use Impruthvi\CashierEntitlements\Resolution\LocalResolver;
+use Impruthvi\CashierEntitlements\Usage\AdmissionResolver;
 
-final readonly class ResolveAllowance
+final readonly class ResolveAllowance implements AdmissionResolver
 {
     /** @param array<string, bool|int|null> $freeAllowances */
     public function __construct(
@@ -49,5 +51,19 @@ final readonly class ResolveAllowance
             || ($value !== null && (! is_int($value) || $value < 0)), FeatureTypeMismatch::class, 'invalid_numeric_grant');
 
         return $floor === null || $value === null ? null : max($floor, $value);
+    }
+
+    public function assertConnection(OwnerReference $owner, Connection $connection): void
+    {
+        $this->resolver->assertConnection($owner, $connection);
+    }
+
+    public function limit(OwnerReference $owner, string $feature, DateTimeImmutable $at): ?int
+    {
+        $allowance = $this->handle($owner, $feature, $at);
+
+        throw_if(is_bool($allowance), FeatureTypeMismatch::class, 'admission_requires_numeric');
+
+        return $allowance;
     }
 }

@@ -31,7 +31,7 @@ final class AppServiceProvider extends ServiceProvider
             ),
         );
 
-        $this->app->singleton(
+        $this->app->bind(
             ResolveAllowance::class,
             fn (): ResolveAllowance => new ResolveAllowance(
                 $this->app->make(LocalResolver::class),

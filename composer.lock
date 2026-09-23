@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "12181f2c95010e8b9be1931db58b1cc1",
+    "content-hash": "9f17a52cdbf8b228f14bdea254ee6225",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1209,16 +1209,16 @@
         },
         {
             "name": "impruthvi/cashier-entitlements",
-            "version": "v0.2.0",
+            "version": "v0.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/impruthvi/cashier-entitlements.git",
-                "reference": "1d54f4a60d0bd74c3c0ad14c5a5b919fe34260ea"
+                "reference": "93920815251ac6216a36af99bc10b3cb3314c429"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/impruthvi/cashier-entitlements/zipball/1d54f4a60d0bd74c3c0ad14c5a5b919fe34260ea",
-                "reference": "1d54f4a60d0bd74c3c0ad14c5a5b919fe34260ea",
+                "url": "https://api.github.com/repos/impruthvi/cashier-entitlements/zipball/93920815251ac6216a36af99bc10b3cb3314c429",
+                "reference": "93920815251ac6216a36af99bc10b3cb3314c429",
                 "shasum": ""
             },
             "require": {
@@ -1276,7 +1276,7 @@
                 "issues": "https://github.com/impruthvi/cashier-entitlements/issues",
                 "source": "https://github.com/impruthvi/cashier-entitlements"
             },
-            "time": "2026-09-21T10:29:55+00:00"
+            "time": "2026-09-23T18:41:40+00:00"
         },
         {
             "name": "inertiajs/inertia-laravel",
