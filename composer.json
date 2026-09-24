@@ -124,7 +124,8 @@
             "@php artisan billing:doctor",
             "@putenv CASHIER_ENTITLEMENTS_ENABLED=false",
             "@php artisan billing:simulate trial-dunning-cancel-reactivate",
-            "@php artisan billing:simulate trial-dunning-cancel-reactivate --shuffle --duplicate --seed=7"
+            "@php artisan billing:simulate trial-dunning-cancel-reactivate --shuffle --duplicate --seed=7",
+            "@putenv CASHIER_ENTITLEMENTS_ENABLED=true"
         ],
         "test:browser": "pest --testsuite=Browser",
         "test:concurrency": "pest --testsuite=Concurrency",
