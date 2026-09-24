@@ -651,51 +651,52 @@ and the RBAC catalog replay helper must name its file with `--path` (trap 8).
 
 ## Implementation tasks
 
-- [ ] **T1 (P1, human: ~1d / CC: ~40min)** — `cashier-entitlements` — add `lifetime` to `MeterPeriods` **and** the provider validator; release 0.2.0
+- [x] **T1 (P1, human: ~1d / CC: ~40min)** — `cashier-entitlements` — add `lifetime` to `MeterPeriods` **and** the provider validator; release 0.2.0
     - Surfaced by: Outside voice #9 — `CashierEntitlementsServiceProvider.php:203` rejects unknown rules independently of `MeterPeriods.php:31`
     - Files: `src/Usage/MeterPeriods.php`, `src/CashierEntitlementsServiceProvider.php`, tests, `CHANGELOG.md`
     - Verify: `composer release-gate`
-- [ ] **T2 (P1, human: ~3h / CC: ~15min)** — entitlements — `ResolveAllowance` with the free-plan floor, as the single reader
+- [x] **T2 (P1, human: ~3h / CC: ~15min)** — entitlements — `ResolveAllowance` with the free-plan floor, as the single reader
     - Surfaced by: Outside voice #1 — `LocalResolver.php:67` returns `[]` and `OwnerAccess.php:42` turns that into `0`
     - Files: `app/Entitlements/ResolveAllowance.php`, `app/Providers/AppServiceProvider.php`
     - Verify: `vendor/bin/pest tests/Feature/Entitlements/AllowanceFloorTest.php`
-- [ ] **T3 (P1, human: ~2h / CC: ~10min)** — providers — morph map + `PriceCatalog` from `PlanCatalog` with a content-hashed version
+- [x] **T3 (P1, human: ~2h / CC: ~10min)** — providers — morph map + `PriceCatalog` from `PlanCatalog` with a content-hashed version
     - Surfaced by: Architecture — `OwnerLocator.php:72` requires a registered alias
     - Files: `app/Providers/AppServiceProvider.php`, `config/cashier-entitlements.php`
     - Verify: `vendor/bin/pest tests/Feature/Entitlements/CatalogTest.php`
-- [ ] **T4 (P1, human: ~1.5d / CC: ~45min)** — actions/http — `CreateProject` with the tenant comparison, `admit()`, receipt→project association, slug-naming request
+- [x] **T4 (P1, human: ~1.5d / CC: ~45min)** — actions/http — `CreateProject` with the tenant comparison, `admit()`, receipt→project association, slug-naming request
     - Surfaced by: Architecture — `admit()` never consults `TenantContext`; Code quality — the fingerprint omits the project name (`NativeUsage.php:40`)
     - Files: `app/Actions/CreateProject.php`, `app/Http/Controllers/Projects/`, `app/Http/Requests/Projects/StoreProjectRequest.php`, `app/Policies/ProjectPolicy.php`, `routes/web.php`, `database/migrations/*_add_usage_receipt_id_to_projects.php`
     - Verify: `vendor/bin/pest tests/Feature/Projects`
-- [ ] **T5 (P1, human: ~4h / CC: ~20min)** — jobs/console — tenant wrapper for `RefreshOwner` **and** the entitlements commands
+- [x] **T5 (P1, human: ~4h / CC: ~20min)** — jobs/console — tenant wrapper for `RefreshOwner` **and** the entitlements commands
     - Surfaced by: Outside voice #8 — `ReconcileCommand.php:76` calls `refresh()` in-process, bypassing the job
-    - Files: `app/Jobs/ResolveTenantForRefresh.php`, `app/Console/`, `app/Providers/AppServiceProvider.php`
+    - Files: `app/Tenancy/ResolveTenantForRefresh.php`, `app/Console/Commands/ReconcileEntitlementsCommand.php`, `app/Providers/AppServiceProvider.php`
+    - Landed as a bus pipe, not job middleware: `RefreshOwner` declares neither, and the package stays unpatched. Sweep and recover needed no wrapper — they only queue. `--all` is refused; see `TODOS.md`.
     - Verify: `vendor/bin/pest tests/Feature/Entitlements/RefreshOwnerTest.php`
-- [ ] **T6 (P1, human: ~1d / CC: ~30min)** — billing — watermark table keyed by Stripe subscription id + event-age guard
+- [x] **T6 (P1, human: ~1d / CC: ~30min)** — billing — watermark table keyed by Stripe subscription id + event-age guard
     - Surfaced by: Outside voice #3 — Cashier's deletion handler writes nothing when no row exists, so a row-local watermark cannot survive delete-before-create
     - Files: `database/migrations/*_create_subscription_event_watermarks_table.php`, `app/Http/Controllers/Billing/StripeWebhookController.php`
     - Verify: `vendor/bin/pest tests/Feature/Billing/WebhookEventAgeTest.php`
-- [ ] **T7 (P1, human: ~1d / CC: ~30min)** — tests/ci — PostgreSQL `Concurrency` suite and its CI job
+- [x] **T7 (P1, human: ~1d / CC: ~30min)** — tests/ci — PostgreSQL `Concurrency` suite and its CI job
     - Surfaced by: Test review — `CheckoutConcurrencyTest.php` is a sequential retry test and `phpunit.xml:29-30` makes competing connections impossible
     - Files: `phpunit.xml`, `.github/workflows/`, `tests/Concurrency/ProjectLimitConcurrencyTest.php`
     - Verify: `vendor/bin/pest --testsuite=Concurrency` against PostgreSQL
-- [ ] **T8 (P1, human: ~4h / CC: ~20min)** — migrations — backfill one counter row per organization from `count(projects)`
+- [x] **T8 (P1, human: ~4h / CC: ~20min)** — migrations — backfill one counter row per organization from `count(projects)`
     - Surfaced by: Outside voice #10 — a lifetime counter equals stock only if every existing row is metered
     - Files: `database/migrations/*_backfill_project_usage_counters.php`
     - Verify: `vendor/bin/pest tests/Feature/Entitlements/UsageBackfillTest.php`
-- [ ] **T9 (P2, human: ~1d / CC: ~30min)** — tests — split the replay claim: facts converge in-replay, resolution asserted after
+- [x] **T9 (P2, human: ~1d / CC: ~30min)** — tests — split the replay claim: facts converge in-replay, resolution asserted after
     - Surfaced by: Test review — `ReplayRunner.php:82` wraps the replay in a transaction and discards after-commit callbacks
     - Files: `tests/Feature/Billing/DunningReplayConvergenceTest.php`, `tests/Feature/Entitlements/PostReplayResolutionTest.php`
     - Verify: `vendor/bin/pest tests/Feature/Billing tests/Feature/Entitlements`
-- [ ] **T10 (P2, human: ~3h / CC: ~15min)** — enums/migrations — `ManageProjects` permission, catalog row, role grant; RBAC replay helper uses `--path`
+- [x] **T10 (P2, human: ~3h / CC: ~15min)** — enums/migrations — `ManageProjects` permission, catalog row, role grant; RBAC replay helper uses `--path`
     - Surfaced by: Prior learning `migration-replay-helper-breaks-when-migrations-are-appended` (9/10)
     - Files: `app/Enums/Permission.php`, `database/migrations/*_add_manage_projects_permission.php`, `tests/Feature/Authorization/RolePersistenceTest.php`
     - Verify: `vendor/bin/pest tests/Feature/Authorization`
-- [ ] **T11 (P2, human: ~1d / CC: ~30min)** — frontend — projects index, create form, upgrade prompt from `ResolveAllowance` scalars
+- [x] **T11 (P2, human: ~1d / CC: ~30min)** — frontend — projects index, create form, upgrade prompt from `ResolveAllowance` scalars
     - Surfaced by: D40 — the prompt is a projection, never its own threshold; prior learning `wayfinder-actions-are-gitignored` (9/10)
     - Files: `resources/js/pages/projects/Index.vue`, upgrade prompt component
     - Verify: `php artisan wayfinder:generate && vendor/bin/pest tests/Feature/Projects/ProjectScreenTest.php tests/Browser/ProjectLimitTest.php`
-- [ ] **T12 (P2, human: ~2h / CC: ~10min)** — tests — register the package's owner-keyed tables with `TenantQueryGuard`, assert the boundary directly
+- [x] **T12 (P2, human: ~2h / CC: ~10min)** — tests — register the package's owner-keyed tables with `TenantQueryGuard`, assert the boundary directly
     - Surfaced by: Architecture — the guard keys on `organization_id` and cannot discover `owner_id` tables
     - Files: `tests/Support/TenantQueryGuard.php`, `tests/Feature/Entitlements/EntitlementBoundaryTest.php`
     - Verify: `vendor/bin/pest tests/Feature/Entitlements`
