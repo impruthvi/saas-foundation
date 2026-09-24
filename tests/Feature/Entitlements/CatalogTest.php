@@ -66,7 +66,7 @@ it('maps the application billing catalog into the package catalog', function ():
         ->and($catalog->prices['price_free']->allowances)->toBe(['exports' => false, 'projects' => 2])
         ->and($catalog->prices['price_pro']->planKey)->toBe('pro')
         ->and($catalog->prices['price_pro']->allowances)->toBe(['exports' => true, 'projects' => 10])
-        ->and($catalog->freeAllowances)->toBe([])
+        ->and($catalog->freeAllowances)->toBeEmpty()
         ->and($catalog->providerContext)->toBe('platform')
         ->and($catalog->liveMode)->toBeFalse();
 });
@@ -87,6 +87,7 @@ it('changes the catalog version for content changes but not configuration order'
             $price['allowances'] = array_reverse($price['allowances'], true);
         }
     }
+
     unset($plan, $price);
 
     expect($changedVersion)->not->toBe($initial->version)

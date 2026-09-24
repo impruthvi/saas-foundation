@@ -91,7 +91,7 @@ it('leaves work that is not an entitlement refresh alone', function (): void {
 it('carries the tenant far enough for a dispatched refresh to reach the provider', function (): void {
     [, $reference] = organizationAwaitingRefresh();
 
-    expect(fn () => acrossEveryOwner(fn () => Bus::dispatch(new RefreshOwner($reference))))
+    expect(fn (): mixed => acrossEveryOwner(fn () => Bus::dispatch(new RefreshOwner($reference))))
         ->toThrow(ReadFailure::class, 'provider_unavailable');
 });
 

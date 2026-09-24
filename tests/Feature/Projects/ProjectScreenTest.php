@@ -6,10 +6,12 @@ use App\Actions\CreateProject;
 use App\Billing\PlanCatalog;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Organization;
+use App\Models\Project;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Testing\TestResponse;
 use Impruthvi\CashierEntitlements\Billing\BillingDecision;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -34,7 +36,7 @@ function allowProjectsFor(Organization $organization, ?int $allowance): void
     );
 }
 
-function visitProjectsAs(User $user, Organization $organization): Illuminate\Testing\TestResponse
+function visitProjectsAs(User $user, Organization $organization): TestResponse
 {
     return test()
         ->actingAs($user)
@@ -106,7 +108,7 @@ it('keeps every project when a downgrade drops usage below the limit', function 
 
     expect(resolve(TenantContext::class)->runFor(
         $organization,
-        fn (): int => App\Models\Project::query()->count(),
+        fn (): int => Project::query()->count(),
     ))->toBe(6);
 });
 

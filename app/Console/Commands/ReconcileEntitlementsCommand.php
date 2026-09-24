@@ -6,6 +6,8 @@ namespace App\Console\Commands;
 
 use App\Models\Organization;
 use App\Tenancy\TenantContext;
+use Illuminate\Console\Attributes\Description;
+use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Impruthvi\CashierEntitlements\Commands\ReconcileCommand;
@@ -25,21 +27,17 @@ use Impruthvi\CashierEntitlements\Commands\ReconcileCommand;
  * `--all` is refused: it audits every owner in one in-package loop, which
  * cannot be given one organization from out here.
  */
-final class ReconcileEntitlementsCommand extends Command
-{
-    /** @var string */
-    protected $signature = 'entitlements:reconcile
+#[Description('Compare Stripe with Cashier, or explicitly apply native access for one owner')]
+#[Signature('entitlements:reconcile
         {--owner-type= : The registered morph alias of the owner}
         {--owner= : The owner key}
         {--all}
         {--test-clock=}
         {--dry-run}
         {--apply}
-        {--json}';
-
-    /** @var string */
-    protected $description = 'Compare Stripe with Cashier, or explicitly apply native access for one owner';
-
+        {--json}')]
+final class ReconcileEntitlementsCommand extends Command
+{
     public function handle(TenantContext $tenant): int
     {
         if ($this->option('all') && ! $this->option('apply')) {

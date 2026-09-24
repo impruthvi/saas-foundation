@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('cashier_entitlement_driver_bindings', function (Blueprint $table) {
+        Schema::create('cashier_entitlement_driver_bindings', function (Blueprint $table): void {
             $table->char('id', 64)->primary();
             $table->char('owner_id', 64);
             $table->string('driver', 40);

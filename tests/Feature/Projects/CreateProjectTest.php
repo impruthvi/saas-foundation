@@ -38,9 +38,8 @@ it('enforces the Free-plan floor inside admission', function (): void {
         $create->handle($organization, 'Second project', 'request-two');
 
         expect(fn (): Project => $create->handle($organization, 'Third project', 'request-three'))
-            ->toThrow(LimitExceeded::class);
-
-        expect(Project::query()->pluck('name')->all())->toBe(['First project', 'Second project']);
+            ->toThrow(LimitExceeded::class)
+            ->and(Project::query()->pluck('name')->all())->toBe(['First project', 'Second project']);
     });
 });
 
@@ -97,8 +96,7 @@ it('refuses another organization before admitting usage', function (): void {
     expect(fn (): Project => resolve(TenantContext::class)->runFor(
         $second,
         fn (): Project => resolve(CreateProject::class)->handle($first, 'Crossed project', 'request-one'),
-    ))->toThrow(CrossTenantAccess::class);
-
-    expect(acrossEveryOwner(fn (): int => DB::table('cashier_entitlement_usage_events')->count()))->toBe(0)
+    ))->toThrow(CrossTenantAccess::class)
+        ->and(acrossEveryOwner(fn (): int => DB::table('cashier_entitlement_usage_events')->count()))->toBe(0)
         ->and(DB::table('projects')->whereIn('organization_id', [$first->id, $second->id])->count())->toBe(0);
 });

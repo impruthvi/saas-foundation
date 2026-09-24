@@ -10,11 +10,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('cashier_entitlement_usage_counters', function (Blueprint $table) {
+        Schema::create('cashier_entitlement_usage_counters', function (Blueprint $table): void {
             $table->char('id', 64)->primary();
             $table->bigInteger('total');
         });
-        Schema::create('cashier_entitlement_usage_events', function (Blueprint $table) {
+        Schema::create('cashier_entitlement_usage_events', function (Blueprint $table): void {
             $table->char('id', 64)->primary();
             $table->char('owner_id', 64)->index();
             $table->string('feature');

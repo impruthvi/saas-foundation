@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('cashier_entitlement_states', function (Blueprint $table) {
+        Schema::create('cashier_entitlement_states', function (Blueprint $table): void {
             $table->char('id', 64)->primary();
             $table->text('owner_identity');
             $table->bigInteger('requested_sequence')->default(0);
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->string('last_error')->nullable();
             $table->index(['retry_at', 'lease_until']);
         });
-        Schema::create('cashier_entitlement_receipts', function (Blueprint $table) {
+        Schema::create('cashier_entitlement_receipts', function (Blueprint $table): void {
             $table->char('id', 64)->primary();
             $table->char('owner_id', 64)->index();
             $table->string('event_id');

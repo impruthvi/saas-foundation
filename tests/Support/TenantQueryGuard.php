@@ -156,13 +156,7 @@ final class TenantQueryGuard
      */
     private static function narrowedBy(string $normalized, array $scopedBy): bool
     {
-        foreach ($scopedBy as $column) {
-            if (preg_match('/\b'.preg_quote($column, '/').'\s*(=|<|>|in\b|is\b)/', $normalized) === 1) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($scopedBy, fn (string $column): bool => preg_match('/\b'.preg_quote($column, '/').'\s*(=|<|>|in\b|is\b)/', $normalized) === 1);
     }
 
     /**

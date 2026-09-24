@@ -14,7 +14,8 @@ return new class extends Migration
         if (Schema::hasTable('cashier_entitlement_billing_periods')) {
             return;
         }
-        Schema::create('cashier_entitlement_billing_periods', function (Blueprint $table) {
+
+        Schema::create('cashier_entitlement_billing_periods', function (Blueprint $table): void {
             $table->char('id', 64)->primary();
             $table->char('owner_id', 64);
             $table->string('price_id');

@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('cashier_entitlement_audit_runs', function (Blueprint $table) {
+        Schema::create('cashier_entitlement_audit_runs', function (Blueprint $table): void {
             $table->char('id', 64)->primary();
             $table->string('scope');
             // A resumable cursor over owner keys. An incomplete scan cannot prove absence,

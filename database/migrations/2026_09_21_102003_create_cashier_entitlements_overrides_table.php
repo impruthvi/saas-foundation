@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('cashier_entitlement_overrides', function (Blueprint $table) {
+        Schema::create('cashier_entitlement_overrides', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->char('owner_id', 64);
             $table->string('feature');

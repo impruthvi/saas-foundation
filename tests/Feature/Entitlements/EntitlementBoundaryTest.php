@@ -106,9 +106,8 @@ it('refuses to spend a neighbour allowance even with their organization in hand'
     expect(fn (): Project => resolve(TenantContext::class)->runFor(
         $second,
         fn (): Project => resolve(CreateProject::class)->handle($first, 'Crossed project', 'crossed'),
-    ))->toThrow(CrossTenantAccess::class);
-
-    expect(projectsUsedBy($first))->toBe(0)
+    ))->toThrow(CrossTenantAccess::class)
+        ->and(projectsUsedBy($first))->toBe(0)
         ->and(projectsUsedBy($second))->toBe(1);
 });
 
