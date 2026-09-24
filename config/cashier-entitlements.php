@@ -4,7 +4,14 @@ declare(strict_types=1);
 
 return [
     // Opt in to native application and background refresh. Dry-run remains read-only.
-    'enabled' => true,
+    //
+    // Off for the dunning replay, and only there. The refresh this would request
+    // is dispatched after commit, and the replay rolls back, so the harness
+    // rightly refuses to report success over work it could never observe. The
+    // replay answers whether subscription facts converge; whether the resolved
+    // entitlement converges is asserted after it, outside its transaction, by
+    // tests/Feature/Entitlements/PostReplayResolutionTest.php.
+    'enabled' => env('CASHIER_ENTITLEMENTS_ENABLED', true),
     'provider_context' => 'platform',
     'live_mode' => false,
     'subscription_type' => 'default',

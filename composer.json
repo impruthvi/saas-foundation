@@ -122,6 +122,7 @@
         ],
         "test:billing": [
             "@php artisan billing:doctor",
+            "@putenv CASHIER_ENTITLEMENTS_ENABLED=false",
             "@php artisan billing:simulate trial-dunning-cancel-reactivate",
             "@php artisan billing:simulate trial-dunning-cancel-reactivate --shuffle --duplicate --seed=7"
         ],
