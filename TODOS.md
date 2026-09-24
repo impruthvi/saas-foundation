@@ -5,30 +5,10 @@ scratch. Each entry records why it was deferred and where to pick it up.
 
 ## Retain superseded invitation history
 
-**What:** Keep a record of every invitation attempt for an address, not only the latest.
-
-**Why:** M2 enforces one invitation row per `(organization_id, email)` and rotates that row
-on resend or re-invite. The row therefore carries the current invitation, not the history.
-The first time someone asks "who invited this person, and how many times did we try", the
-answer is not in the database.
-
-**Pros:** A real audit trail for the one action that grants access to a tenant. Makes
-"audited" in the M2 milestone description literally true rather than approximately true.
-
-**Cons:** A second table, or an event stream, for a question nobody has asked yet. Under
-D11's scope filter that is exactly the kind of thing that gets deferred.
-
-**Context:** M2 chose row rotation over inserting a second row because a partial unique
-index (`… where status = 'pending'`) is unavailable on MySQL, and D3 keeps core migrations
-portable. The alternative — enforcing uniqueness in the action instead of the index —
-reintroduces the check-then-insert race that `App\Actions\CreateOrganization` was written
-to avoid. Start at `app/Actions/InviteOrganizationMember.php` and
-`app/Actions/ResendOrganizationInvitation.php`; both already know the moment a token is
-rotated, which is where a history row would be written.
-
-**Depends on / blocked by:** M6, which owns the audit log. Do not build a bespoke
-invitation-history table ahead of it — write invitation events into the general audit log
-once that exists.
+**Resolved by M6** (`docs/plans/0005-m6-admin-console.md`, D49). Invitation sent, resent
+(token rotated), revoked, accepted and declined are each written as an audit event by the
+action that performs them, so the history lives in the general audit log rather than in a
+bespoke table. The invitation row itself still rotates. Remove this entry once M6 merges.
 
 ## Count pending invitations against seats
 
@@ -158,6 +138,10 @@ carrying a tenant-owned model trips the suite-wide query guard through
 first exist. Worth doing before M6 puts a customer lookup in front of a support person who
 will believe what it says.
 
+**M6 note:** still deferred. The organization lookup shows the owner from `owner_id`,
+never the Stripe customer's email, so the console cannot mislead a support person about
+who owns an organization. The receipts-to-wrong-address problem stands.
+
 ## Make webhook processing converge regardless of delivery order
 
 **What:** Ignore a Stripe event that is older than the state already stored, so an
@@ -226,36 +210,17 @@ mirroring what `BelongsToOrganization` already does from `TenantContext`.
 queries items directly. Under D11's filter that makes it M6's problem, arriving with the
 admin screen that asks the question.
 
+**M6 note:** still deferred, with its trigger unchanged. The console reads items only
+through `BillingFacts`, per organization, inside `runFor()`, so nothing queries
+`SubscriptionItem` directly yet.
+
 ## Decide how long failed webhook events are kept
 
-**What:** A retention policy, and something that enforces it, for the
-`failed_webhook_events` table.
-
-**Why:** D36 retains the raw Stripe payload of any event this application could not place,
-so that returning 200 means "recorded" rather than "discarded". Retention at M4 is
-permanent and the rows are unredacted Stripe JSON — customer ids, email addresses, card
-metadata. A table that only grows and holds personal data is a liability that arrives
-quietly, and the day someone asks about data deletion the answer is currently "we kept all
-of it forever".
-
-**Pros:** Bounds a table that has no natural ceiling, and gives a straight answer to a
-question an adopter of an open-source SaaS kit will reasonably ask. Pruning is also the
-moment to decide what to redact, which is cheaper to settle before a year of rows exists.
-
-**Cons:** Pruning fights the reason the table exists. A failed event is kept so it can be
-replayed after the bug that broke it is fixed, and bugs are sometimes found months later.
-Too short a window and the table is decorative; too long and nothing was really decided.
-
-**Context:** M6 owns the webhook timeline and replay surfaces, which are the first readers
-of this table, so the retention question and the replay UI want answering together. Note
-the precedent from the entitlements package, which states plainly that its usage counters
-and receipts are never pruned "because that is what keeps deduplication correct" — a
-deliberate position, published, rather than an oversight. This table deserves the same
-treatment: pick a window, say so in the decision record, and enforce it with a scheduled
-command. Start at the `failed_webhook_events` migration.
-
-**Depends on / blocked by:** M6, which builds the replay path that decides how old an event
-can usefully be.
+**Resolved by M6** (D48). `failed_webhook_events` is folded into `webhook_events`, and a
+daily `webhook-events:prune` removes `applied` and `superseded` rows after 90 days and
+`unplaceable`, `errored`, `refused` and `replayed` rows after 180. Payload redaction is
+still open. See "Redact personal data in retained webhook payloads" below. Remove this
+entry once M6 merges.
 
 ## Release a project's allowance when the project is deleted
 
@@ -292,32 +257,11 @@ anything in this repository.
 
 ## Prune entitlement state for organizations that no longer exist
 
-**What:** A retention policy, and something that enforces it, for the
-`cashier_entitlement_*` rows belonging to deleted organizations.
-
-**Why:** The package never prunes counters or receipts — a deliberate published position,
-since permanence is what keeps deduplication correct. Deleting an organization therefore
-leaves its usage counters, receipts and observations behind forever, keyed by an
-`owner_id` that no longer resolves to anything.
-
-**Pros:** Bounds a set of tables that only grows, and gives a straight answer to the data
-deletion question an adopter will ask. The rows also carry a billing-adjacent history of an
-account that has been closed.
-
-**Cons:** Pruning fights the reason the retention exists, exactly as it does for
-`failed_webhook_events`. Deleting a counter for an owner that turns out to be recoverable
-reopens the deduplication hole the package closed.
-
-**Context:** These rows are **inert, not dangerous** — `organizations.id` is
-auto-incrementing (D26) and PostgreSQL does not reuse sequence values, so no future
-organization can inherit a deleted one's usage. This is a storage and data-retention
-question, not a correctness one, which is why M5 added no refusal to `DeleteUser` (D34 is
-unchanged). Answer it together with the `failed_webhook_events` retention entry above —
-both want one window, one decision record, and one scheduled command, not two. Start at the
-published `create_cashier_entitlements_usage_tables` migration.
-
-**Depends on / blocked by:** M6, which owns the retention and replay surfaces that decide
-how old a record can usefully be.
+**Decided by M6, not built** (D48). The position is recorded: `cashier_entitlement_*`
+rows for deleted organizations are retained and never pruned. They are inert, because
+`organizations.id` is never reused (D26), and pruning would reopen the deduplication hole
+the package closed. Revisit only if a data-deletion request requires it, and then answer
+it together with webhook payload redaction. Remove this entry once M6 merges.
 
 ## Audit every owner from the console in one pass
 
@@ -347,3 +291,74 @@ the scheduled sweep and recovery rely on anyway. Start at
 
 **Depends on / blocked by:** An upstream seam in `impruthvi/cashier-entitlements` — either a
 non-final audit command, or a per-owner callback the host can wrap.
+
+## Grant and revoke overrides from the admin console
+
+**What:** Turn on `cashier-entitlements` overrides (`'overrides' => true`) and give
+operators a reasoned, expiring grant and revoke on the entitlement inspector.
+
+**Why:** "Give this customer five more projects for a month" is the most common support
+action an entitlement system exists to allow, and `CONTEXT.md` already defines an
+override. M6 shipped the inspector without it because it is not on the D8 journey.
+
+**Pros:** The package already provides the append-only ledger
+(`NativeOverrides::grant()` / `revoke()` / `history()`), with reason and actor required.
+The inspector already has an `override` source case waiting for it. Small surface.
+
+**Cons:** One extra query per resolve once enabled. The floor (D45) interacts: an
+override resolves inside the package answer, so the floor is bypassed while the grant
+lives, and an expiring grant drops a customer back to the free allowance and possibly to
+"over the limit", which M5 already renders.
+
+**Context:** Start at `config/cashier-entitlements.php` (`overrides`),
+`vendor/impruthvi/cashier-entitlements/src/Overrides/NativeOverrides.php`, and
+`app/Operations/InspectEntitlements.php`. The write belongs in a core Action
+(`GrantEntitlementOverride`) that records an audit event (D49), called from a console
+action. Filament gets no logic of its own.
+
+**Depends on / blocked by:** M6 (inspector, audit log, operators).
+
+## Suspend, archive and restore an organization
+
+**What:** The write path for `OrganizationStatus::Suspended` and `Archived`, with an
+operator action in the console.
+
+**Why:** M1 deferred the transitions to M6 as having "no caller until M6". Reads already
+honour the status (`ResolveTenantContext`, switching, invitations, checkout). M6 deferred
+the writes again because suspension is a billing question.
+
+**Pros:** Gives support a real lever against abuse, and completes the lifecycle M1
+started.
+
+**Cons:** A suspended organization that Stripe keeps charging is D34's defect again.
+Suspension has to decide what happens to the subscription (pause, cancel at period end,
+or refuse while billing is open), and that decision belongs with billing.
+
+**Context:** Start at `app/Enums/OrganizationStatus.php` and D34's `BillingMustBeResolved`
+pattern in `app/Actions/DeleteUser.php`. The likely shape is `SuspendOrganization`, which
+refuses while a subscription is open, mirroring D34.
+
+**Depends on / blocked by:** A billing decision about paused subscriptions. M6 for the
+console surface.
+
+## Redact personal data in retained webhook payloads
+
+**What:** Strip or hash personal fields (emails, names, addresses, card metadata) from
+`webhook_events.payload` once a row no longer needs replaying.
+
+**Why:** D48 keeps unredacted Stripe payloads for up to 180 days. That is bounded, but
+it is still personal data held longer than the application needs it once an event has
+applied.
+
+**Pros:** Shrinks what a leak or a data-deletion request touches, without giving up
+replay for rows that still need it.
+
+**Cons:** It needs a field-by-field decision about what replay still reads. Redacting too
+much makes a later replay apply wrong data.
+
+**Context:** Start at the `webhook_events` migration and `webhook-events:prune`. The
+likely shape is redaction when `applied_at` is set, with rows awaiting replay left
+untouched.
+
+**Depends on / blocked by:** M6 (`webhook_events`).
+
