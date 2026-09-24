@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import type { PaginationLink } from '@/types/invitation';
+import type { PaginationLink } from '@/types/pagination';
 
 defineProps<{
     links: PaginationLink[];

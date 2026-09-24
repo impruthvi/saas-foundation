@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property int $organization_id
  * @property string $name
+ * @property string|null $usage_receipt_id
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Organization $organization

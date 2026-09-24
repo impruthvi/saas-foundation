@@ -256,3 +256,94 @@ command. Start at the `failed_webhook_events` migration.
 
 **Depends on / blocked by:** M6, which builds the replay path that decides how old an event
 can usefully be.
+
+## Release a project's allowance when the project is deleted
+
+**What:** A way to give an allowance back, so a deleted project stops counting against the
+`projects` limit — and the project deletion UI that becomes honest once it exists.
+
+**Why:** M5 models `projects` as a lifetime meter (D39), which equals a stock count only
+while nothing is ever deleted. D44 therefore forbids deletion rather than shipping a
+customer-visible trap: delete a project on a plan allowing two, and you would still have
+none left. That is a worse product than having no delete button.
+
+**Pros:** Closes the gap between "projects you have" and "projects you have ever created",
+which is the one assumption the whole lifetime-meter decision rests on. Also unblocks the
+ordinary expectation that a resource you created can be removed.
+
+**Cons:** `impruthvi/cashier-entitlements` has no decrement path by design —
+`NativeUsage::record()` requires `quantity >= 1`, and the package states plainly that usage
+counters and receipts are never pruned, because permanence is what keeps deduplication
+correct. A release operation must therefore be additive and auditable rather than a
+subtraction, or it breaks the property the package was built around.
+
+**Context:** The likely shape is a receipt-referencing release in the package — an appended
+row that offsets a named prior receipt, so the ledger stays append-only and the counter is
+a sum rather than a mutable total. M5 already stores `projects.usage_receipt_id`, so the
+local half of the association exists. Start at
+`vendor/impruthvi/cashier-entitlements/src/Usage/NativeUsage.php` and
+`app/Actions/CreateProject.php`. If the release proves unworkable, the fallback is the
+design the outside voice argued for during M5's review: enforce with a locked
+`count(projects)` and keep the package for the allowance number only — a contained change
+behind `ResolveAllowance` and `CreateProject`.
+
+**Depends on / blocked by:** A `cashier-entitlements` release after 0.2.0. Not blocked by
+anything in this repository.
+
+## Prune entitlement state for organizations that no longer exist
+
+**What:** A retention policy, and something that enforces it, for the
+`cashier_entitlement_*` rows belonging to deleted organizations.
+
+**Why:** The package never prunes counters or receipts — a deliberate published position,
+since permanence is what keeps deduplication correct. Deleting an organization therefore
+leaves its usage counters, receipts and observations behind forever, keyed by an
+`owner_id` that no longer resolves to anything.
+
+**Pros:** Bounds a set of tables that only grows, and gives a straight answer to the data
+deletion question an adopter will ask. The rows also carry a billing-adjacent history of an
+account that has been closed.
+
+**Cons:** Pruning fights the reason the retention exists, exactly as it does for
+`failed_webhook_events`. Deleting a counter for an owner that turns out to be recoverable
+reopens the deduplication hole the package closed.
+
+**Context:** These rows are **inert, not dangerous** — `organizations.id` is
+auto-incrementing (D26) and PostgreSQL does not reuse sequence values, so no future
+organization can inherit a deleted one's usage. This is a storage and data-retention
+question, not a correctness one, which is why M5 added no refusal to `DeleteUser` (D34 is
+unchanged). Answer it together with the `failed_webhook_events` retention entry above —
+both want one window, one decision record, and one scheduled command, not two. Start at the
+published `create_cashier_entitlements_usage_tables` migration.
+
+**Depends on / blocked by:** M6, which owns the retention and replay surfaces that decide
+how old a record can usefully be.
+
+## Audit every owner from the console in one pass
+
+**What:** `entitlements:reconcile --all`, which currently refuses with `owner_scope_required`
+instead of auditing every organization the way the package's own command does.
+
+**Why:** The audit reads each owner's subscriptions through a tenant-scoped relation, and
+that scope raises rather than falling back. D41 resolves the tenant around the command from
+`--owner`, which works for one organization and cannot work for a loop that picks its own
+owners. The loop lives inside the package's `ReconcileCommand::audit()`, and the command is
+`final`, so there is nowhere from out here to resolve a tenant per iteration.
+
+**Pros:** Restores an operator tool that answers "is anything drifted anywhere" in one
+command. Today the answer needs one invocation per organization, which does not scale past
+a few dozen.
+
+**Cons:** Every option moves the tenant decision somewhere it does not belong — reaching
+into the package, reimplementing the merged report shape (including `unknown_customers`,
+which is computed from a Stripe-wide customer discovery rather than per owner), or teaching
+the tenant to resolve itself from whatever model is being read.
+
+**Context:** `entitlements:doctor` still reports across owners and is unaffected, because it
+reads the state table rather than any tenant-scoped relation. The per-owner form,
+`--owner-type=organization --owner=N`, works for both `--apply` and the dry run and is what
+the scheduled sweep and recovery rely on anyway. Start at
+`app/Console/Commands/ReconcileEntitlementsCommand.php` and D41.
+
+**Depends on / blocked by:** An upstream seam in `impruthvi/cashier-entitlements` — either a
+non-final audit command, or a per-owner callback the host can wrap.

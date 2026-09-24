@@ -28,11 +28,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { index } from '@/routes/organizations/members';
-import type {
-    OrganizationMember,
-    Paginated,
-    PendingInvitation,
-} from '@/types/invitation';
+import type { OrganizationMember, PendingInvitation } from '@/types/invitation';
+import type { Paginated } from '@/types/pagination';
 
 defineOptions({
     layout: {

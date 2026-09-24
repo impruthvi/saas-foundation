@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3d4978c952a0f8bc4b8ff26b578366f9",
+    "content-hash": "cc4b863ad85c64e9e4157883ae49221e",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1206,6 +1206,77 @@
                 }
             ],
             "time": "2026-07-20T13:40:43+00:00"
+        },
+        {
+            "name": "impruthvi/cashier-entitlements",
+            "version": "v0.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/impruthvi/cashier-entitlements.git",
+                "reference": "93920815251ac6216a36af99bc10b3cb3314c429"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/impruthvi/cashier-entitlements/zipball/93920815251ac6216a36af99bc10b3cb3314c429",
+                "reference": "93920815251ac6216a36af99bc10b3cb3314c429",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^12.0 || ^13.0",
+                "illuminate/database": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "php": "^8.3",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "laravel/cashier": "^16.8",
+                "laravel/pennant": "^1.26",
+                "laravel/pint": "^1.14",
+                "masterix21/laravel-entitlements": "1.3.1",
+                "orchestra/testbench": "^10.0 || ^11.0",
+                "pestphp/pest": "^4.0",
+                "pestphp/pest-plugin-laravel": "^4.0"
+            },
+            "suggest": {
+                "laravel/cashier": "Required for billing diagnostics and background Stripe reconciliation (^16.8).",
+                "laravel/pennant": "Optional read-only entitlement store with explicit owner scope and snapshot semantics (^1.26).",
+                "masterix21/laravel-entitlements": "Optional license assignment driver for integer-keyed owners; see docs/m5-adapters.md for supported scope (1.3.1)."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Impruthvi\\CashierEntitlements\\CashierEntitlementsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Impruthvi\\CashierEntitlements\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Local entitlement resolution and background billing reconciliation for Laravel Cashier.",
+            "homepage": "https://github.com/impruthvi/cashier-entitlements",
+            "keywords": [
+                "billing",
+                "cashier",
+                "entitlements",
+                "laravel",
+                "limits",
+                "saas",
+                "stripe",
+                "usage"
+            ],
+            "support": {
+                "issues": "https://github.com/impruthvi/cashier-entitlements/issues",
+                "source": "https://github.com/impruthvi/cashier-entitlements"
+            },
+            "time": "2026-09-23T18:41:40+00:00"
         },
         {
             "name": "inertiajs/inertia-laravel",
@@ -10237,16 +10308,16 @@
         },
         {
             "name": "impruthvi/cashier-dunning",
-            "version": "v0.2.2",
+            "version": "v0.2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/impruthvi/cashier-dunning.git",
-                "reference": "c11ef89db84434bddcd7a649b1c472ed74009a7f"
+                "reference": "bd755796e4040209cedec846cb17fc89aa97f8c4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/impruthvi/cashier-dunning/zipball/c11ef89db84434bddcd7a649b1c472ed74009a7f",
-                "reference": "c11ef89db84434bddcd7a649b1c472ed74009a7f",
+                "url": "https://api.github.com/repos/impruthvi/cashier-dunning/zipball/bd755796e4040209cedec846cb17fc89aa97f8c4",
+                "reference": "bd755796e4040209cedec846cb17fc89aa97f8c4",
                 "shasum": ""
             },
             "require": {
@@ -10317,7 +10388,7 @@
             ],
             "support": {
                 "issues": "https://github.com/impruthvi/cashier-dunning/issues",
-                "source": "https://github.com/impruthvi/cashier-dunning/tree/v0.2.2"
+                "source": "https://github.com/impruthvi/cashier-dunning/tree/v0.2.3"
             },
             "funding": [
                 {
@@ -10325,7 +10396,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-20T21:14:50+00:00"
+            "time": "2026-09-24T10:00:17+00:00"
         },
         {
             "name": "jean85/pretty-package-versions",

@@ -50,15 +50,29 @@ jobs:
               uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
               with:
                   php-version: '8.4'
-                  extensions: pdo_pgsql, pgsql
+                  extensions: pcntl, pdo_pgsql, pgsql
                   tools: composer:v2
                   coverage: none
+
+            # Pest Browser invokes Playwright's Node shebang directly, even though Bun
+            # owns dependency installation and package scripts.
+            - name: Setup Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: '22'
 
             - name: Setup Bun
               uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
             - name: Setup Application
               run: composer setup
+
+            # The committed suite holds one browser test, because the upgrade journey
+            # needs both a real browser and a refresh, and a refresh will not run
+            # inside a transaction. The browser job cannot host it: that job runs on
+            # `:memory:`, whose schema does not survive the reconnect truncation needs.
+            - name: Install Chromium
+              run: bunx playwright install --with-deps chromium
 
             # phpunit.xml declares DB_CONNECTION without force="true", so a real
             # environment variable wins. That is what switches the suite onto Postgres

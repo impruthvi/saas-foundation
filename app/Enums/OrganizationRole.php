@@ -38,9 +38,11 @@ enum OrganizationRole: string
                 Permission::InviteMembers,
                 Permission::ManageMembers,
                 Permission::ManageBilling,
+                Permission::ManageProjects,
             ],
             self::Member => [
                 Permission::ViewMembers,
+                Permission::ManageProjects,
             ],
         };
     }

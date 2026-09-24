@@ -15,6 +15,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
+        "impruthvi/cashier-entitlements": "^0.2.1",
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/cashier": "^16.8",
         "laravel/chisel": "^0.1.0",
@@ -29,7 +30,7 @@
         "barryvdh/laravel-ide-helper": "^3.7",
         "driftingly/rector-laravel": "^2.5",
         "fakerphp/faker": "^1.24",
-        "impruthvi/cashier-dunning": "^0.2.2",
+        "impruthvi/cashier-dunning": "^0.2.3",
         "larastan/larastan": "^3.9",
         "laravel/boost": "^2.9",
         "laravel/pail": "^1.2.5",
@@ -84,6 +85,8 @@
             "bun run format:check",
             "bun run types:check",
             "@test:billing",
+            "@test:committed",
+            "@test:concurrency",
             "@test"
         ],
         "types:check": [
@@ -119,13 +122,17 @@
         ],
         "test:billing": [
             "@php artisan billing:doctor",
+            "@putenv CASHIER_ENTITLEMENTS_ENABLED=false",
             "@php artisan billing:simulate trial-dunning-cancel-reactivate",
-            "@php artisan billing:simulate trial-dunning-cancel-reactivate --shuffle --duplicate --seed=7"
+            "@php artisan billing:simulate trial-dunning-cancel-reactivate --shuffle --duplicate --seed=7",
+            "@putenv CASHIER_ENTITLEMENTS_ENABLED=true"
         ],
         "test:browser": "pest --testsuite=Browser",
+        "test:concurrency": "pest --testsuite=Concurrency",
         "test:types": "./vendor/bin/phpstan analyse --memory-limit=-1",
         "test:type-coverage": "php -d memory_limit=-1 vendor/bin/pest --testsuite=Unit,Feature --type-coverage",
-        "test:unit": "pest --testsuite=Unit,Feature"
+        "test:unit": "pest --testsuite=Unit,Feature",
+        "test:committed": "pest --testsuite=Committed"
     },
     "extra": {
         "laravel": {

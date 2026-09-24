@@ -7,6 +7,7 @@ use App\Http\Controllers\Organizations\InvitationController;
 use App\Http\Controllers\Organizations\InvitationDeliveryController;
 use App\Http\Controllers\Organizations\MemberController;
 use App\Http\Controllers\Organizations\SwitchOrganizationController;
+use App\Http\Controllers\Projects\ProjectController;
 use App\Http\Middleware\ProtectInvitationToken;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,9 @@ Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+
+    Route::get('projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 
     Route::post('organizations/{organization}/switch', SwitchOrganizationController::class)
         ->name('organizations.switch');

@@ -21,9 +21,10 @@ use Symfony\Component\Finder\Finder;
 final class TenantQueryGuard
 {
     /**
-     * Tables the guard watches, beyond those discovered from the models.
+     * Tables the guard watches, beyond those discovered from the models,
+     * each mapped to the columns that narrow a statement to one tenant.
      *
-     * @var list<string>
+     * @var array<string, list<string>>
      */
     private static array $registered = [];
 
@@ -35,13 +36,22 @@ final class TenantQueryGuard
     private static bool $allowingUnscoped = false;
 
     /**
-     * Watch a table that no application model declares, such as a test fixture.
+     * Watch a table that no application model declares.
+     *
+     * `$scopedBy` names the columns a statement must narrow on. It exists for
+     * the entitlement package, whose tables carry `owner_id` rather than
+     * `organization_id`, and whose hot path reads them by a primary key hashed
+     * from the owner. Naming `id` as a scope column is therefore not a way of
+     * accepting everything: it still refuses a statement that filters on any
+     * other column, which is what a cross-owner sweep looks like. What it
+     * cannot do is prove a given hash belongs to the resolved organization,
+     * which is why `EntitlementBoundaryTest` asserts that part directly.
+     *
+     * @param  list<string>  $scopedBy
      */
-    public static function register(string $table): void
+    public static function register(string $table, array $scopedBy = ['organization_id']): void
     {
-        if (! in_array($table, self::$registered, true)) {
-            self::$registered[] = $table;
-        }
+        self::$registered[$table] = $scopedBy;
     }
 
     /**
@@ -89,13 +99,16 @@ final class TenantQueryGuard
     /**
      * The tables the guard watches: every `TenantOwned` model, plus registrations.
      *
-     * @return list<string>
+     * @return array<string, list<string>>
      */
     public static function tables(): array
     {
         self::$discovered ??= self::discoverFromModels();
 
-        return [...self::$discovered, ...self::$registered];
+        return [
+            ...array_fill_keys(self::$discovered, ['organization_id']),
+            ...self::$registered,
+        ];
     }
 
     private static function assertScoped(string $sql): void
@@ -110,20 +123,40 @@ final class TenantQueryGuard
             return;
         }
 
+        // An organization named anywhere in the statement scopes the whole of
+        // it, including through a subquery. The narrower per-column check below
+        // is reserved for tables that carry a different tenant key.
         if (str_contains($normalized, 'organization_id')) {
             return;
         }
 
-        $touched = collect(self::tables())->first(
-            fn (string $table): bool => preg_match('/\b(from|join|update|into)\s+'.preg_quote($table, '/').'\b/', $normalized) === 1,
-        );
+        foreach (self::tables() as $table => $scopedBy) {
+            if (preg_match('/\b(from|join|update|into)\s+'.preg_quote($table, '/').'\b/', $normalized) !== 1) {
+                continue;
+            }
 
-        throw_if(
-            $touched !== null,
-            RuntimeException::class,
-            "Unscoped query against tenant-owned table [{$touched}]: {$sql}. "
-            .'Resolve an organization first, or wrap the read in TenantQueryGuard::allowUnscoped().',
-        );
+            if (self::narrowedBy($normalized, $scopedBy)) {
+                continue;
+            }
+
+            throw new RuntimeException(
+                "Unscoped query against tenant-owned table [{$table}]: {$sql}. "
+                .'Resolve an organization first, or wrap the read in TenantQueryGuard::allowUnscoped().',
+            );
+        }
+    }
+
+    /**
+     * Whether the statement compares one of the tenant keys against something.
+     *
+     * Matching the comparison rather than the bare word keeps `id` from being
+     * satisfied by a select list, and keeps `\bid\b` from matching `owner_id`.
+     *
+     * @param  list<string>  $scopedBy
+     */
+    private static function narrowedBy(string $normalized, array $scopedBy): bool
+    {
+        return array_any($scopedBy, fn (string $column): bool => preg_match('/\b'.preg_quote($column, '/').'\s*(=|<|>|in\b|is\b)/', $normalized) === 1);
     }
 
     /**
