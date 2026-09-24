@@ -581,7 +581,8 @@ COVERAGE: 0/40 today — 40/40 planned (2 E2E, 1 PostgreSQL-only)
 | `tests/Feature/Entitlements/PostReplayResolutionTest.php` (Pt12b) | The state the replay leaves resolves identically — outside the transaction |
 | `tests/Feature/Entitlements/AllowanceFloorTest.php` (Pt13)        | D45: every path that yields `[]`, and the zero-allowance guard             |
 | `tests/Feature/Entitlements/UsageBackfillTest.php` (Pt14)         | Pre-existing projects produce the correct remaining value                  |
-| `tests/Browser/ProjectLimitTest.php` (Pb1)                        | Refused → checkout → allowed, in a real browser                            |
+| `tests/Browser/ProjectLimitTest.php` (Pb1)                        | Creating through the form, and the prompt appearing at the boundary        |
+| `tests/Committed/ProjectUpgradeJourneyTest.php` (Pb1)             | Refused → checkout → allowed, in a real browser                            |
 
 ### Test traps this suite will hit
 
@@ -695,7 +696,8 @@ and the RBAC catalog replay helper must name its file with `--path` (trap 8).
 - [x] **T11 (P2, human: ~1d / CC: ~30min)** — frontend — projects index, create form, upgrade prompt from `ResolveAllowance` scalars
     - Surfaced by: D40 — the prompt is a projection, never its own threshold; prior learning `wayfinder-actions-are-gitignored` (9/10)
     - Files: `resources/js/pages/projects/Index.vue`, upgrade prompt component
-    - Verify: `php artisan wayfinder:generate && vendor/bin/pest tests/Feature/Projects/ProjectScreenTest.php tests/Browser/ProjectLimitTest.php`
+    - Verify: `php artisan wayfinder:generate --with-form && vendor/bin/pest tests/Feature/Projects/ProjectScreenTest.php tests/Browser/ProjectLimitTest.php`
+    - The upgrade journey needs a refresh, which cannot run inside a transaction, so it lives in the committed lane rather than under `tests/Browser`.
 - [x] **T12 (P2, human: ~2h / CC: ~10min)** — tests — register the package's owner-keyed tables with `TenantQueryGuard`, assert the boundary directly
     - Surfaced by: Architecture — the guard keys on `organization_id` and cannot discover `owner_id` tables
     - Files: `tests/Support/TenantQueryGuard.php`, `tests/Feature/Entitlements/EntitlementBoundaryTest.php`
