@@ -660,9 +660,12 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
     - Landed: Cashier's handlers are reached through `App\Billing\CashierEventHandlers`, a never-routed subclass of Cashier's controller, because the `laravel` arch preset allows only resource methods on routed controllers. `StripeWebhookController` is unchanged by T6.
     - Landed: `ResolveAllowance::explain()` returns the answer together with its source (package or floor), so the inspector's label comes from the same code as the answer.
     - Landed: after `customer.deleted`, the customer lookup already finds no organization. A separate test with an `invoice.created` replay pins the type filter, which a mutation run showed was untested otherwise.
-- [ ] **T7 (P1, human: ~2d / CC: ~1h)** — console — lookup, organization view, user, webhook events + replay, impersonation history
+- [x] **T7 (P1, human: ~2d / CC: ~1h)** — console — lookup, organization view, user, webhook events + replay, impersonation history
     - Files: `app/Filament/**`
     - Verify: `vendor/bin/pest tests/Feature/AdminConsole`
+    - Landed: four read-only resources (organizations, users, webhook events, impersonations) with no create or edit routes, and a dashboard health widget built from `Doctor`. The organization page shows the inspector, the subscription summary, members and invitations through the T6 reads, with two custom-data table widgets (Stripe events with replay, audit log) paginated by `App\Filament\Support\PagedRows`.
+    - Landed: lookup by member address goes through `App\Operations\LookupOrganizations`, which asks `MembershipRepository` (the D22 door) rather than querying memberships.
+    - Landed: At1's behavioural half. The operator's own organization is resolved, and the organization page and audit widget still show only the customer's data. A mutation that drops `runFor()` from the audit read fails it.
 - [ ] **T8 (P1, human: ~1d / CC: ~40min)** — removability — chisel script, `admin-removed` CI job (Playwright), `AdminConsoleLinkTest`, `NavigationSmokeTest`, `adminConsoleUrl`
     - Surfaced by: Test review — R5, a PHP test cannot see Wayfinder-compiled hrefs
     - Files: `scripts/remove-admin-console.php`, `.github/workflows/tests.yml`, `tests/Feature/AdminConsoleLinkTest.php`, `tests/Browser/NavigationSmokeTest.php`, sidebar
