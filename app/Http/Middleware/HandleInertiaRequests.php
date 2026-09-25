@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Impersonation;
 use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\MembershipRepository;
@@ -58,6 +59,7 @@ final class HandleInertiaRequests extends Middleware
             ],
             'organization' => fn (): ?array => $this->present($this->tenant->current()),
             'organizations' => fn (): array => $this->availableOrganizations($request),
+            'impersonation' => fn (): ?array => $this->impersonation($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
@@ -96,6 +98,26 @@ final class HandleInertiaRequests extends Middleware
             'name' => $organization->name,
             'slug' => $organization->slug,
             'personal' => $organization->personal,
+        ];
+    }
+
+    /**
+     * The impersonation this session is in, for the banner that ends it.
+     *
+     * @return array{user: string|null, operator: string|null, expiresAt: string}|null
+     */
+    private function impersonation(Request $request): ?array
+    {
+        $impersonation = Impersonation::liveIn($request->session());
+
+        if (! $impersonation instanceof Impersonation) {
+            return null;
+        }
+
+        return [
+            'user' => $impersonation->user?->name,
+            'operator' => $impersonation->operator?->name,
+            'expiresAt' => $impersonation->expires_at->toIso8601String(),
         ];
     }
 }

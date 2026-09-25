@@ -12,14 +12,14 @@
   D32, D35, D36, D38, D41, D42, D44, D45, and `0002` §4 (`laravel/chisel` is load-bearing).
 - **Decisions it proposes:** D46, D47, D48, D49, D50, D51, D52.
 - **Proof it is done:** two things, and both must hold.
-  1. **The journey's last clause runs.** An operator signs in through the ordinary Fortify
-     login, finds the organization that just subscribed to Pro, and sees its resolved
-     `projects` entitlement (Pro, 10, source: package), its usage counter (n / 10), and
-     the Stripe events that requested the refresh that produced that entitlement, with
-     `customer.subscription.created` marked primary and applied.
-  2. **The module is removable.** A CI job runs the removal script, `composer remove
-     filament/filament`, and then the full PHP suite and the frontend build. Both are
-     green. No product page links to a route that no longer exists.
+    1. **The journey's last clause runs.** An operator signs in through the ordinary Fortify
+       login, finds the organization that just subscribed to Pro, and sees its resolved
+       `projects` entitlement (Pro, 10, source: package), its usage counter (n / 10), and
+       the Stripe events that requested the refresh that produced that entitlement, with
+       `customer.subscription.created` marked primary and applied.
+    2. **The module is removable.** A CI job runs the removal script, `composer remove
+filament/filament`, and then the full PHP suite and the frontend build. Both are
+       green. No product page links to a route that no longer exists.
 
 ## The one sentence
 
@@ -34,31 +34,31 @@ they have to outlive the console.
 The build plan says "customer lookup" and "admin". Both collide with words `CONTEXT.md`
 already fixes, so they get settled here, before code names anything.
 
-| Term               | Meaning                                                                                                | Avoid                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| **Operator**       | A person allowed into the admin console. A platform fact, unrelated to any organization.               | admin (that is a **rank**), superuser, staff                                          |
-| **Admin console**  | The Filament panel operators use. The module that D4 makes removable.                                  | admin panel, backoffice, dashboard (that is the product)                              |
-| **Webhook event**  | One Stripe delivery as this application received it, with the outcome of applying it.                  | webhook log, event (alone), failed event (that is one outcome)                        |
-| **Audit event**    | One intentional, attributed act that changed who can do what in an organization, or what it is billed. | activity, log entry, history                                                          |
-| **Impersonation**  | A bounded, reasoned period in which an operator acts as a user. It has a start, an end, and an expiry. | login as, sudo, masquerade                                                            |
-| **Organization lookup** | Finding an organization by name, slug, Stripe customer id, or a member's email.                   | customer lookup (a **user** is never a customer, and Stripe's customer is the organization) |
+| Term                    | Meaning                                                                                                | Avoid                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| **Operator**            | A person allowed into the admin console. A platform fact, unrelated to any organization.               | admin (that is a **rank**), superuser, staff                                                |
+| **Admin console**       | The Filament panel operators use. The module that D4 makes removable.                                  | admin panel, backoffice, dashboard (that is the product)                                    |
+| **Webhook event**       | One Stripe delivery as this application received it, with the outcome of applying it.                  | webhook log, event (alone), failed event (that is one outcome)                              |
+| **Audit event**         | One intentional, attributed act that changed who can do what in an organization, or what it is billed. | activity, log entry, history                                                                |
+| **Impersonation**       | A bounded, reasoned period in which an operator acts as a user. It has a start, an end, and an expiry. | login as, sudo, masquerade                                                                  |
+| **Organization lookup** | Finding an organization by name, slug, Stripe customer id, or a member's email.                        | customer lookup (a **user** is never a customer, and Stripe's customer is the organization) |
 
 ## What already exists and is not rebuilt
 
-| Existing                                                              | What M6 does with it                                                                                                                                  |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `App\Tenancy\TenantContext::runFor()`                                 | The only way the console reads tenant-owned data (D46). No new resolver, no third audited door.                                                       |
-| `App\Tenancy\MembershipRepository::organizationsFor()`                | Organization lookup by member email. Already an audited door (D22); the console calls it rather than querying memberships.                           |
-| `App\Entitlements\ResolveAllowance`                                   | The inspector's allowance answer. The inspector adds only the *source* of the answer (package, floor), never a second computation.                   |
-| `App\Billing\BillingFacts`                                            | The only reader of Cashier subscription state, still asserted by `ArchTest`. The console asks it; it never touches `$org->subscription()`.            |
-| `App\Billing\PlanCatalog`                                             | Plan and allowance names for the inspector. No plan tables (D35).                                                                                     |
-| `App\Models\FailedWebhookEvent` + `failed_webhook_events` (D36)       | **Superseded** by `webhook_events` (D48). Its rows are migrated, then the table is dropped.                                                          |
-| `App\Models\SubscriptionEventWatermark` (D42)                         | Identifies which applied event last wrote a subscription row. Read-only here.                                                                         |
-| `cashier_entitlement_states` / `_receipts` / `_usage_counters`        | The inspector's raw material. States and usage are read through `NativeStateStore::state()` and `OwnerAccess::usage()`. Receipts have no public reader, so `App\Entitlements\RefreshReceipts` reads `cashier_entitlement_receipts` read-only, keyed by the public `NativeStateStore::ownerId()`. It is the **only** direct reader of a package table, and an arch test pins that. |
-| `Impruthvi\CashierEntitlements\Diagnostics\Doctor`                    | **Global only**: `report()` counts pending, failing and stale owners across all of them. It is the console home's health widget. Per-organization refresh health comes from `NativeStateStore::state()` (`requested_sequence`, `completed_sequence`, `last_error`, `retry_at`, `observed_at`). |
-| `OrganizationStatus::isUsable()`                                      | Already honoured by tenant resolution, switching, invitations and checkout. M6 does **not** add the suspend write path (see NOT in scope).            |
-| `laravel/chisel` (`RemoveInterfaceVisitor`, `RemoveImportVisitor`)   | The removal script (D52). Exactly the job `0002` §4 promoted it for.                                                                                  |
-| `tests/Support/TenantQueryGuard` + `AuthorizationTeamGuard`           | Every console test runs under both. That is the proof D46 holds, rather than a claim that it does.                                                    |
+| Existing                                                           | What M6 does with it                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `App\Tenancy\TenantContext::runFor()`                              | The only way the console reads tenant-owned data (D46). No new resolver, no third audited door.                                                                                                                                                                                                                                                                                   |
+| `App\Tenancy\MembershipRepository::organizationsFor()`             | Organization lookup by member email. Already an audited door (D22); the console calls it rather than querying memberships.                                                                                                                                                                                                                                                        |
+| `App\Entitlements\ResolveAllowance`                                | The inspector's allowance answer. The inspector adds only the _source_ of the answer (package, floor), never a second computation.                                                                                                                                                                                                                                                |
+| `App\Billing\BillingFacts`                                         | The only reader of Cashier subscription state, still asserted by `ArchTest`. The console asks it; it never touches `$org->subscription()`.                                                                                                                                                                                                                                        |
+| `App\Billing\PlanCatalog`                                          | Plan and allowance names for the inspector. No plan tables (D35).                                                                                                                                                                                                                                                                                                                 |
+| `App\Models\FailedWebhookEvent` + `failed_webhook_events` (D36)    | **Superseded** by `webhook_events` (D48). Its rows are migrated, then the table is dropped.                                                                                                                                                                                                                                                                                       |
+| `App\Models\SubscriptionEventWatermark` (D42)                      | Identifies which applied event last wrote a subscription row. Read-only here.                                                                                                                                                                                                                                                                                                     |
+| `cashier_entitlement_states` / `_receipts` / `_usage_counters`     | The inspector's raw material. States and usage are read through `NativeStateStore::state()` and `OwnerAccess::usage()`. Receipts have no public reader, so `App\Entitlements\RefreshReceipts` reads `cashier_entitlement_receipts` read-only, keyed by the public `NativeStateStore::ownerId()`. It is the **only** direct reader of a package table, and an arch test pins that. |
+| `Impruthvi\CashierEntitlements\Diagnostics\Doctor`                 | **Global only**: `report()` counts pending, failing and stale owners across all of them. It is the console home's health widget. Per-organization refresh health comes from `NativeStateStore::state()` (`requested_sequence`, `completed_sequence`, `last_error`, `retry_at`, `observed_at`).                                                                                    |
+| `OrganizationStatus::isUsable()`                                   | Already honoured by tenant resolution, switching, invitations and checkout. M6 does **not** add the suspend write path (see NOT in scope).                                                                                                                                                                                                                                        |
+| `laravel/chisel` (`RemoveInterfaceVisitor`, `RemoveImportVisitor`) | The removal script (D52). Exactly the job `0002` §4 promoted it for.                                                                                                                                                                                                                                                                                                              |
+| `tests/Support/TenantQueryGuard` + `AuthorizationTeamGuard`        | Every console test runs under both. That is the proof D46 holds, rather than a claim that it does.                                                                                                                                                                                                                                                                                |
 
 ## Decisions this milestone proposes
 
@@ -275,7 +275,7 @@ button that cannot work is dead navigation.
 **The trap.** The package's `QueueRefreshFromWebhook` listener re-verifies the Stripe
 signature against `app('request')` and requires its JSON body to equal the payload. A
 replay runs inside a Livewire request, so the listener throws `unverified_webhook`. It
-does so *after* Cashier has already written the subscription row.
+does so _after_ Cashier has already written the subscription row.
 
 **The mechanism.** The event-applying half of `StripeWebhookController` moves into
 `App\Billing\ApplyStripeEvent`, which resolves the organization, checks the watermark,
@@ -448,7 +448,7 @@ inspector does not pretend there is one cause:
 
 - **Override grant and revoke.** The package's ledger exists and `overrides` is `false`.
   Turning it on costs a query per resolve, and it is not on the journey. It is the most
-  likely *next* console action, so the inspector's "source" field already has an
+  likely _next_ console action, so the inspector's "source" field already has an
   `override` case that renders when the ledger is enabled. `TODOS.md`.
 - **Suspend, archive, restore.** Reads already honour `OrganizationStatus`. The write
   path is a billing question: a suspended organization Stripe keeps charging is D34's
@@ -535,21 +535,21 @@ Legend: ★★★ behaviour + edge + error | ★★ happy path | [→E2E] browse
 
 ### Test files
 
-| File                                                          | Proves                                                                 |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `tests/Feature/AdminConsole/TenantDisciplineTest.php` (At1)   | D46 on both request paths, with the operator a member elsewhere        |
-| `tests/Feature/AdminConsole/OperatorAccessTest.php` (At2)     | D47 access ladder, commands, Fortify login reuse                       |
-| `tests/Feature/AdminConsole/OrganizationLookupTest.php` (At3) | Lookup by each key, through the audited door only                      |
+| File                                                            | Proves                                                               |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `tests/Feature/AdminConsole/TenantDisciplineTest.php` (At1)     | D46 on both request paths, with the operator a member elsewhere      |
+| `tests/Feature/AdminConsole/OperatorAccessTest.php` (At2)       | D47 access ladder, commands, Fortify login reuse                     |
+| `tests/Feature/AdminConsole/OrganizationLookupTest.php` (At3)   | Lookup by each key, through the audited door only                    |
 | `tests/Feature/AdminConsole/EntitlementInspectorTest.php` (At4) | Source, staleness, trigger event, pending, sweep-triggered           |
-| `tests/Feature/Billing/WebhookEventLogTest.php` (At5)         | D48 every outcome, redelivery, migration, pruning                      |
-| `tests/Feature/Billing/WebhookResponseContractTest.php`       | R4: status and body per controller path, pinned before T1              |
-| `tests/Feature/Audit/AuditEventTest.php` (At6)                | D49 every act, attribution, immutability, boundary                     |
-| `tests/Feature/Impersonation/ImpersonationTest.php` (At7)     | D50 lifecycle, refusals, refused-route enumeration                     |
-| `tests/Feature/AdminConsole/WebhookReplayTest.php` (At8)      | D51, including the listener trap                                       |
-| `tests/Feature/AdminConsoleLinkTest.php` (At9)                | D52 prop both states; outside `AdminConsole/` so it survives removal   |
-| `tests/Browser/NavigationSmokeTest.php` (Ab3)                 | Every navigation link clicks through, member and operator, both jobs   |
-| `tests/Committed/AdminJourneyTest.php` (Ab1)                  | The journey's last clause in a real browser                            |
-| `tests/Browser/ImpersonationBannerTest.php` (Ab2)             | Banner renders, End returns the operator to the console                |
+| `tests/Feature/Billing/WebhookEventLogTest.php` (At5)           | D48 every outcome, redelivery, migration, pruning                    |
+| `tests/Feature/Billing/WebhookResponseContractTest.php`         | R4: status and body per controller path, pinned before T1            |
+| `tests/Feature/Audit/AuditEventTest.php` (At6)                  | D49 every act, attribution, immutability, boundary                   |
+| `tests/Feature/Impersonation/ImpersonationTest.php` (At7)       | D50 lifecycle, refusals, refused-route enumeration                   |
+| `tests/Feature/AdminConsole/WebhookReplayTest.php` (At8)        | D51, including the listener trap                                     |
+| `tests/Feature/AdminConsoleLinkTest.php` (At9)                  | D52 prop both states; outside `AdminConsole/` so it survives removal |
+| `tests/Browser/NavigationSmokeTest.php` (Ab3)                   | Every navigation link clicks through, member and operator, both jobs |
+| `tests/Committed/AdminJourneyTest.php` (Ab1)                    | The journey's last clause in a real browser                          |
+| `tests/Browser/ImpersonationBannerTest.php` (Ab2)               | Banner renders, End returns the operator to the console              |
 
 ### Test traps this suite will hit
 
@@ -576,41 +576,41 @@ Legend: ★★★ behaviour + edge + error | ★★ happy path | [→E2E] browse
 
 ## Failure modes
 
-| Codepath                    | Realistic production failure                                   | Test | Handled          | Operator or user sees                              |
-| --------------------------- | -------------------------------------------------------------- | ---- | ---------------- | -------------------------------------------------- |
-| Console Livewire action     | Service forgot `runFor()`; operator's own org resolved         | At1  | Yes (forgotten)  | `TenantContextMissing` error, never wrong data     |
-| `canAccessPanel`            | Operator without 2FA in production                             | At2  | Yes              | 403 with a message naming two-factor               |
-| Webhook controller          | Handler throws after the event row was written                 | At5  | Yes              | Row `errored`; Stripe retries; retry upserts       |
-| Webhook controller          | Writing `webhook_events` itself fails                          | At5  | **Propagates**   | 500; Stripe retries. Losing the record is worse    |
-| Inspector                   | Refresh pending or failing                                     | At4  | Yes              | "Refresh pending since …" / `last_error`           |
-| Inspector                   | Last refresh came from a sweep                                 | At4  | Yes              | "Refreshed by schedule; no event"                  |
-| Replay                      | Listener trap (`unverified_webhook`)                           | At8  | Yes (bypassed)   | Replay succeeds; refresh requested                 |
-| Replay                      | Organization still missing                                     | At8  | Yes              | Row stays `unplaceable`; notification says why     |
-| Impersonation               | Operator leaves a tab open past expiry                         | At7  | Yes              | Next request ends it and returns to the console    |
-| Impersonation               | Operator tries to change the user's password                   | At7  | Yes              | 403 naming the impersonation                       |
-| Impersonation               | Operator's own account deleted mid-impersonation               | At7  | Yes              | `EndImpersonation` logs out rather than restoring  |
-| Removal                     | Vue file imports a console route                               | At9  | Yes (CI build)   | Nothing; the `admin-removed` job fails first       |
-| Removal                     | Hard-coded `/admin` href in a Vue file                         | Ab3  | Yes (smoke)      | Nothing; the smoke test fails in `admin-removed`   |
-| Impersonation               | Operator revoked mid-impersonation                             | At7  | Yes              | Next request logs the browser out                  |
-| Impersonation               | Operator's password confirmation carried into user's session   | At7  | Yes (invalidate) | `password.confirm` asks again                      |
-| Replay                      | `livemode` / account mismatch                                  | At8  | Yes              | Outcome `refused`, notification names the reason   |
-| Webhook log                 | Applied event redelivered after a newer one                    | At5  | Yes              | `applied_at` kept; last delivery `superseded`      |
-| Audit                       | Invitation accepted during registration (guest request)        | At6  | Yes              | Actor is the new user, not blank                   |
+| Codepath                | Realistic production failure                                 | Test | Handled          | Operator or user sees                             |
+| ----------------------- | ------------------------------------------------------------ | ---- | ---------------- | ------------------------------------------------- |
+| Console Livewire action | Service forgot `runFor()`; operator's own org resolved       | At1  | Yes (forgotten)  | `TenantContextMissing` error, never wrong data    |
+| `canAccessPanel`        | Operator without 2FA in production                           | At2  | Yes              | 403 with a message naming two-factor              |
+| Webhook controller      | Handler throws after the event row was written               | At5  | Yes              | Row `errored`; Stripe retries; retry upserts      |
+| Webhook controller      | Writing `webhook_events` itself fails                        | At5  | **Propagates**   | 500; Stripe retries. Losing the record is worse   |
+| Inspector               | Refresh pending or failing                                   | At4  | Yes              | "Refresh pending since …" / `last_error`          |
+| Inspector               | Last refresh came from a sweep                               | At4  | Yes              | "Refreshed by schedule; no event"                 |
+| Replay                  | Listener trap (`unverified_webhook`)                         | At8  | Yes (bypassed)   | Replay succeeds; refresh requested                |
+| Replay                  | Organization still missing                                   | At8  | Yes              | Row stays `unplaceable`; notification says why    |
+| Impersonation           | Operator leaves a tab open past expiry                       | At7  | Yes              | Next request ends it and returns to the console   |
+| Impersonation           | Operator tries to change the user's password                 | At7  | Yes              | 403 naming the impersonation                      |
+| Impersonation           | Operator's own account deleted mid-impersonation             | At7  | Yes              | `EndImpersonation` logs out rather than restoring |
+| Removal                 | Vue file imports a console route                             | At9  | Yes (CI build)   | Nothing; the `admin-removed` job fails first      |
+| Removal                 | Hard-coded `/admin` href in a Vue file                       | Ab3  | Yes (smoke)      | Nothing; the smoke test fails in `admin-removed`  |
+| Impersonation           | Operator revoked mid-impersonation                           | At7  | Yes              | Next request logs the browser out                 |
+| Impersonation           | Operator's password confirmation carried into user's session | At7  | Yes (invalidate) | `password.confirm` asks again                     |
+| Replay                  | `livemode` / account mismatch                                | At8  | Yes              | Outcome `refused`, notification names the reason  |
+| Webhook log             | Applied event redelivered after a newer one                  | At5  | Yes              | `applied_at` kept; last delivery `superseded`     |
+| Audit                   | Invitation accepted during registration (guest request)      | At6  | Yes              | Actor is the new user, not blank                  |
 
 **Critical gaps: none.** Every row above has a test and handling, and none fails silently.
 
 ## Parallelization
 
-| Step                                                         | Modules touched                                                        | Depends on |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------- | ---------- |
-| S1 — `ApplyStripeEvent` extraction, no behaviour change      | `app/Billing/`, `app/Http/Controllers/Billing/`                        | —          |
-| S2 — `webhook_events` + fold `failed_webhook_events`         | `app/Models/`, `database/migrations/`, controller, tests               | S1         |
-| S3 — `audit_events` + `RecordAuditEvent` + wiring            | `app/Actions/`, `app/Models/`, `database/migrations/`                  | —          |
-| S4 — impersonation core (actions, guard, banner, prop)       | `app/Actions/`, `app/Http/Middleware/`, `bootstrap/app.php`, `resources/js/` | S3   |
-| S5 — Filament install, panel, operators, `ForgetTenantContext` | `app/Providers/Filament/`, `app/Models/`, `app/Console/`, `User`     | —          |
-| S6 — `app/Operations/` reads + the two write Actions         | `app/Operations/`, `app/Actions/`                                      | S2, S3     |
-| S7 — console screens                                         | `app/Filament/`                                                        | S4, S5, S6 |
-| S8 — removal script, CI job, link test, navigation smoke     | `scripts/`, `.github/workflows/`, `tests/Feature/`, `tests/Browser/`   | S7         |
+| Step                                                           | Modules touched                                                              | Depends on |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------- |
+| S1 — `ApplyStripeEvent` extraction, no behaviour change        | `app/Billing/`, `app/Http/Controllers/Billing/`                              | —          |
+| S2 — `webhook_events` + fold `failed_webhook_events`           | `app/Models/`, `database/migrations/`, controller, tests                     | S1         |
+| S3 — `audit_events` + `RecordAuditEvent` + wiring              | `app/Actions/`, `app/Models/`, `database/migrations/`                        | —          |
+| S4 — impersonation core (actions, guard, banner, prop)         | `app/Actions/`, `app/Http/Middleware/`, `bootstrap/app.php`, `resources/js/` | S3         |
+| S5 — Filament install, panel, operators, `ForgetTenantContext` | `app/Providers/Filament/`, `app/Models/`, `app/Console/`, `User`             | —          |
+| S6 — `app/Operations/` reads + the two write Actions           | `app/Operations/`, `app/Actions/`                                            | S2, S3     |
+| S7 — console screens                                           | `app/Filament/`                                                              | S4, S5, S6 |
+| S8 — removal script, CI job, link test, navigation smoke       | `scripts/`, `.github/workflows/`, `tests/Feature/`, `tests/Browser/`         | S7         |
 
 ```
 Lane A: T0 → S1 → S2 ─┐
@@ -641,9 +641,12 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
     - Verify: `vendor/bin/pest tests/Feature/Audit tests/Feature/Invitations tests/Feature/Organizations`
     - Landed: `AuditActor` lives only in hidden Context, so no hydration hook was needed. `Context::hydrate()` flushes before loading a job's payload, which forgets an actor the job did not carry. An act with no actor records `source = system`. The middleware binds the user only: the impersonation id joins it in T4, when impersonations exist. `ApplyStripeEvent` runs as `stripe`. Console acts are named through `CommandStarting`.
 
-- [ ] **T4 (P1, human: ~1.5d / CC: ~45min)** — impersonation — actions, guard, refused-route list, banner, shared prop
+- [x] **T4 (P1, human: ~1.5d / CC: ~45min)** — impersonation — actions, guard, refused-route list, banner, shared prop
     - Files: migration, `app/Models/Impersonation.php`, `app/Actions/{Start,End}Impersonation.php`, `app/Http/Middleware/EnsureImpersonationIsLive.php`, `bootstrap/app.php`, `HandleInertiaRequests`, layout component
     - Verify: `php artisan wayfinder:generate --with-form && vendor/bin/pest tests/Feature/Impersonation`
+    - Landed: the product cannot see the console's `operators` table, so it asks an `App\Contracts\Operators` contract ("is this user an operator", "where does an operator return to"). Its default, `NoOperators`, says nobody. T5 binds the real one. Once the console is removed, nothing can start an impersonation, and a live one ends as revoked on its next request.
+    - Landed: the guard intercepts `logout` while impersonating and signs out this device only. Fortify's logout calls `cycleRememberToken()`, which would have ended the customer's own remembered sessions everywhere.
+    - Landed: the guard runs before `ResolveTenantContext`, and the expiry test locks that: after expiry the operator's own organization resolves. `operators:revoke` closing live rows is T5's, with the command.
 - [ ] **T5 (P1, human: ~1d / CC: ~30min)** — console — Filament install, panel, operators, access ladder, `ForgetTenantContext`
     - Files: `composer.json`, `app/Providers/Filament/AdminPanelProvider.php`, `app/Models/Operator.php`, commands, `User`
     - Verify: `vendor/bin/pest tests/Feature/AdminConsole/OperatorAccessTest.php tests/Feature/AdminConsole/TenantDisciplineTest.php`
@@ -697,7 +700,7 @@ Prior learnings applied: `saas-foundation-bindings-before-tenant` (10/10, 2026-0
    every `password.confirm` gate as the **user**. Decision R1.
 2. **[P2] (confidence: 9/10) Factual correction, no behaviour change: `Doctor::report()`
    is global.** `Doctor.php:33` takes `(DateTimeImmutable $at, ?string $scope, ?int
-   $staleAfter)` and counts owners in `state()`. It has no per-owner argument. The table
+$staleAfter)` and counts owners in `state()`. It has no per-owner argument. The table
    row and the diagram are corrected: per-organization refresh health comes from
    `NativeStateStore::state()`, and Doctor feeds the console home's health widget.
 3. **[P3] (confidence: 9/10) Factual correction: test trap 6 named project creation**,
@@ -847,11 +850,12 @@ put to the user as O1–O6:
 
 Codex recommendation: "revise before implementation because impersonation revocation,
 replay validation, and historical evidence remain underspecified, and the inspector
-depends on an unavailable read API." 
+depends on an unavailable read API."
 
 ## Decision ledger
 
 ### S0: Scope and structure (Step 0 complexity gate)
+
 Feature answers: D2 → A (user reply "A", after the gstack upgrade). All six build-plan
 surfaces. Overrides, suspend/archive, Stripe owner sync and `subscription_items.organization_id`
 are deferred to `TODOS.md`.
@@ -864,15 +868,16 @@ Pending remedies: none at the time of the scope answer.
 State: approved
 
 ### R1: What the impersonated session inherits from the operator's session
+
 Finding: Section 1 #1, P1, confidence 9/10, `Store.php:618-622` + plan D50 "regenerates the session", reviewer: eng review (Claude).
 Plan baseline: D50 as drafted: `session()->regenerate()`, then write the impersonation keys and clear the organization key. Not approved; original proposal.
 Runtime evidence: `regenerate()` → `migrate()` keeps all attributes. `auth.password_confirmed_at` survives (`Store.php:835`, `RequirePassword.php:96`). Fortify's two-factor keys and any `url.intended` survive too. Verified by reading the framework source.
 Comparison grid:
 
-| Choice | Current (draft) | A | B |
-|---|---|---|---|
-| R1 session contents at start/end | regenerate: operator's keys carried over | invalidate, then write only the allowlisted keys (`impersonation_id`, `impersonator_id`) | keep regenerate, forget a denylist (`auth.password_confirmed_at`, organization key) |
-| Proof | none | At7: after start, `password.confirm` routes redirect to confirmation; session holds only allowlisted keys; same on end | At7: denylisted keys absent |
+| Choice                           | Current (draft)                          | A                                                                                                                      | B                                                                                   |
+| -------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| R1 session contents at start/end | regenerate: operator's keys carried over | invalidate, then write only the allowlisted keys (`impersonation_id`, `impersonator_id`)                               | keep regenerate, forget a denylist (`auth.password_confirmed_at`, organization key) |
+| Proof                            | none                                     | At7: after start, `password.confirm` routes redirect to confirmation; session holds only allowlisted keys; same on end | At7: denylisted keys absent                                                         |
 
 Question D4:
 D4 — What does an impersonated session keep from the operator's session?
@@ -883,13 +888,13 @@ Recommendation: A, because an allowlist fails closed. A key nobody thought of is
 Completeness: A=10/10, B=6/10
 Pros / cons:
 A) Invalidate, then allowlist (recommended)
-  ✅ `invalidate()` flushes every attribute and rotates the id. Only the two impersonation keys are written back, so nothing the operator confirmed survives.
-  ✅ The same rule runs at the end, so Alice's state never leaks back into the operator's console session either.
-  ❌ Flash messages and `url.intended` are lost across the switch. The console notification has to be re-flashed after invalidation, a two-line cost.
+✅ `invalidate()` flushes every attribute and rotates the id. Only the two impersonation keys are written back, so nothing the operator confirmed survives.
+✅ The same rule runs at the end, so Alice's state never leaks back into the operator's console session either.
+❌ Flash messages and `url.intended` are lost across the switch. The console notification has to be re-flashed after invalidation, a two-line cost.
 B) Regenerate, then forget a denylist
-  ✅ Smallest diff: one `forget([...])` call after the existing regenerate.
-  ❌ Fails open. Any future key (a new Fortify flag, a package's "recently verified" marker) carries over silently, and no test notices.
-  ❌ Fortify's two-factor challenge keys and `url.intended` still carry unless someone lists them too.
+✅ Smallest diff: one `forget([...])` call after the existing regenerate.
+❌ Fails open. Any future key (a new Fortify flag, a package's "recently verified" marker) carries over silently, and no test notices.
+❌ Fortify's two-factor challenge keys and `url.intended` still carry unless someone lists them too.
 Net: A costs two lines and closes the whole class. B closes today's instance and leaves the next one open.
 Header: Impersonation session
 Options:
@@ -904,16 +909,17 @@ Accepted scope: `invalidate()` on start and on end of an impersonation; write ba
 History: none
 
 ### R2: Where an audit event gets its actor and impersonation from
+
 Finding: Section 1 #4, P1, confidence 9/10, `RemoveOrganizationMember.php:24` and six other `handle()` signatures + plan D49 "stamps its id", reviewer: eng review (Claude).
 Plan baseline: D49 as drafted. `actor_id` and `impersonation_id` are recorded, with no mechanism named. Not approved; original proposal.
 Runtime evidence: 7 of the 11 audited actions take no actor (signatures quoted in finding 4). `TenantContext` already mirrors the tenant into `Illuminate\Log\Context` (`TenantContext.php:61`), and `TenancyServiceProvider.php:25` restores it on hydration. That precedent (D24) carries a value into queued jobs and forgets it when absent.
 Comparison grid:
 
-| Choice | Current (draft) | A | B | C |
-|---|---|---|---|---|
-| R2 actor/impersonation source | unspecified | `AuditActor` in hidden `Context`: set by a `web` middleware from the authenticated user and the session's impersonation, set explicitly by console commands and webhook processing (actor null, `source` named); read by `RecordAuditEvent`; dehydrated into queued jobs, forgotten when absent | explicit `?User $actor` and `?Impersonation $impersonation` parameters added to every audited `handle()` and every caller | `RecordAuditEvent` reads `Auth::user()` and the session |
-| Works in jobs/commands | — | yes, carried or explicitly named | yes, if every caller passes it | no, null actor silently |
-| Proof | — | At6: actor and impersonation recorded over HTTP, across a real queue roundtrip, and as `source=console` from a command; absent context on a later job forgets | At6: each call site passes the actor | At6 over HTTP only |
+| Choice                        | Current (draft) | A                                                                                                                                                                                                                                                                                               | B                                                                                                                         | C                                                       |
+| ----------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| R2 actor/impersonation source | unspecified     | `AuditActor` in hidden `Context`: set by a `web` middleware from the authenticated user and the session's impersonation, set explicitly by console commands and webhook processing (actor null, `source` named); read by `RecordAuditEvent`; dehydrated into queued jobs, forgotten when absent | explicit `?User $actor` and `?Impersonation $impersonation` parameters added to every audited `handle()` and every caller | `RecordAuditEvent` reads `Auth::user()` and the session |
+| Works in jobs/commands        | —               | yes, carried or explicitly named                                                                                                                                                                                                                                                                | yes, if every caller passes it                                                                                            | no, null actor silently                                 |
+| Proof                         | —               | At6: actor and impersonation recorded over HTTP, across a real queue roundtrip, and as `source=console` from a command; absent context on a later job forgets                                                                                                                                   | At6: each call site passes the actor                                                                                      | At6 over HTTP only                                      |
 
 Question D5:
 D5 — Where does an audit event learn who did it, and whether an operator was impersonating?
@@ -924,16 +930,16 @@ Recommendation: A, because it copies the mechanism D24 already proved for the te
 Note: options differ in kind, not coverage. No completeness score.
 Pros / cons:
 A) Carry it in Context, like the tenant (recommended)
-  ✅ Same shape as `TenantContext`: set once per request, dehydrated into every job, and forgotten when absent, so a worker never attributes one job's actor to the next.
-  ✅ No signature changes across seven actions and their callers and tests. The audit call is one line per action.
-  ❌ Ambient rather than explicit. A reader of `RemoveOrganizationMember` cannot see who the actor is from its signature, so the middleware and the command wrapper need the inline comment.
+✅ Same shape as `TenantContext`: set once per request, dehydrated into every job, and forgotten when absent, so a worker never attributes one job's actor to the next.
+✅ No signature changes across seven actions and their callers and tests. The audit call is one line per action.
+❌ Ambient rather than explicit. A reader of `RemoveOrganizationMember` cannot see who the actor is from its signature, so the middleware and the command wrapper need the inline comment.
 B) Pass the actor explicitly
-  ✅ Most explicit: every `handle()` says who acts, and a missing actor is a type error rather than a null row.
-  ❌ Changes seven signatures and every controller, job, command and test that calls them. That is roughly 30 call sites for one audit column.
-  ❌ The impersonation still has to come from the request, so B needs an ambient source anyway for half of the attribution.
+✅ Most explicit: every `handle()` says who acts, and a missing actor is a type error rather than a null row.
+❌ Changes seven signatures and every controller, job, command and test that calls them. That is roughly 30 call sites for one audit column.
+❌ The impersonation still has to come from the request, so B needs an ambient source anyway for half of the attribution.
 C) Read Auth and the session inside RecordAuditEvent
-  ✅ Smallest change: no middleware, no parameters.
-  ❌ Silent null actor in every queued job and console command, and the Actions rule says actions run in exactly those places.
+✅ Smallest change: no middleware, no parameters.
+❌ Silent null actor in every queued job and console command, and the Actions rule says actions run in exactly those places.
 Net: A reuses a proven house pattern and stays correct off the request path. B is the most explicit but pays ~30 call-site changes and still needs A's mechanism for impersonation.
 Header: Audit attribution
 Options:
@@ -950,16 +956,17 @@ Accepted scope: `App\Audit\AuditActor` in hidden `Illuminate\Log\Context`; `web`
 History: none
 
 ### R3: How the inspector names the event behind the current entitlement
+
 Finding: Section 1 #5, P2, confidence 8/10, `NativeStateStore.php` `request()` + receipts migration lines 33-36 + plan "The inspector names the receipt whose `received_at` equals…", reviewer: eng review (Claude).
 Plan baseline: draft rule: exactly one receipt matched on `received_at == requested_at`. Not approved; original proposal.
 Runtime evidence: second-resolution timestamps, hash ids, no sequence column on receipts. Checkout produces two refresh-requesting events, usually within one second. Stripe's own `created` for each is in `webhook_events.stripe_created_at` (D48).
 Comparison grid:
 
-| Choice | Current (draft) | A | B | C |
-|---|---|---|---|---|
-| R3 matching rule | one receipt, `received_at == requested_at` | every receipt in that second, joined to `webhook_events` and ordered by Stripe `created`. Name the subscription-shaped `applied` one as primary and list the others as "also in this refresh" | ignore receipts; name the newest `applied` subscription-shaped webhook event for the organization whose `last_received_at` ≤ the state's `last_success_at` | upstream: `cashier-entitlements` 0.3.0 adds a `requested_sequence` column to receipts, then match exactly |
-| Honest when ambiguous | no (picks arbitrarily) | yes, shows all candidates | partly (can name an event whose refresh failed) | yes, exact |
-| Proof | — | At4: two events in one second → both shown, `subscription.created` primary; sweep-triggered → "no event"; pending → "pending"; receipt with no `webhook_events` row → shown by event id only | At4: newest applied named | package test + At4 |
+| Choice                | Current (draft)                            | A                                                                                                                                                                                             | B                                                                                                                                                          | C                                                                                                         |
+| --------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| R3 matching rule      | one receipt, `received_at == requested_at` | every receipt in that second, joined to `webhook_events` and ordered by Stripe `created`. Name the subscription-shaped `applied` one as primary and list the others as "also in this refresh" | ignore receipts; name the newest `applied` subscription-shaped webhook event for the organization whose `last_received_at` ≤ the state's `last_success_at` | upstream: `cashier-entitlements` 0.3.0 adds a `requested_sequence` column to receipts, then match exactly |
+| Honest when ambiguous | no (picks arbitrarily)                     | yes, shows all candidates                                                                                                                                                                     | partly (can name an event whose refresh failed)                                                                                                            | yes, exact                                                                                                |
+| Proof                 | —                                          | At4: two events in one second → both shown, `subscription.created` primary; sweep-triggered → "no event"; pending → "pending"; receipt with no `webhook_events` row → shown by event id only  | At4: newest applied named                                                                                                                                  | package test + At4                                                                                        |
 
 Question D6:
 D6 — How does the entitlement inspector name "the webhook event that set it"?
@@ -970,15 +977,15 @@ Recommendation: A, because it stays exact about what the package knows and says 
 Note: options differ in kind, not coverage. No completeness score.
 Pros / cons:
 A) Show every event in that second (recommended)
-  ✅ Never claims more than the data proves. Both checkout events appear, and the subscription event, which wrote the plan, is marked primary.
-  ✅ Uses `webhook_events` (D48) for type, outcome and Stripe's own `created`, so ordering inside the second is real rather than guessed.
-  ❌ The screen has to render a small list rather than one line, and the journey test asserts on the primary row rather than on a single value.
+✅ Never claims more than the data proves. Both checkout events appear, and the subscription event, which wrote the plan, is marked primary.
+✅ Uses `webhook_events` (D48) for type, outcome and Stripe's own `created`, so ordering inside the second is real rather than guessed.
+❌ The screen has to render a small list rather than one line, and the journey test asserts on the primary row rather than on a single value.
 B) Newest applied event before the last successful refresh
-  ✅ Always one answer, and no receipt matching at all. Simplest to render and test.
-  ❌ Can name an event whose own refresh failed, with a later sweep succeeding. The inspector then states a cause it cannot prove.
+✅ Always one answer, and no receipt matching at all. Simplest to render and test.
+❌ Can name an event whose own refresh failed, with a later sweep succeeding. The inspector then states a cause it cannot prove.
 C) Fix it upstream first
-  ✅ Exact by construction: the receipt records which request it produced.
-  ❌ Blocks M6 on a `cashier-entitlements` release again (M5 already paid this once, D39), and existing receipts stay ambiguous anyway.
+✅ Exact by construction: the receipt records which request it produced.
+❌ Blocks M6 on a `cashier-entitlements` release again (M5 already paid this once, D39), and existing receipts stay ambiguous anyway.
 Net: A is exact and honest today at the cost of a short list. B is simpler but can mislead a support person. C is exact only for new data, and costs a release.
 Header: Inspector event link
 Options:
@@ -995,17 +1002,18 @@ Accepted scope: match all receipts with `received_at == requested_at` when `comp
 History: none
 
 ### R4: Regression contract for the webhook path (T1 extraction + T2 storage swap)
+
 Finding: Section 3 #1, P1 CRITICAL, confidence 9/10, `StripeWebhookTest.php:41-142` + `WebhookEventAgeTest.php:28-143`, reviewer: eng review (Claude). Regression rule: coverage is required; only its shape is decided here.
 Plan baseline: T1 "no behaviour change, proven by the existing webhook tests before anything else moves"; trap 4 "update them in the same commit as the migration". The shape of the contract is not approved.
 Runtime evidence: 14 existing tests cover the path. 10 assertions reference the old table: 3 reason reads, 6 "nothing retained" on applying paths, 1 bad signature (verified with grep, lines listed in finding #1). Bad signature returns 403 (`StripeWebhookTest.php:146` `assertForbidden()`).
 Comparison grid:
 
-| Choice | Current (draft) | A | B |
-|---|---|---|---|
-| Behaviour preserved | implied | all 14 behaviours listed in finding #1, **plus** HTTP status and body per path (200 "Webhook retained." / "Webhook superseded.", 500 on other failures, 403 on bad signature) | same 14 behaviours |
-| Intentional changes | trap 4 | only: 3 reason reads → `WebhookEvent` `outcome` + `outcome_reason`; 6 "nothing retained" → "exactly one row, outcome `applied`"; bad-signature stays "nothing recorded"; redelivery increments instead of duplicating | same list |
-| Sequencing | T1 then T2 | two commits: **T1 lands with both test files byte-unchanged and green**; T2's diff to those files is limited to the 10 storage assertions, reviewed as such | one commit: extraction and storage swap together, tests updated together |
-| Added proof | — | a characterization test pinning status + body for every controller path, written **before** T1 and kept | none beyond existing |
+| Choice              | Current (draft) | A                                                                                                                                                                                                                     | B                                                                        |
+| ------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Behaviour preserved | implied         | all 14 behaviours listed in finding #1, **plus** HTTP status and body per path (200 "Webhook retained." / "Webhook superseded.", 500 on other failures, 403 on bad signature)                                         | same 14 behaviours                                                       |
+| Intentional changes | trap 4          | only: 3 reason reads → `WebhookEvent` `outcome` + `outcome_reason`; 6 "nothing retained" → "exactly one row, outcome `applied`"; bad-signature stays "nothing recorded"; redelivery increments instead of duplicating | same list                                                                |
+| Sequencing          | T1 then T2      | two commits: **T1 lands with both test files byte-unchanged and green**; T2's diff to those files is limited to the 10 storage assertions, reviewed as such                                                           | one commit: extraction and storage swap together, tests updated together |
+| Added proof         | —               | a characterization test pinning status + body for every controller path, written **before** T1 and kept                                                                                                               | none beyond existing                                                     |
 
 Question D7:
 D7 — How is the existing webhook behaviour protected while M6 rewrites that path?
@@ -1016,13 +1024,13 @@ Recommendation: A, because separating "move the code" from "change the storage",
 Completeness: A=10/10, B=7/10
 Pros / cons:
 A) Two steps, tests frozen across the move (recommended)
-  ✅ T1's proof is mechanical: the same two test files (14 tests), untouched, pass before and after. No judgement needed.
-  ✅ T2's test diff is only the 10 storage assertions, so a reviewer can see that nothing else about behaviour moved.
-  ❌ A characterization test for status and body per path must be written first. Roughly 8 short cases, one more file to keep.
+✅ T1's proof is mechanical: the same two test files (14 tests), untouched, pass before and after. No judgement needed.
+✅ T2's test diff is only the 10 storage assertions, so a reviewer can see that nothing else about behaviour moved.
+❌ A characterization test for status and body per path must be written first. Roughly 8 short cases, one more file to keep.
 B) One step, tests updated together
-  ✅ One commit, and less ceremony than two ordered steps.
-  ❌ The extraction and the storage swap share one test diff, so an edited assertion could be hiding a behaviour change, and no one can tell which.
-  ❌ Response bodies and statuses stay unpinned. Only side effects are asserted today.
+✅ One commit, and less ceremony than two ordered steps.
+❌ The extraction and the storage swap share one test diff, so an edited assertion could be hiding a behaviour change, and no one can tell which.
+❌ Response bodies and statuses stay unpinned. Only side effects are asserted today.
 Net: A costs one small characterization file and a commit boundary, and buys a provably behaviour-free extraction. B saves that and lets the riskiest diff in M6 carry its own test edits.
 Header: Webhook regression contract
 Options:
@@ -1037,17 +1045,18 @@ Accepted scope: new T0 writes `WebhookResponseContractTest` (status + body per c
 History: none
 
 ### R5: How "no dead navigation" is proven, with and without the console
+
 Finding: Section 3 #2, P1, confidence 9/10, `AppSidebar.vue:25-49` + plan D52 `NavigationTest`, reviewer: eng review (Claude).
 Plan baseline: D52 as drafted: a PHP `NavigationTest` rendering Inertia pages and checking shared-navigation hrefs, run in both jobs. Removability itself is approved scope (S0); the proof mechanism is not.
 Runtime evidence: navigation hrefs are compiled into Vue from Wayfinder imports and never appear in Inertia props. A browser suite exists (`composer test:browser`, CI job `browser (sqlite)`). `package.json` has `types:check` (`vue-tsc --noEmit`) and `build` (`vite build`).
 Comparison grid:
 
-| Choice | Current (draft) | A | B |
-|---|---|---|---|
-| Server-side proof | `NavigationTest` over Inertia props (cannot see hrefs) | `AdminConsoleLinkTest` (outside `AdminConsole/`): `adminConsoleUrl` shared for operators only while installed; absent for everyone after removal | same `AdminConsoleLinkTest` |
-| Compile-time proof | `bun run build` | `wayfinder:generate` → `bun run types:check` → `bun run build` in both jobs; a removed route's import fails | same |
-| Runtime proof | none that works | `tests/Browser/NavigationSmokeTest.php`: as a member and as an operator, click every sidebar and user-menu link; assert no 404/500 and no console errors; runs in the browser job and in `admin-removed` | none |
-| Catches a hard-coded string href to `/admin` | no | yes (smoke) | no |
+| Choice                                       | Current (draft)                                        | A                                                                                                                                                                                                        | B                           |
+| -------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Server-side proof                            | `NavigationTest` over Inertia props (cannot see hrefs) | `AdminConsoleLinkTest` (outside `AdminConsole/`): `adminConsoleUrl` shared for operators only while installed; absent for everyone after removal                                                         | same `AdminConsoleLinkTest` |
+| Compile-time proof                           | `bun run build`                                        | `wayfinder:generate` → `bun run types:check` → `bun run build` in both jobs; a removed route's import fails                                                                                              | same                        |
+| Runtime proof                                | none that works                                        | `tests/Browser/NavigationSmokeTest.php`: as a member and as an operator, click every sidebar and user-menu link; assert no 404/500 and no console errors; runs in the browser job and in `admin-removed` | none                        |
+| Catches a hard-coded string href to `/admin` | no                                                     | yes (smoke)                                                                                                                                                                                              | no                          |
 
 Question D8:
 D8 — How do we prove removing the console leaves no dead links?
@@ -1058,13 +1067,13 @@ Recommendation: A, because only a browser sees what a user clicks. The build cat
 Completeness: A=10/10, B=8/10
 Pros / cons:
 A) Link test + build checks + browser smoke (recommended)
-  ✅ Three layers, each able to fail: the shared prop (PHP), removed routes (type-check and build), and real clicks (browser), for both a member and an operator.
-  ✅ Reuses the existing browser suite and CI job. The smoke test is one short file that also runs in `admin-removed`.
-  ❌ The `admin-removed` job needs Playwright and Chromium installed. That adds about 1-2 minutes of CI time on that job.
+✅ Three layers, each able to fail: the shared prop (PHP), removed routes (type-check and build), and real clicks (browser), for both a member and an operator.
+✅ Reuses the existing browser suite and CI job. The smoke test is one short file that also runs in `admin-removed`.
+❌ The `admin-removed` job needs Playwright and Chromium installed. That adds about 1-2 minutes of CI time on that job.
 B) Link test + build checks only
-  ✅ No browser in the removal job, so it stays fast and simple.
-  ✅ Wayfinder routes are imports, so the build catches the likely failure, a removed route still imported.
-  ❌ A hard-coded href or a runtime error on navigation passes silently.
+✅ No browser in the removal job, so it stays fast and simple.
+✅ Wayfinder routes are imports, so the build catches the likely failure, a removed route still imported.
+❌ A hard-coded href or a runtime error on navigation passes silently.
 Net: A buys a runtime check that can actually fail, for a couple of CI minutes. B relies on the build alone, which is strong for imports and blind to everything else.
 Header: Dead-navigation proof
 Options:
@@ -1079,15 +1088,16 @@ Accepted scope: `NavigationTest` replaced by `tests/Feature/AdminConsoleLinkTest
 History: none
 
 ### O1: Does revoking an operator end their live impersonations?
+
 Finding: Outside voice #1, P1, confidence 9/10 (verified: the D50 guard reads only `expires_at`), reviewer: Codex.
 Plan baseline: R1-approved D50; `EnsureImpersonationIsLive` ends on expiry only. Operator authority is not rechecked.
 Runtime evidence: no operator check exists after start; `canAccessPanel()` gates `/admin`, not the product routes the impersonated session uses.
 Comparison grid:
 
-| Choice | Current | A Apply | B Keep | C Investigate | D Defer |
-|---|---|---|---|---|---|
-| O1 guard rechecks operator | no | yes: guard ends the impersonation (`ended_by = revoked`) when the `operators` row is gone; `operators:revoke` also ends live rows | no | bounded 1h spike on cost/placement, no change | TODOS entry, no change |
-| Proof | — | At7: revoke mid-impersonation → next product request returns to login, row `ended_by = revoked` | — | — | — |
+| Choice                     | Current | A Apply                                                                                                                           | B Keep | C Investigate                                 | D Defer                |
+| -------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------- | ---------------------- |
+| O1 guard rechecks operator | no      | yes: guard ends the impersonation (`ended_by = revoked`) when the `operators` row is gone; `operators:revoke` also ends live rows | no     | bounded 1h spike on cost/placement, no change | TODOS entry, no change |
+| Proof                      | —       | At7: revoke mid-impersonation → next product request returns to login, row `ended_by = revoked`                                   | —      | —                                             | —                      |
 
 Question D9:
 D9 — Should revoking an operator end their impersonations immediately?
@@ -1098,18 +1108,18 @@ Recommendation: A, because revocation that does not revoke is not revocation, an
 Note: options differ in kind, not coverage. No completeness score.
 Pros / cons:
 A) Apply this change (recommended)
-  ✅ Revocation takes effect on the very next request, and the command also closes the rows so the history says why.
-  ✅ Costs one join on `operators` inside a guard that already loads the impersonation.
-  ❌ The product-side guard now reads an `operators` table the console owns, so it has to tolerate that table being absent after removal.
+✅ Revocation takes effect on the very next request, and the command also closes the rows so the history says why.
+✅ Costs one join on `operators` inside a guard that already loads the impersonation.
+❌ The product-side guard now reads an `operators` table the console owns, so it has to tolerate that table being absent after removal.
 B) Keep this row's current value
-  ✅ No change. Expiry already bounds the window to 30 minutes.
-  ❌ Up to 30 minutes of access after an explicit revocation, the exact case revocation exists for.
+✅ No change. Expiry already bounds the window to 30 minutes.
+❌ Up to 30 minutes of access after an explicit revocation, the exact case revocation exists for.
 C) Investigate before choosing
-  ✅ Time-boxed to 1h to confirm guard placement and removal behaviour.
-  ❌ Nothing changes until another decision. The gap stays open in the plan.
+✅ Time-boxed to 1h to confirm guard placement and removal behaviour.
+❌ Nothing changes until another decision. The gap stays open in the plan.
 D) Defer this proposed change only
-  ✅ Keeps M6 moving. Recorded in TODOS.md with the exposure stated.
-  ❌ Ships a known security gap in the milestone that introduces impersonation.
+✅ Keeps M6 moving. Recorded in TODOS.md with the exposure stated.
+❌ Ships a known security gap in the milestone that introduces impersonation.
 Net: A closes a real authority gap for one lookup. Everything else ships it knowingly.
 Header: Revoke ends impersonation
 Options:
@@ -1128,15 +1138,16 @@ Accepted scope: `EnsureImpersonationIsLive` ends any live impersonation whose op
 History: none
 
 ### O2: What checks does a replay run before requesting a refresh?
+
 Finding: Outside voice #2, P1, confidence 9/10 (verified `QueueRefreshFromWebhook.php:24-40`, `WebhookController.php:255`), reviewer: Codex.
 Plan baseline: D51 as drafted: replay calls `RefreshManager::request($organization, $eventId)` unconditionally after applying.
 Runtime evidence: the listener refuses types outside its five, refuses `livemode`/`account` mismatch, and requires exactly one customer. `handleCustomerDeleted` clears `stripe_id`, so a post-deletion refresh fails.
 Comparison grid:
 
-| Choice | Current | A Apply | B Keep | C Investigate | D Defer |
-|---|---|---|---|---|---|
-| O2 replay eligibility | none | `ReplayWebhookEvent` runs the listener's non-HTTP checks (same five types, `livemode`, `account`, one owner) before requesting a refresh. Other types apply without a refresh. Outcomes defined: `replayed`, `superseded` (watermark refused), `unplaceable` (still), `refused` (context mismatch), with an `errored` handler failure staying `errored` | unconditional refresh | 1h spike | TODOS |
-| Proof | — | At8: each outcome; `customer.deleted` replay requests no refresh; livemode mismatch refused | — | — | — |
+| Choice                | Current | A Apply                                                                                                                                                                                                                                                                                                                                                 | B Keep                | C Investigate | D Defer |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------- | ------- |
+| O2 replay eligibility | none    | `ReplayWebhookEvent` runs the listener's non-HTTP checks (same five types, `livemode`, `account`, one owner) before requesting a refresh. Other types apply without a refresh. Outcomes defined: `replayed`, `superseded` (watermark refused), `unplaceable` (still), `refused` (context mismatch), with an `errored` handler failure staying `errored` | unconditional refresh | 1h spike      | TODOS   |
+| Proof                 | —       | At8: each outcome; `customer.deleted` replay requests no refresh; livemode mismatch refused                                                                                                                                                                                                                                                             | —                     | —             | —       |
 
 Question D10:
 D10 — What must a replay check before it asks for an entitlement refresh?
@@ -1147,18 +1158,18 @@ Recommendation: A, because replay must be the same pipeline minus only the HTTP 
 Note: options differ in kind, not coverage. No completeness score.
 Pros / cons:
 A) Apply this change (recommended)
-  ✅ Replay keeps every protection a live delivery has, except the signature, which cannot apply offline.
-  ✅ Every replay ends in a named outcome, so the operator sees why nothing happened.
-  ❌ The listener's checks are duplicated in app code, because the package keeps them private to the listener, and they can drift on a package upgrade. A test pins them.
+✅ Replay keeps every protection a live delivery has, except the signature, which cannot apply offline.
+✅ Every replay ends in a named outcome, so the operator sees why nothing happened.
+❌ The listener's checks are duplicated in app code, because the package keeps them private to the listener, and they can drift on a package upgrade. A test pins them.
 B) Keep this row's current value
-  ✅ Simplest replay.
-  ❌ Unguarded refreshes and a half-applied `customer.deleted`.
+✅ Simplest replay.
+❌ Unguarded refreshes and a half-applied `customer.deleted`.
 C) Investigate before choosing
-  ✅ Could explore an upstream seam that exposes the checks.
-  ❌ No decision, and replay stays unsafe in the plan meanwhile.
+✅ Could explore an upstream seam that exposes the checks.
+❌ No decision, and replay stays unsafe in the plan meanwhile.
 D) Defer this proposed change only
-  ✅ Could ship replay later.
-  ❌ Leaves the plan's replay unsafe as written; it cannot ship as is.
+✅ Could ship replay later.
+❌ Leaves the plan's replay unsafe as written; it cannot ship as is.
 Net: A is the minimum for replay to be safe. The cost is a pinned copy of four checks.
 Header: Replay eligibility
 Options:
@@ -1177,15 +1188,16 @@ Accepted scope: `ReplayWebhookEvent` repeats the listener's non-HTTP checks (fiv
 History: none
 
 ### O3: Who is the audit actor when an invitation is accepted during registration?
+
 Finding: Outside voice #3, P2, confidence 9/10 (verified `CreateNewUser.php:58`), reviewer: Codex.
 Plan baseline: R2-approved: `AuditActor` set by a `web` middleware from the authenticated user.
 Runtime evidence: `CreateNewUser` calls `ConsumePendingInvitation` before Fortify logs the user in, so the middleware ran as a guest.
 Comparison grid:
 
-| Choice | Current | A Apply | B Keep | C Investigate | D Defer |
-|---|---|---|---|---|---|
-| O3 actor at registration | null actor | `CreateNewUser` sets `AuditActor` to the new user, scoped around `ConsumePendingInvitation` (restore after) | null actor, `source = web` | spike | TODOS |
-| Proof | — | At6: register via an invitation link → the accept event's actor is the new user | — | — | — |
+| Choice                   | Current    | A Apply                                                                                                     | B Keep                     | C Investigate | D Defer |
+| ------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------- | -------------------------- | ------------- | ------- |
+| O3 actor at registration | null actor | `CreateNewUser` sets `AuditActor` to the new user, scoped around `ConsumePendingInvitation` (restore after) | null actor, `source = web` | spike         | TODOS   |
+| Proof                    | —          | At6: register via an invitation link → the accept event's actor is the new user                             | —                          | —             | —       |
 
 Question D11:
 D11 — Who does the audit log say accepted an invitation during sign-up?
@@ -1196,18 +1208,18 @@ Recommendation: A, because the actor is known at that exact line and the fix is 
 Note: options differ in kind, not coverage. No completeness score.
 Pros / cons:
 A) Apply this change (recommended)
-  ✅ The registration path records the right actor, and the scope restores afterwards so nothing leaks.
-  ✅ A two-line change at the one place the actor is known but not yet authenticated.
-  ❌ A second place that sets `AuditActor`, beside the middleware, the console and the webhook.
+✅ The registration path records the right actor, and the scope restores afterwards so nothing leaks.
+✅ A two-line change at the one place the actor is known but not yet authenticated.
+❌ A second place that sets `AuditActor`, beside the middleware, the console and the webhook.
 B) Keep this row's current value
-  ✅ No change.
-  ❌ Null actor on the most common invitation acceptance path.
+✅ No change.
+❌ Null actor on the most common invitation acceptance path.
 C) Investigate before choosing
-  ✅ Could look for other pre-login acts.
-  ❌ Delays a known fix.
+✅ Could look for other pre-login acts.
+❌ Delays a known fix.
 D) Defer this proposed change only
-  ✅ M6 moves on.
-  ❌ Ships blank actors on day one.
+✅ M6 moves on.
+❌ Ships blank actors on day one.
 Net: A fixes the gap where it occurs for two lines. The others leave the main invitation path unattributed.
 Header: Registration actor
 Options:
@@ -1226,15 +1238,16 @@ Accepted scope: `CreateNewUser` wraps `ConsumePendingInvitation` in an `AuditAct
 History: none
 
 ### O4: How does the inspector read receipts?
+
 Finding: Outside voice #4, P2, confidence 9/10 (verified `NativeStateStore.php:174-189`), reviewer: Codex.
 Plan baseline: R3-approved matching rule; "What already exists" says package tables are read only through `state()` and `usage()`.
 Runtime evidence: no public receipt reader. `NativeStateStore::ownerId(OwnerReference)` is public (`:27`) and yields the key receipts use.
 Comparison grid:
 
-| Choice | Current | A Apply | B Keep | C Investigate | D Defer |
-|---|---|---|---|---|---|
+| Choice            | Current                           | A Apply                                                                                                                                                                                                                  | B Keep                        | C Investigate            | D Defer                                      |
+| ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | ------------------------ | -------------------------------------------- |
 | O4 receipt access | forbidden (so R3 unimplementable) | one app class `App\Entitlements\RefreshReceipts` reads `cashier_entitlement_receipts` by `NativeStateStore::ownerId()` and `received_at`, read-only, and is the only direct package-table reader; an arch test pins that | keep the ban (R3 cannot ship) | spike on upstream reader | upstream `receipts()` API first, blocking T6 |
-| Proof | — | At4 through the class; arch test | — | — | — |
+| Proof             | —                                 | At4 through the class; arch test                                                                                                                                                                                         | —                             | —                        | —                                            |
 
 Question D12:
 D12 — How does the inspector get the refresh receipts R3 needs?
@@ -1245,18 +1258,18 @@ Recommendation: A, because one named read-only class keeps the exception visible
 Note: options differ in kind, not coverage. No completeness score.
 Pros / cons:
 A) Apply this change (recommended)
-  ✅ Unblocks R3 with no package release, using the package's own public `ownerId()` for the key.
-  ✅ One class, pinned by an arch test as the only direct reader, so the exception cannot spread.
-  ❌ Couples to a package table's shape. A package upgrade that changes receipts must be read, the same accepted cost as D32 and D28.
+✅ Unblocks R3 with no package release, using the package's own public `ownerId()` for the key.
+✅ One class, pinned by an arch test as the only direct reader, so the exception cannot spread.
+❌ Couples to a package table's shape. A package upgrade that changes receipts must be read, the same accepted cost as D32 and D28.
 B) Keep this row's current value
-  ✅ No coupling to package internals.
-  ❌ R3, which you approved, cannot be built. The journey's last clause loses its event link.
+✅ No coupling to package internals.
+❌ R3, which you approved, cannot be built. The journey's last clause loses its event link.
 C) Investigate before choosing
-  ✅ Might find an existing seam.
-  ❌ There is none today (checked). The inspector stays blocked.
+✅ Might find an existing seam.
+❌ There is none today (checked). The inspector stays blocked.
 D) Defer this proposed change only
-  ✅ Clean upstream API.
-  ❌ Blocks T6 on a package release, which M5 already paid once.
+✅ Clean upstream API.
+❌ Blocks T6 on a package release, which M5 already paid once.
 Net: A trades a documented, test-pinned coupling for an unblocked inspector. D is cleaner and costs a release cycle.
 Header: Receipt reader
 Options:
@@ -1275,15 +1288,16 @@ Accepted scope: `App\Entitlements\RefreshReceipts` reads `cashier_entitlement_re
 History: none
 
 ### O5: How does `webhook_events` keep "this event was applied" through later redeliveries?
+
 Finding: Outside voice #5, P2, confidence 8/10 (verified: the upsert overwrites `outcome`; the watermark at `StripeWebhookController.php:176` marks a late redelivery superseded), reviewer: Codex.
 Plan baseline: D48 as drafted: one mutable `outcome` per `stripe_event_id`.
 Runtime evidence: A applied → B newer applied → A redelivered → superseded, which overwrites `applied`. R3 reads `applied` as evidence.
 Comparison grid:
 
-| Choice | Current | A Apply | B Keep | C Investigate | D Defer |
-|---|---|---|---|---|---|
-| O5 application history | lost on redelivery | add `applied_at` (set on first successful apply, never cleared); `outcome` stays "latest delivery". R3 and the timeline read `applied_at` | one mutable outcome | spike | TODOS |
-| Proof | — | At5: apply A, apply newer B, redeliver A → `outcome = superseded`, `applied_at` kept | — | — | — |
+| Choice                 | Current            | A Apply                                                                                                                                   | B Keep              | C Investigate | D Defer |
+| ---------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------- | ------- |
+| O5 application history | lost on redelivery | add `applied_at` (set on first successful apply, never cleared); `outcome` stays "latest delivery". R3 and the timeline read `applied_at` | one mutable outcome | spike         | TODOS   |
+| Proof                  | —                  | At5: apply A, apply newer B, redeliver A → `outcome = superseded`, `applied_at` kept                                                      | —                   | —             | —       |
 
 Question D13:
 D13 — How does the webhook log remember an event was applied if Stripe re-sends it later?
@@ -1294,18 +1308,18 @@ Recommendation: A, because one extra timestamp keeps the fact without a second t
 Note: options differ in kind, not coverage. No completeness score.
 Pros / cons:
 A) Apply this change (recommended)
-  ✅ The fact "this applied" becomes write-once, while "latest delivery outcome" stays accurate.
-  ✅ One nullable column, with no history table.
-  ❌ Two related fields to explain on the screen. The timeline labels them "applied at" and "last delivery".
+✅ The fact "this applied" becomes write-once, while "latest delivery outcome" stays accurate.
+✅ One nullable column, with no history table.
+❌ Two related fields to explain on the screen. The timeline labels them "applied at" and "last delivery".
 B) Keep this row's current value
-  ✅ Simplest schema.
-  ❌ Loses evidence on a normal Stripe redelivery.
+✅ Simplest schema.
+❌ Loses evidence on a normal Stripe redelivery.
 C) Investigate before choosing
-  ✅ Could consider a delivery-history table.
-  ❌ Codex and I both judge that unnecessary. The delay buys little.
+✅ Could consider a delivery-history table.
+❌ Codex and I both judge that unnecessary. The delay buys little.
 D) Defer this proposed change only
-  ✅ Ships sooner.
-  ❌ R3 reads a field that can lie.
+✅ Ships sooner.
+❌ R3 reads a field that can lie.
 Net: A costs one column and keeps the inspector truthful.
 Header: Applied history
 Options:
@@ -1324,15 +1338,16 @@ Accepted scope: Nullable `applied_at` on `webhook_events`, written once on first
 History: none
 
 ### O6: How long are `replayed` rows kept?
+
 Finding: Outside voice #6, P2, confidence 9/10 (verified: D48's prune windows name `applied`, `superseded`, `unplaceable` and `errored` only), reviewer: Codex.
 Plan baseline: D48 windows: 90 days for applied/superseded, 180 days for unplaceable/errored. `replayed` is unlisted, so it is kept forever.
 Runtime evidence: the plan text only.
 Comparison grid:
 
-| Choice | Current | A Apply | B Keep | C Investigate | D Defer |
-|---|---|---|---|---|---|
-| O6 `replayed` window | forever (unintended) | 180 days from `last_received_at`, same as the class it came from | forever | — | TODOS |
-| Proof | — | At5 prune covers `replayed` | — | — | — |
+| Choice               | Current              | A Apply                                                          | B Keep  | C Investigate | D Defer |
+| -------------------- | -------------------- | ---------------------------------------------------------------- | ------- | ------------- | ------- |
+| O6 `replayed` window | forever (unintended) | 180 days from `last_received_at`, same as the class it came from | forever | —             | TODOS   |
+| Proof                | —                    | At5 prune covers `replayed`                                      | —       | —             | —       |
 
 Question D14:
 D14 — How long does the webhook log keep an event that was replayed?
@@ -1343,18 +1358,18 @@ Recommendation: A, because a replayed row was an unplaceable or errored row, so 
 Note: options differ in kind, not coverage. No completeness score.
 Pros / cons:
 A) Apply this change (recommended)
-  ✅ Honours the stated ceiling, with one enum case added to the prune query.
-  ✅ Consistent: the row keeps the window of the problem it recovered from.
-  ❌ None beyond the one line and its test.
+✅ Honours the stated ceiling, with one enum case added to the prune query.
+✅ Consistent: the row keeps the window of the problem it recovered from.
+❌ None beyond the one line and its test.
 B) Keep this row's current value
-  ✅ Nothing to change.
-  ❌ Unbounded retention of payloads, contrary to D48.
+✅ Nothing to change.
+❌ Unbounded retention of payloads, contrary to D48.
 C) Investigate before choosing
-  ✅ None meaningful. The choice is a window length.
-  ❌ Delays a one-line fix.
+✅ None meaningful. The choice is a window length.
+❌ Delays a one-line fix.
 D) Defer this proposed change only
-  ✅ None meaningful.
-  ❌ Ships the contradiction.
+✅ None meaningful.
+❌ Ships the contradiction.
 Net: A is a one-line consistency fix.
 Header: Replayed retention
 Options:
@@ -1373,6 +1388,7 @@ Accepted scope: `replayed` (and `refused`) rows pruned 180 days after `last_rece
 History: none
 
 ### TD1: TODO — grant and revoke overrides from the console
+
 Proposal: new `TODOS.md` entry (What/Why/Pros/Cons/Context/Depends written).
 Options: A) Add to TODOS.md (recommended) · B) Skip · C) Build it now in this PR.
 State: approved
@@ -1381,6 +1397,7 @@ Accepted scope: entry added to `TODOS.md`.
 History: none
 
 ### TD2: TODO — suspend, archive and restore an organization
+
 Proposal: new `TODOS.md` entry.
 Options: A) Add to TODOS.md (recommended) · B) Skip · C) Build it now in this PR.
 State: approved
@@ -1389,6 +1406,7 @@ Accepted scope: entry added to `TODOS.md`.
 History: none
 
 ### TD3: TODO — redact personal data in retained webhook payloads
+
 Proposal: new `TODOS.md` entry.
 Options: A) Add to TODOS.md (recommended) · B) Skip · C) Build it now in this PR.
 State: approved
@@ -1437,13 +1455,13 @@ None. No finding scored below 5, and none was suppressed.
 
 ## GSTACK REVIEW REPORT
 
-| Review         | Trigger               | Why                             | Runs | Status       | Findings                                  |
-| -------------- | --------------------- | ------------------------------- | ---- | ------------ | ----------------------------------------- |
-| CEO Review     | `/plan-ceo-review`    | Scope & strategy                | 0    | —            | —                                         |
-| Outside Review | Codex (`codex exec`)  | Independent 2nd opinion         | 1    | issues_found | 6 findings, 6 verified, 6 applied         |
-| Eng Review     | `/plan-eng-review`    | Architecture & tests (required) | 1    | ISSUES OPEN  | 14 issues, 0 critical gaps                |
-| Design Review  | `/plan-design-review` | UI/UX gaps                      | 0    | —            | —                                         |
-| DX Review      | `/plan-devex-review`  | Developer experience gaps       | 0    | —            | —                                         |
+| Review         | Trigger               | Why                             | Runs | Status       | Findings                          |
+| -------------- | --------------------- | ------------------------------- | ---- | ------------ | --------------------------------- |
+| CEO Review     | `/plan-ceo-review`    | Scope & strategy                | 0    | —            | —                                 |
+| Outside Review | Codex (`codex exec`)  | Independent 2nd opinion         | 1    | issues_found | 6 findings, 6 verified, 6 applied |
+| Eng Review     | `/plan-eng-review`    | Architecture & tests (required) | 1    | ISSUES OPEN  | 14 issues, 0 critical gaps        |
+| Design Review  | `/plan-design-review` | UI/UX gaps                      | 0    | —            | —                                 |
+| DX Review      | `/plan-devex-review`  | Developer experience gaps       | 0    | —            | —                                 |
 
 - **OUTSIDE COVERAGE:** Codex, plan-review phase, completed on `ea9d7b0`. Six findings:
   revocation, replay checks, the registration actor, the receipt reader, `applied_at` and

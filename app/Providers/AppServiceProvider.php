@@ -8,8 +8,10 @@ use App\Audit\AuditActor;
 use App\Billing\Plan;
 use App\Billing\PlanCatalog;
 use App\Console\Commands\ReconcileEntitlementsCommand;
+use App\Contracts\Operators;
 use App\Entitlements\ResolveAllowance;
 use App\Enums\AuditSource;
+use App\Impersonation\NoOperators;
 use App\Models\Organization;
 use App\Tenancy\ResolveTenantForRefresh;
 use Carbon\CarbonImmutable;
@@ -31,6 +33,9 @@ final class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // The admin console binds the real list. Without it nobody is an operator.
+        $this->app->singletonIf(Operators::class, NoOperators::class);
+
         $this->app->singleton(
             PriceCatalog::class,
             fn (): PriceCatalog => $this->entitlementCatalog(

@@ -361,4 +361,3 @@ likely shape is redaction when `applied_at` is set, with rows awaiting replay le
 untouched.
 
 **Depends on / blocked by:** M6 (`webhook_events`).
-
