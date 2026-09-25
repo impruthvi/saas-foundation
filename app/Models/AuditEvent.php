@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Attributes\WithoutTimestamps;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
 
 /**
@@ -34,6 +35,8 @@ use LogicException;
  * @property array<string, mixed> $context
  * @property CarbonImmutable $occurred_at
  * @property-read Organization $organization
+ * @property-read User|null $actor
+ * @property-read Impersonation|null $impersonation
  *
  * @method static AuditEventFactory factory($count = null, $state = [])
  * @method static Builder<static>|AuditEvent newModelQuery()
@@ -53,6 +56,22 @@ final class AuditEvent extends Model implements TenantOwned
 
     /** @use HasFactory<AuditEventFactory> */
     use HasFactory;
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'actor_id');
+    }
+
+    /**
+     * @return BelongsTo<Impersonation, $this>
+     */
+    public function impersonation(): BelongsTo
+    {
+        return $this->belongsTo(Impersonation::class);
+    }
 
     protected static function booted(): void
     {

@@ -653,9 +653,13 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
     - Landed: the provider is `AdminConsoleServiceProvider`, because the `laravel` arch preset requires the `ServiceProvider` suffix. `filament:install` rewrote `bootstrap/providers.php` and dropped the production exclusion of the billing replay provider. That was restored by hand, and the removal script (T8) must edit that file rather than regenerate it. The installer also added `filament:upgrade` to `post-autoload-dump` and three `public/*/filament` lines to `.gitignore`. The removal script undoes all three.
     - Landed: `Authenticate` is persistent as well as `ForgetTenantContext`, so revoking an operator stops the actions on a page already open, not only the next page. Grant and revoke are Actions (`GrantOperator`, `RevokeOperator`) behind thin commands, and revoke closes live impersonations.
     - Deferred to T7: At1's behavioural half (a real Livewire action over tenant data with the operator a member elsewhere) needs a console screen. T5 asserts the persistent registration.
-- [ ] **T6 (P1, human: ~1.5d / CC: ~45min)** — operations — three read services and two write Actions, each inside `runFor()`
+- [x] **T6 (P1, human: ~1.5d / CC: ~45min)** — operations — three read services and two write Actions, each inside `runFor()`
     - Files: `app/Operations/{InspectEntitlements,SubscriptionTimeline,OrganizationActivity}.php`, `app/Entitlements/RefreshReceipts.php`, `app/Actions/{RequestEntitlementRefresh,ReplayWebhookEvent}.php`, `tests/Unit/ArchTest.php`
     - Verify: `vendor/bin/pest tests/Feature/AdminConsole`
+    - Landed: the paged reads return `{rows, total}` rather than a `LengthAwarePaginator`. The console table builds its own paginator. The services stay plain data (D46), and the paginator's generic type is not worth fighting.
+    - Landed: Cashier's handlers are reached through `App\Billing\CashierEventHandlers`, a never-routed subclass of Cashier's controller, because the `laravel` arch preset allows only resource methods on routed controllers. `StripeWebhookController` is unchanged by T6.
+    - Landed: `ResolveAllowance::explain()` returns the answer together with its source (package or floor), so the inspector's label comes from the same code as the answer.
+    - Landed: after `customer.deleted`, the customer lookup already finds no organization. A separate test with an `invoice.created` replay pins the type filter, which a mutation run showed was untested otherwise.
 - [ ] **T7 (P1, human: ~2d / CC: ~1h)** — console — lookup, organization view, user, webhook events + replay, impersonation history
     - Files: `app/Filament/**`
     - Verify: `vendor/bin/pest tests/Feature/AdminConsole`
