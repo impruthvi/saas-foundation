@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Billing;
 
+use App\Audit\AuditActor;
+use App\Enums\AuditSource;
 use App\Enums\WebhookOutcome;
 use App\Exceptions\CrossTenantAccess;
 use App\Exceptions\TenantContextMissing;
@@ -71,6 +73,21 @@ final readonly class ApplyStripeEvent
      * @return TApplied|WebhookOutcome
      */
     public function handle(array $payload, Closure $apply): mixed
+    {
+        return AuditActor::runAs(
+            AuditActor::source(AuditSource::Stripe),
+            fn (): mixed => $this->place($payload, $apply),
+        );
+    }
+
+    /**
+     * @template TApplied
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  Closure(): TApplied  $apply
+     * @return TApplied|WebhookOutcome
+     */
+    private function place(array $payload, Closure $apply): mixed
     {
         $customerId = $this->customerIdFor($payload);
 

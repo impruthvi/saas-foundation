@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Billing\BillingFacts;
 use App\Billing\Price;
+use App\Enums\AuditAction;
 use App\Exceptions\Billing\AlreadySubscribed;
 use App\Exceptions\Billing\OrganizationNotBillable;
 use App\Models\Organization;
@@ -19,7 +20,10 @@ use Stripe\Customer;
 /** Starts a hosted subscription checkout for an organization. */
 final readonly class StartBillingCheckout
 {
-    public function __construct(private BillingFacts $facts) {}
+    public function __construct(
+        private BillingFacts $facts,
+        private RecordAuditEvent $audit,
+    ) {}
 
     public function handle(
         Organization $organization,
@@ -55,6 +59,11 @@ final readonly class StartBillingCheckout
             'cancel_url' => $cancelUrl,
         ], [
             'idempotency_key' => $this->checkoutIdempotencyKey($organization, $price),
+        ]);
+
+        $this->audit->handle($organization->id, AuditAction::CheckoutStarted, $organization, [
+            'price_id' => $price->id,
+            'checkout_session_id' => $session->id,
         ]);
 
         return new Checkout($organization, $session);

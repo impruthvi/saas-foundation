@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\AuditAction;
 use App\Enums\MembershipRole;
 use App\Enums\OrganizationRole;
 use App\Models\Membership;
@@ -25,6 +26,7 @@ final readonly class TransferOrganizationOwnership
     public function __construct(
         private MembershipRepository $memberships,
         private TenantContext $tenant,
+        private RecordAuditEvent $audit,
     ) {}
 
     public function handle(Organization $organization, User $newOwner): Organization
@@ -34,6 +36,8 @@ final readonly class TransferOrganizationOwnership
         throw_if(! $this->memberships->activeMembership($newOwner, $organization) instanceof Membership, InvalidArgumentException::class, 'Ownership can only be transferred to an active member.');
 
         return DB::transaction(fn (): Organization => $this->tenant->runFor($organization, function () use ($organization, $newOwner): Organization {
+            $previousOwnerId = $organization->owner_id;
+
             $organization->forceFill(['owner_id' => $newOwner->id])->save();
 
             $organization->memberships()
@@ -45,6 +49,11 @@ final readonly class TransferOrganizationOwnership
             // assignRole: the new owner was a member a line ago, and a promotion
             // that accumulates leaves them holding both roles.
             $newOwner->syncRoles([OrganizationRole::forRank(MembershipRole::Admin)->value]);
+
+            $this->audit->handle($organization->id, AuditAction::OwnershipTransferred, $organization, [
+                'from_user_id' => $previousOwnerId,
+                'to_user_id' => $newOwner->id,
+            ]);
 
             return $organization->refresh();
         }));

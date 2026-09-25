@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\AuditAction;
 use App\Exceptions\Memberships\LastAdministrator;
 use App\Exceptions\Memberships\OwnerCannotBeRemoved;
 use App\Models\Membership;
@@ -19,7 +20,10 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class RemoveOrganizationMember
 {
-    public function __construct(private TenantContext $tenant) {}
+    public function __construct(
+        private TenantContext $tenant,
+        private RecordAuditEvent $audit,
+    ) {}
 
     public function handle(Membership $membership): void
     {
@@ -39,6 +43,11 @@ final readonly class RemoveOrganizationMember
                 );
 
                 $membership->delete();
+
+                $this->audit->handle($membership->organization_id, AuditAction::MemberRemoved, $membership, [
+                    'user_id' => $membership->user_id,
+                    'rank' => $membership->role->value,
+                ]);
             },
         ));
     }

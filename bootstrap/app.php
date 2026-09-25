@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\IdentifyAuditActor;
 use App\Http\Middleware\ResolveTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 // before Inertia, so shared props are built with the tenant
                 // already resolved rather than resolving one of their own.
                 ResolveTenantContext::class,
+                IdentifyAuditActor::class,
                 SubstituteBindings::class,
                 HandleInertiaRequests::class,
                 AddLinkHeadersForPreloadedAssets::class,

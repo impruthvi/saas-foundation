@@ -636,9 +636,11 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
     - Files: migrations, `app/Models/WebhookEvent.php`, controller, `routes/console.php`, fixtures
     - Test diff limited to the 10 storage assertions (3 reason reads → `outcome`; 6 "nothing retained" → recorded outcome; bad signature unchanged) plus new redelivery and fold assertions. Landed: 5 of the 6 became "only `applied` rows"; the sixth, the 500 path, became "one `errored` row", because D48 records errored deliveries too
     - Verify: `vendor/bin/pest tests/Feature/Billing`
-- [ ] **T3 (P1, human: ~1d / CC: ~40min)** — audit — `audit_events`, `RecordAuditEvent`, eleven call sites
+- [x] **T3 (P1, human: ~1d / CC: ~40min)** — audit — `audit_events`, `RecordAuditEvent`, eleven call sites
     - Files: migration, `app/Models/AuditEvent.php`, `app/Actions/RecordAuditEvent.php`, `app/Audit/AuditActor.php`, actor middleware, `app/Providers/TenancyServiceProvider.php` (hydration), `bootstrap/app.php`, eleven actions
     - Verify: `vendor/bin/pest tests/Feature/Audit tests/Feature/Invitations tests/Feature/Organizations`
+    - Landed: `AuditActor` lives only in hidden Context, so no hydration hook was needed. `Context::hydrate()` flushes before loading a job's payload, which forgets an actor the job did not carry. An act with no actor records `source = system`. The middleware binds the user only: the impersonation id joins it in T4, when impersonations exist. `ApplyStripeEvent` runs as `stripe`. Console acts are named through `CommandStarting`.
+
 - [ ] **T4 (P1, human: ~1.5d / CC: ~45min)** — impersonation — actions, guard, refused-route list, banner, shared prop
     - Files: migration, `app/Models/Impersonation.php`, `app/Actions/{Start,End}Impersonation.php`, `app/Http/Middleware/EnsureImpersonationIsLive.php`, `bootstrap/app.php`, `HandleInertiaRequests`, layout component
     - Verify: `php artisan wayfinder:generate --with-form && vendor/bin/pest tests/Feature/Impersonation`

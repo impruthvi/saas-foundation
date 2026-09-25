@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
 use App\Enums\MembershipRole;
 use App\Enums\MembershipStatus;
@@ -40,6 +41,8 @@ use Illuminate\Support\Str;
  */
 final readonly class InviteOrganizationMember
 {
+    public function __construct(private RecordAuditEvent $audit) {}
+
     /**
      * @return array{invitation: Invitation, token: string}
      */
@@ -76,6 +79,11 @@ final readonly class InviteOrganizationMember
                 'revoked_at' => null,
                 'revoked_by_user_id' => null,
             ])->save();
+
+            $this->audit->handle($organization->id, AuditAction::InvitationSent, $invitation, [
+                'email' => $email,
+                'rank' => $role->value,
+            ]);
 
             return ['invitation' => $invitation, 'token' => $token];
         });

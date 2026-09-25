@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Audit\AuditActor;
 use App\Billing\Plan;
 use App\Billing\PlanCatalog;
 use App\Console\Commands\ReconcileEntitlementsCommand;
 use App\Entitlements\ResolveAllowance;
+use App\Enums\AuditSource;
 use App\Models\Organization;
 use App\Tenancy\ResolveTenantForRefresh;
 use Carbon\CarbonImmutable;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Impruthvi\CashierEntitlements\Billing\PriceCatalog;
@@ -56,6 +60,12 @@ final class AppServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([ReconcileEntitlementsCommand::class]);
         }
+
+        // An act started from the command line has no person behind it. A queued
+        // job replaces this with whatever its payload carried.
+        Event::listen(CommandStarting::class, static function (): void {
+            AuditActor::source(AuditSource::Console)->bind();
+        });
 
         $this->configureDefaults();
     }

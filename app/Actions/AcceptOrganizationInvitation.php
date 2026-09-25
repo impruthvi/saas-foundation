@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
 use App\Exceptions\Invitations\InvitationAddressedToAnother;
 use App\Exceptions\Invitations\InvitationAlreadyAccepted;
@@ -32,6 +33,7 @@ final readonly class AcceptOrganizationInvitation
     public function __construct(
         private TenantContext $tenant,
         private AddOrganizationMember $members,
+        private RecordAuditEvent $audit,
     ) {}
 
     public function handle(Invitation $invitation, User $user): Membership
@@ -121,6 +123,12 @@ final readonly class AcceptOrganizationInvitation
                 'accepted_at' => now(),
                 'accepted_by_user_id' => $user->id,
             ])->save();
+
+            $this->audit->handle($locked->organization_id, AuditAction::InvitationAccepted, $locked, [
+                'email' => $locked->email,
+                'user_id' => $user->id,
+                'rank' => $locked->role->value,
+            ]);
 
             return $membership;
         });
