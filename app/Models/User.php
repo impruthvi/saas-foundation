@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Contracts\Operators;
 use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
@@ -59,7 +62,7 @@ use Spatie\Permission\Traits\HasRoles;
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-final class User extends Authenticatable implements PasskeyUser
+final class User extends Authenticatable implements FilamentUser, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
@@ -68,6 +71,22 @@ final class User extends Authenticatable implements PasskeyUser
     use Notifiable;
     use PasskeyAuthenticatable;
     use TwoFactorAuthenticatable;
+
+    /**
+     * Whether this person may use the admin console.
+     *
+     * An operator, with a verified address, and outside local development with
+     * two-factor authentication confirmed: a console that can act as any user is
+     * worth more to an attacker than any one account.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if ($this->email_verified_at === null || ! resolve(Operators::class)->isOperator($this)) {
+            return false;
+        }
+
+        return app()->environment(['local', 'testing']) || $this->two_factor_confirmed_at !== null;
+    }
 
     /** @return array<string, string> */
     protected function casts(): array

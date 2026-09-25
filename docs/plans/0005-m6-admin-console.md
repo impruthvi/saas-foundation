@@ -647,9 +647,12 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
     - Landed: the product cannot see the console's `operators` table, so it asks an `App\Contracts\Operators` contract ("is this user an operator", "where does an operator return to"). Its default, `NoOperators`, says nobody. T5 binds the real one. Once the console is removed, nothing can start an impersonation, and a live one ends as revoked on its next request.
     - Landed: the guard intercepts `logout` while impersonating and signs out this device only. Fortify's logout calls `cycleRememberToken()`, which would have ended the customer's own remembered sessions everywhere.
     - Landed: the guard runs before `ResolveTenantContext`, and the expiry test locks that: after expiry the operator's own organization resolves. `operators:revoke` closing live rows is T5's, with the command.
-- [ ] **T5 (P1, human: ~1d / CC: ~30min)** — console — Filament install, panel, operators, access ladder, `ForgetTenantContext`
-    - Files: `composer.json`, `app/Providers/Filament/AdminPanelProvider.php`, `app/Models/Operator.php`, commands, `User`
+- [x] **T5 (P1, human: ~1d / CC: ~30min)** — console — Filament install, panel, operators, access ladder, `ForgetTenantContext`
+    - Files: `composer.json`, `app/Providers/Filament/AdminConsoleServiceProvider.php`, `app/Models/Operator.php`, commands, `User`
     - Verify: `vendor/bin/pest tests/Feature/AdminConsole/OperatorAccessTest.php tests/Feature/AdminConsole/TenantDisciplineTest.php`
+    - Landed: the provider is `AdminConsoleServiceProvider`, because the `laravel` arch preset requires the `ServiceProvider` suffix. `filament:install` rewrote `bootstrap/providers.php` and dropped the production exclusion of the billing replay provider. That was restored by hand, and the removal script (T8) must edit that file rather than regenerate it. The installer also added `filament:upgrade` to `post-autoload-dump` and three `public/*/filament` lines to `.gitignore`. The removal script undoes all three.
+    - Landed: `Authenticate` is persistent as well as `ForgetTenantContext`, so revoking an operator stops the actions on a page already open, not only the next page. Grant and revoke are Actions (`GrantOperator`, `RevokeOperator`) behind thin commands, and revoke closes live impersonations.
+    - Deferred to T7: At1's behavioural half (a real Livewire action over tenant data with the operator a member elsewhere) needs a console screen. T5 asserts the persistent registration.
 - [ ] **T6 (P1, human: ~1.5d / CC: ~45min)** — operations — three read services and two write Actions, each inside `runFor()`
     - Files: `app/Operations/{InspectEntitlements,SubscriptionTimeline,OrganizationActivity}.php`, `app/Entitlements/RefreshReceipts.php`, `app/Actions/{RequestEntitlementRefresh,ReplayWebhookEvent}.php`, `tests/Unit/ArchTest.php`
     - Verify: `vendor/bin/pest tests/Feature/AdminConsole`
@@ -666,7 +669,7 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
 
 ## Inline diagrams the implementation should carry
 
-- `app/Providers/Filament/AdminPanelProvider.php`: the two request paths and why
+- `app/Providers/Filament/AdminConsoleServiceProvider.php`: the two request paths and why
   `ForgetTenantContext` is persistent. Without it, a reader will delete the middleware as
   redundant.
 - `app/Operations/InspectEntitlements.php`: the receipt-to-state matching rule, and the
