@@ -161,7 +161,7 @@ that set it". Cashier stores no event history. Only subscription rows, overwritt
 place. Without this table that clause cannot be shown.
 
 **Retention, answered with the two `TODOS.md` entries that asked for it.** A daily
-`webhook-events:prune` removes `applied` and `superseded` rows older than 90 days, and
+`model:prune` over `App\Models\WebhookEvent`, which is `MassPrunable` (Laravel's own pruning, not a custom command), removes `applied` and `superseded` rows older than 90 days, and
 `unplaceable`, `errored`, `refused` and `replayed` rows older than 180. The longer window
 is for the rows a replay exists to recover, and a replayed row keeps the window of the
 problem it recovered from. Age is measured from `last_received_at`.
@@ -426,7 +426,7 @@ inspector does not pretend there is one cause:
    Panel at `/admin`, no login page, `ForgetTenantContext` persistent (D46).
 2. `operators` table, model, `operators:grant` / `operators:revoke`, `canAccessPanel()` (D47).
 3. `webhook_events` table and model, written on every controller path; migrate and drop
-   `failed_webhook_events`; `webhook-events:prune` scheduled daily (D48).
+   `failed_webhook_events`; `model:prune` for `WebhookEvent` scheduled daily (D48).
 4. `ApplyStripeEvent` extracted from `StripeWebhookController` with no behaviour change,
    proven by the existing webhook tests before anything else moves (D51).
 5. `audit_events`, `AuditEvent`, `RecordAuditEvent`, `AuditActor` (hidden Context, middleware, hydration hook, console/webhook setters), wired into the eleven acts listed in D49.
@@ -625,16 +625,16 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
 
 ## Implementation tasks
 
-- [ ] **T0 (P1, human: ~2h / CC: ~10min)** — tests — `WebhookResponseContractTest`: status and body for every controller path, written against today's code and kept
+- [x] **T0 (P1, human: ~2h / CC: ~10min)** — tests — `WebhookResponseContractTest`: status and body for every controller path, written against today's code and kept
     - Surfaced by: Test review — regression contract R4
     - Files: `tests/Feature/Billing/WebhookResponseContractTest.php`
     - Verify: `vendor/bin/pest tests/Feature/Billing/WebhookResponseContractTest.php` green on `main` before T1
-- [ ] **T1 (P1, human: ~3h / CC: ~15min)** — billing — extract `ApplyStripeEvent`, no behaviour change. Own commit
+- [x] **T1 (P1, human: ~3h / CC: ~15min)** — billing — extract `ApplyStripeEvent`, no behaviour change. Own commit
     - Files: `app/Billing/ApplyStripeEvent.php`, `app/Http/Controllers/Billing/StripeWebhookController.php`
     - Verify: `vendor/bin/pest tests/Feature/Billing` green, and `git diff --stat HEAD~1 -- tests/Feature/Billing/StripeWebhookTest.php tests/Feature/Billing/WebhookEventAgeTest.php` empty
-- [ ] **T2 (P1, human: ~1d / CC: ~30min)** — billing — `webhook_events`, every outcome, fold and drop `failed_webhook_events`, prune command
+- [x] **T2 (P1, human: ~1d / CC: ~30min)** — billing — `webhook_events`, every outcome, fold and drop `failed_webhook_events`, prune command
     - Files: migrations, `app/Models/WebhookEvent.php`, controller, `routes/console.php`, fixtures
-    - Test diff limited to the 10 storage assertions (3 reason reads → `outcome`; 6 "nothing retained" → one `applied` row; bad signature unchanged) plus new redelivery and fold assertions
+    - Test diff limited to the 10 storage assertions (3 reason reads → `outcome`; 6 "nothing retained" → recorded outcome; bad signature unchanged) plus new redelivery and fold assertions. Landed: 5 of the 6 became "only `applied` rows"; the sixth, the 500 path, became "one `errored` row", because D48 records errored deliveries too
     - Verify: `vendor/bin/pest tests/Feature/Billing`
 - [ ] **T3 (P1, human: ~1d / CC: ~40min)** — audit — `audit_events`, `RecordAuditEvent`, eleven call sites
     - Files: migration, `app/Models/AuditEvent.php`, `app/Actions/RecordAuditEvent.php`, `app/Audit/AuditActor.php`, actor middleware, `app/Providers/TenancyServiceProvider.php` (hydration), `bootstrap/app.php`, eleven actions

@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Billing;
 
-use App\Enums\UnappliedWebhook;
+use App\Enums\WebhookOutcome;
 use App\Exceptions\CrossTenantAccess;
 use App\Exceptions\TenantContextMissing;
-use App\Models\FailedWebhookEvent;
 use App\Models\Organization;
 use App\Models\SubscriptionEventWatermark;
+use App\Models\WebhookEvent;
 use App\Tenancy\TenantContext;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Cashier\Cashier;
+use Throwable;
 
 /**
  * Applies one Stripe event on behalf of the organization it concerns.
@@ -29,6 +30,9 @@ use Laravel\Cashier\Cashier;
  * subscription. An event that cannot be placed, and one that has been
  * superseded, are both kept rather than applied. Other failures propagate so
  * the caller can report them.
+ *
+ * Every delivery is recorded in `webhook_events`, whatever became of it, so the
+ * event behind an organization's current plan can always be named.
  *
  * The caller supplies how the event is applied, because Cashier's handlers are
  * reachable only through its webhook controller.
@@ -64,14 +68,14 @@ final readonly class ApplyStripeEvent
      *
      * @param  array<string, mixed>  $payload
      * @param  Closure(): TApplied  $apply
-     * @return TApplied|UnappliedWebhook
+     * @return TApplied|WebhookOutcome
      */
     public function handle(array $payload, Closure $apply): mixed
     {
         $customerId = $this->customerIdFor($payload);
 
         if ($customerId === null) {
-            return $apply();
+            return $this->applying($payload, $apply);
         }
 
         $organization = Cashier::findBillable($customerId);
@@ -89,7 +93,7 @@ final readonly class ApplyStripeEvent
                 $organization,
                 fn (): mixed => $this->hasBeenSuperseded($payload)
                     ? $this->discard($payload)
-                    : $apply(),
+                    : $this->applying($payload, $apply),
             );
         } catch (TenantContextMissing|CrossTenantAccess $exception) {
             return $this->retain(
@@ -98,6 +102,36 @@ final readonly class ApplyStripeEvent
                 $exception->getMessage(),
             );
         }
+    }
+
+    /**
+     * Apply the event and record how that went.
+     *
+     * A tenant failure is left for the caller to keep as unplaceable. Anything
+     * else is recorded as errored before it propagates, so a delivery Stripe
+     * will retry still leaves a trace of why it failed.
+     *
+     * @template TApplied
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  Closure(): TApplied  $apply
+     * @return TApplied
+     */
+    private function applying(array $payload, Closure $apply): mixed
+    {
+        try {
+            $applied = $apply();
+        } catch (TenantContextMissing|CrossTenantAccess $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            $this->record($payload, WebhookOutcome::Errored, class_basename($exception), $exception->getMessage());
+
+            throw $exception;
+        }
+
+        $this->record($payload, WebhookOutcome::Applied);
+
+        return $applied;
     }
 
     /**
@@ -184,16 +218,16 @@ final readonly class ApplyStripeEvent
      *
      * @param  array<string, mixed>  $payload
      */
-    private function retain(array $payload, string $reason, string $message): UnappliedWebhook
+    private function retain(array $payload, string $reason, string $message): WebhookOutcome
     {
-        $this->keep($payload, $reason, $message);
+        $this->record($payload, WebhookOutcome::Unplaceable, $reason, $message);
 
         Log::warning('Retained a Stripe webhook this application could not place.', [
             'stripe_event_id' => is_string($payload['id'] ?? null) ? $payload['id'] : null,
             'reason' => $reason,
         ]);
 
-        return UnappliedWebhook::Unplaceable;
+        return WebhookOutcome::Unplaceable;
     }
 
     /**
@@ -201,30 +235,59 @@ final readonly class ApplyStripeEvent
      *
      * @param  array<string, mixed>  $payload
      */
-    private function discard(array $payload): UnappliedWebhook
+    private function discard(array $payload): WebhookOutcome
     {
-        $this->keep(
+        $this->record(
             $payload,
+            WebhookOutcome::Superseded,
             'SupersededDelivery',
             'A more recent event for this subscription had already been applied.',
         );
 
-        return UnappliedWebhook::Superseded;
+        return WebhookOutcome::Superseded;
     }
 
     /**
+     * Write this delivery onto the event's single row.
+     *
+     * A redelivery updates the row rather than adding one. `applied_at` is set
+     * the first time the event applies and never cleared, so a late redelivery
+     * that is superseded does not erase what the event already did.
+     *
      * @param  array<string, mixed>  $payload
      */
-    private function keep(array $payload, string $reason, string $message): void
+    private function record(array $payload, WebhookOutcome $outcome, ?string $reason = null, ?string $message = null): void
     {
-        FailedWebhookEvent::query()->create([
-            'stripe_event_id' => is_string($payload['id'] ?? null) ? $payload['id'] : null,
+        $eventId = is_string($payload['id'] ?? null) ? $payload['id'] : null;
+        $objectId = data_get($payload, 'data.object.id');
+        $createdAt = $payload['created'] ?? null;
+        $now = now();
+
+        $event = $eventId === null
+            ? new WebhookEvent
+            : WebhookEvent::query()->firstOrNew(['stripe_event_id' => $eventId]);
+
+        $event->fill([
             'type' => is_string($payload['type'] ?? null) ? $payload['type'] : null,
             'stripe_customer_id' => $this->customerIdFor($payload),
+            'stripe_object_id' => is_string($objectId) ? $objectId : null,
+            'stripe_created_at' => is_int($createdAt) ? $createdAt : null,
+            'outcome' => $outcome,
+            'outcome_reason' => $reason,
+            'outcome_message' => $message,
             'payload' => $payload,
-            'reason' => $reason,
-            'message' => $message,
-            'created_at' => now(),
+            'deliveries' => $event->exists ? $event->deliveries + 1 : 1,
+            'last_received_at' => $now,
         ]);
+
+        if (! $event->exists) {
+            $event->first_received_at = $now;
+        }
+
+        if ($outcome === WebhookOutcome::Applied && $event->applied_at === null) {
+            $event->applied_at = $now;
+        }
+
+        $event->save();
     }
 }

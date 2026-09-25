@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Billing;
 
 use App\Billing\ApplyStripeEvent;
-use App\Enums\UnappliedWebhook;
+use App\Enums\WebhookOutcome;
 use Illuminate\Http\Request;
 use Laravel\Cashier\Http\Controllers\WebhookController;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,9 +37,9 @@ final class StripeWebhookController extends WebhookController
         );
 
         return match ($result) {
-            UnappliedWebhook::Unplaceable => new Response('Webhook retained.', Response::HTTP_OK),
-            UnappliedWebhook::Superseded => new Response('Webhook superseded.', Response::HTTP_OK),
-            default => $result,
+            WebhookOutcome::Unplaceable => new Response('Webhook retained.', Response::HTTP_OK),
+            WebhookOutcome::Superseded => new Response('Webhook superseded.', Response::HTTP_OK),
+            default => $result instanceof Response ? $result : new Response,
         };
     }
 

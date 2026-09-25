@@ -217,7 +217,7 @@ through `BillingFacts`, per organization, inside `runFor()`, so nothing queries
 ## Decide how long failed webhook events are kept
 
 **Resolved by M6** (D48). `failed_webhook_events` is folded into `webhook_events`, and a
-daily `webhook-events:prune` removes `applied` and `superseded` rows after 90 days and
+daily `model:prune` run over `App\Models\WebhookEvent` (`MassPrunable`) removes `applied` and `superseded` rows after 90 days and
 `unplaceable`, `errored`, `refused` and `replayed` rows after 180. Payload redaction is
 still open. See "Redact personal data in retained webhook payloads" below. Remove this
 entry once M6 merges.
@@ -356,7 +356,7 @@ replay for rows that still need it.
 **Cons:** It needs a field-by-field decision about what replay still reads. Redacting too
 much makes a later replay apply wrong data.
 
-**Context:** Start at the `webhook_events` migration and `webhook-events:prune`. The
+**Context:** Start at the `webhook_events` migration and `WebhookEvent::prunable()`. The
 likely shape is redaction when `applied_at` is set, with rows awaiting replay left
 untouched.
 

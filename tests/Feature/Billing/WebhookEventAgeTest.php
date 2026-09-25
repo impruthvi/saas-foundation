@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Models\FailedWebhookEvent;
+use App\Enums\WebhookOutcome;
 use App\Models\Organization;
 use App\Models\Subscription;
+use App\Models\WebhookEvent;
 use App\Tenancy\TenantContext;
 use Tests\Support\StripeWebhook;
 
@@ -38,7 +39,7 @@ it('ignores a subscription event older than the one already applied', function (
         ->assertSeeText('Webhook superseded.');
 
     expect(subscriptionStatus($this->organization))->toBe('active')
-        ->and(FailedWebhookEvent::query()->sole()->reason)->toBe('SupersededDelivery');
+        ->and(WebhookEvent::query()->where('stripe_event_id', 'evt_subscription_updated')->sole()->outcome_reason)->toBe('SupersededDelivery');
 
     $this->assertDatabaseHas('subscription_event_watermarks', [
         'organization_id' => $this->organization->id,
@@ -64,7 +65,7 @@ it('applies a subscription event newer than the one already applied', function (
         'stripe_id' => 'sub_pro',
         'event_created_at' => 2_000,
     ]);
-    $this->assertDatabaseEmpty('failed_webhook_events');
+    expect(WebhookEvent::query()->where('outcome', '!=', WebhookOutcome::Applied)->exists())->toBeFalse();
 });
 
 it('applies an event carrying the same timestamp, so a redelivery still lands', function (): void {
@@ -77,8 +78,8 @@ it('applies an event carrying the same timestamp, so a redelivery still lands', 
         status: 'past_due',
     ))->assertOk();
 
-    expect(subscriptionStatus($this->organization))->toBe('past_due');
-    $this->assertDatabaseEmpty('failed_webhook_events');
+    expect(subscriptionStatus($this->organization))->toBe('past_due')
+        ->and(WebhookEvent::query()->where('outcome', '!=', WebhookOutcome::Applied)->exists())->toBeFalse();
 });
 
 it('applies an event with no timestamp rather than dropping it', function (): void {
@@ -95,7 +96,7 @@ it('applies an event with no timestamp rather than dropping it', function (): vo
         'organization_id' => $this->organization->id,
         'stripe_id' => 'sub_pro',
     ]);
-    $this->assertDatabaseEmpty('failed_webhook_events');
+    expect(WebhookEvent::query()->where('outcome', '!=', WebhookOutcome::Applied)->exists())->toBeFalse();
 });
 
 it('refuses to resurrect a subscription whose deletion arrived before its creation', function (): void {
@@ -150,9 +151,8 @@ it('leaves events that do not write a subscription row unguarded', function (): 
         'data' => ['object' => ['id' => 'cus_acme']],
     ])->assertOk();
 
-    expect($this->organization->fresh()?->stripe_id)->toBeNull();
-
-    $this->assertDatabaseEmpty('failed_webhook_events');
+    expect($this->organization->fresh()?->stripe_id)->toBeNull()
+        ->and(WebhookEvent::query()->where('outcome', '!=', WebhookOutcome::Applied)->exists())->toBeFalse();
     $this->assertDatabaseHas('subscription_event_watermarks', [
         'organization_id' => $this->organization->id,
         'stripe_id' => 'sub_pro',
