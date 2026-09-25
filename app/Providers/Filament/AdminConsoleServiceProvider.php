@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use App\Contracts\Operators;
 use App\Filament\Middleware\ForgetTenantContext;
+use App\Filament\Middleware\ShareAdminConsoleLink;
 use App\Filament\Support\OperatorTable;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -20,6 +21,7 @@ use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Routing\Router;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
@@ -44,6 +46,18 @@ final class AdminConsoleServiceProvider extends PanelProvider
         parent::register();
 
         $this->app->singleton(Operators::class, OperatorTable::class);
+    }
+
+    /**
+     * The product links to the console only through a prop this adds.
+     *
+     * It is appended to the `web` group rather than placed in the order
+     * `bootstrap/app.php` owns, because its position does not matter: it only
+     * shares a prop, and it must leave with the console.
+     */
+    public function boot(): void
+    {
+        $this->app->make(Router::class)->pushMiddlewareToGroup('web', ShareAdminConsoleLink::class);
     }
 
     public function panel(Panel $panel): Panel

@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import {
     BookOpen,
     CreditCard,
     FolderGit2,
     FolderKanban,
     LayoutGrid,
+    ShieldCheck,
     Users,
 } from '@lucide/vue';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -51,7 +53,20 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
+const page = usePage();
+
+// The console shares its own address, and only with operators, so this link
+// disappears for everyone the moment the console is removed.
+const footerNavItems = computed<NavItem[]>(() => [
+    ...(page.props.adminConsoleUrl
+        ? [
+              {
+                  title: 'Admin console',
+                  href: page.props.adminConsoleUrl,
+                  icon: ShieldCheck,
+              },
+          ]
+        : []),
     {
         title: 'Repository',
         href: 'https://github.com/laravel/vue-starter-kit',
@@ -62,7 +77,7 @@ const footerNavItems: NavItem[] = [
         href: 'https://laravel.com/docs/starter-kits#vue',
         icon: BookOpen,
     },
-];
+]);
 </script>
 
 <template>

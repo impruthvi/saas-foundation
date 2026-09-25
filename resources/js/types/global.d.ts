@@ -22,6 +22,7 @@ declare module '@inertiajs/core' {
             organization: Organization | null;
             organizations: Organization[];
             impersonation: Impersonation | null;
+            adminConsoleUrl?: string | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

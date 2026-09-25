@@ -72,6 +72,7 @@ final class User extends Authenticatable implements FilamentUser, PasskeyUser
     use PasskeyAuthenticatable;
     use TwoFactorAuthenticatable;
 
+    /* @chisel-admin-console */
     /**
      * Whether this person may use the admin console.
      *
@@ -87,6 +88,8 @@ final class User extends Authenticatable implements FilamentUser, PasskeyUser
 
         return app()->environment(['local', 'testing']) || $this->two_factor_confirmed_at !== null;
     }
+
+    /* @end-chisel-admin-console */
 
     /** @return array<string, string> */
     protected function casts(): array

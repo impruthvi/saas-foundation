@@ -666,10 +666,15 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
     - Landed: four read-only resources (organizations, users, webhook events, impersonations) with no create or edit routes, and a dashboard health widget built from `Doctor`. The organization page shows the inspector, the subscription summary, members and invitations through the T6 reads, with two custom-data table widgets (Stripe events with replay, audit log) paginated by `App\Filament\Support\PagedRows`.
     - Landed: lookup by member address goes through `App\Operations\LookupOrganizations`, which asks `MembershipRepository` (the D22 door) rather than querying memberships.
     - Landed: At1's behavioural half. The operator's own organization is resolved, and the organization page and audit widget still show only the customer's data. A mutation that drops `runFor()` from the audit read fails it.
-- [ ] **T8 (P1, human: ~1d / CC: ~40min)** — removability — chisel script, `admin-removed` CI job (Playwright), `AdminConsoleLinkTest`, `NavigationSmokeTest`, `adminConsoleUrl`
+- [x] **T8 (P1, human: ~1d / CC: ~40min)** — removability — chisel script, `admin-removed` CI job (Playwright), `AdminConsoleLinkTest`, `NavigationSmokeTest`, `adminConsoleUrl`
     - Surfaced by: Test review — R5, a PHP test cannot see Wayfinder-compiled hrefs
     - Files: `scripts/remove-admin-console.php`, `.github/workflows/tests.yml`, `tests/Feature/AdminConsoleLinkTest.php`, `tests/Browser/NavigationSmokeTest.php`, sidebar
     - Verify: run the script on a throwaway worktree, then `composer ci:check && bun run build`
+    - Landed and proven locally: on a copy of the project, `scripts/remove-admin-console.php` followed by `ci:check` (lint, format, types, the billing replay, the suite with type coverage), a frontend rebuild and the browser suite all pass with the console gone. The removed-state link test ran; the installed-state tests skipped with their stated reason.
+    - Landed: the console shares its address from a middleware it appends to the `web` group (`ShareAdminConsoleLink`), not from provider boot. The browser test plugin flushes Inertia's shared props between requests, and a per-request share does not depend on when the app booted.
+    - Landed: the console's section of `User` is marked `@chisel-admin-console`, since chisel prefixes every tag with `chisel-`. chisel's import removal only reaches files whose sole top-level node is the namespace, and `declare(strict_types=1)` adds a second. So the three imports are removed by exact line, and the script runs Pint on what it edits.
+    - Landed: the tests of core code that sat in `tests/Feature/AdminConsole/` moved out (`tests/Feature/Operations/`, `tests/Feature/Billing/WebhookReplayTest.php`), so removal deletes only the console's own tests.
+    - Note: `composer test:billing` needs a migrated database. The local dev database in this workspace still has T2's migrations pending, so it fails locally until `php artisan migrate` runs. CI migrates first.
 - [ ] **T9 (P2, human: ~4h / CC: ~20min)** — journey — `AdminJourneyTest` and `ImpersonationBannerTest`
     - Verify: `composer test:browser` and the committed lane
 - [ ] **T10 (P2, human: ~2h / CC: ~10min)** — docs — `CONTEXT.md` terms, D46–D52, build plan status, `TODOS.md` entries closed and added
