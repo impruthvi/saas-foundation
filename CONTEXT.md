@@ -112,3 +112,33 @@ bringing applied entitlements into agreement with declared policy. Provider read
 in background work; resolution remains local. Local recomputation alone cannot discover
 missing provider events.
 _Avoid_: replay (that delivers recorded events), local recomputation (only one step)
+
+**Webhook event**:
+One Stripe delivery as this application received it, with the outcome of its latest
+delivery and, separately, when it first applied.
+_Avoid_: webhook log, event (alone), failed event (that is one outcome)
+
+**Audit event**:
+One intentional, attributed act that changed who can do what in an organization, or what
+it is billed. Append-only.
+_Avoid_: activity, log entry, history
+
+### Console
+
+**Operator**:
+A person allowed into the admin console. A platform fact, unrelated to any organization.
+_Avoid_: admin (that is a rank), superuser, staff
+
+**Admin console**:
+The removable Filament panel operators use. It owns screens and the operator list, and
+no business rules.
+_Avoid_: admin panel, backoffice, dashboard (that is the product)
+
+**Organization lookup**:
+Finding an organization by name, slug, Stripe customer id, or a member's address.
+_Avoid_: customer lookup (a user is never a customer; Stripe's customer is the organization)
+
+**Impersonation**:
+A bounded, reasoned period in which an operator acts as a user. It has a start, an
+expiry and an end, and every act inside it is attributed to it.
+_Avoid_: login as, sudo, masquerade

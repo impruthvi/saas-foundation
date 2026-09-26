@@ -127,3 +127,64 @@ jobs:
 
             - name: Run Browser Tests
               run: composer test:browser
+
+    # The admin console must be removable without breaking anything or leaving a
+    # link behind (D4, D52). This job removes it the way an adopter would, then
+    # runs the whole gate against what is left: the suite, the type check, the
+    # frontend build (which fails if any Vue file still imports a console route)
+    # and the browser smoke test that clicks every navigation link.
+    admin-removed:
+        runs-on: ubuntu-latest
+
+        name: admin console removed (sqlite)
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              with:
+                  php-version: '8.4'
+                  tools: composer:v2
+                  coverage: none
+
+            - name: Setup Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: '22'
+
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+            - name: Setup Application
+              run: composer setup
+
+            - name: Remove the Admin Console
+              run: php scripts/remove-admin-console.php
+
+            # Wayfinder's output is generated and gitignored, so the routes the
+            # console registered are still in it until it is regenerated.
+            - name: Rebuild the Frontend
+              run: |
+                  rm -rf resources/js/actions resources/js/routes
+                  php artisan wayfinder:generate --with-form
+                  bun run build
+
+            - name: Install Chromium
+              run: bunx playwright install --with-deps chromium
+
+            - name: Run CI Checks
+              run: |
+                  php artisan migrate --force
+                  composer ci:check
+              env:
+                  DB_CONNECTION: sqlite
+                  DB_DATABASE: ${{ format('{0}/database/database.sqlite', github.workspace) }}
+                  QUEUE_CONNECTION: sync
+                  MAIL_MAILER: array
+
+            - name: Run Browser Tests
+              run: composer test:browser

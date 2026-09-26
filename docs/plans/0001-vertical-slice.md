@@ -1,12 +1,16 @@
 # 0001 — Vertical slice build plan
 
 - **Date:** 2026-09-16
-- **Status:** **M0 through M3 complete.** M2's segment of the journey runs: an
+- **Status:** **M0 through M6 complete.** M2's segment of the journey runs: an
   invited stranger opens the emailed link with no account, registers, and lands
   as an active member of both the inviting organization and their own personal
-  one. M3's proof runs too, and the members screen it unlocked. Amended
-  2026-09-16 by D20-D26, 2026-09-17 by D27-D28, and 2026-09-19 by D29-D31.
-  M4 is next.
+  one. M3's proof runs too, and the members screen it unlocked. M4 and M5 carry
+  the journey through Checkout to a limit refused server-side. M6's clause runs:
+  an operator opens the organization that just subscribed and finds its
+  entitlement, its usage, and the Stripe event that set it, and the console
+  can be removed with the suite, the build and the navigation still green.
+  Amended 2026-09-16 by D20-D26, 2026-09-17 by D27-D28, 2026-09-19 by D29-D31,
+  and by D32-D52 in the M4-M6 plans. M7 is next.
 - **Decisions:** `docs/decisions/0001-architecture-decisions.md` and
   `docs/decisions/0002-inherited-tooling-audit.md`.
 - **Defines done for:** D8, the ten-minute journey.
@@ -186,6 +190,13 @@ not an aspiration.
 Surfaces: customer lookup · subscription timeline · webhook replay · entitlement
 inspector · audited impersonation · audit log. These are the "operations included"
 differentiator; three of them are the last clause of the D8 sentence.
+
+**Done**, per `plans/0005-m6-admin-console.md` (D46-D52). "Customer lookup" became
+_organization lookup_, because a user is never a customer and Stripe's customer is the
+organization. The console holds no ambient tenant and reads through services that name
+the organization. Every Stripe delivery is recorded. The audit log and the end of an
+impersonation belong to the product, because they have to outlive the console. A CI
+job removes the console and runs the whole gate against what is left.
 
 ### M7 — The journey as one artifact
 

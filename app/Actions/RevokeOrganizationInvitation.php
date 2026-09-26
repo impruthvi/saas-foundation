@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
 use App\Exceptions\Invitations\InvitationAlreadyAccepted;
 use App\Models\Invitation;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Withdraws an offer the organization no longer wants to stand behind.
@@ -24,15 +26,25 @@ use App\Models\User;
  */
 final readonly class RevokeOrganizationInvitation
 {
+    public function __construct(private RecordAuditEvent $audit) {}
+
     public function handle(Invitation $invitation, ?User $revokedBy = null): Invitation
     {
         if ($invitation->status === InvitationStatus::Accepted) {
             throw InvitationAlreadyAccepted::make();
         }
 
-        return $invitation->close(InvitationStatus::Revoked, [
-            'revoked_at' => now(),
-            'revoked_by_user_id' => $revokedBy?->id,
-        ]);
+        return DB::transaction(function () use ($invitation, $revokedBy): Invitation {
+            $invitation->close(InvitationStatus::Revoked, [
+                'revoked_at' => now(),
+                'revoked_by_user_id' => $revokedBy?->id,
+            ]);
+
+            $this->audit->handle($invitation->organization_id, AuditAction::InvitationRevoked, $invitation, [
+                'email' => $invitation->email,
+            ]);
+
+            return $invitation;
+        });
     }
 }

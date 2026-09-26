@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { Impersonation } from '@/types/impersonation';
 import type { Organization } from '@/types/organization';
 
 declare module 'vite/client' {
@@ -20,6 +21,8 @@ declare module '@inertiajs/core' {
             auth: Auth;
             organization: Organization | null;
             organizations: Organization[];
+            impersonation: Impersonation | null;
+            adminConsoleUrl?: string | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

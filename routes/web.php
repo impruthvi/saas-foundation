@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\Invitations\AcceptInvitationController;
 use App\Http\Controllers\Organizations\InvitationController;
 use App\Http\Controllers\Organizations\InvitationDeliveryController;
@@ -18,6 +19,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::get('projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
+
+    Route::delete('impersonation', [ImpersonationController::class, 'destroy'])
+        ->name('impersonation.destroy');
 
     Route::post('organizations/{organization}/switch', SwitchOrganizationController::class)
         ->name('organizations.switch');

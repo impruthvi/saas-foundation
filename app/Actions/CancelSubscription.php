@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Billing\BillingFacts;
+use App\Enums\AuditAction;
 use App\Exceptions\Billing\NoActiveSubscription;
 use App\Models\Organization;
 use App\Models\Subscription;
 
 final readonly class CancelSubscription
 {
-    public function __construct(private BillingFacts $billing) {}
+    public function __construct(
+        private BillingFacts $billing,
+        private RecordAuditEvent $audit,
+    ) {}
 
     public function handle(Organization $organization): Subscription
     {
@@ -27,6 +31,12 @@ final readonly class CancelSubscription
             $item->setRelation('subscription', $subscription);
         }
 
-        return $subscription->cancel();
+        $subscription->cancel();
+
+        $this->audit->handle($organization->id, AuditAction::SubscriptionCancelled, $subscription, [
+            'ends_at' => $subscription->ends_at?->toIso8601String(),
+        ]);
+
+        return $subscription;
     }
 }

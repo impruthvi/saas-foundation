@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureImpersonationIsLive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\IdentifyAuditActor;
 use App\Http\Middleware\ResolveTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -32,7 +34,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 // Before bindings, so a bound tenant-owned model is scoped, and
                 // before Inertia, so shared props are built with the tenant
                 // already resolved rather than resolving one of their own.
+                // Before the tenant, because ending an impersonation changes who
+                // is signed in and so which organization applies.
+                EnsureImpersonationIsLive::class,
                 ResolveTenantContext::class,
+                IdentifyAuditActor::class,
                 SubstituteBindings::class,
                 HandleInertiaRequests::class,
                 AddLinkHeadersForPreloadedAssets::class,

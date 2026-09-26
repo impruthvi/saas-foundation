@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entitlements;
 
+use App\Enums\AllowanceSource;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Impruthvi\CashierEntitlements\Billing\OwnerReference;
@@ -32,7 +33,22 @@ final readonly class ResolveAllowance implements AdmissionResolver
      */
     public function handle(OwnerReference $owner, string $feature, ?DateTimeImmutable $at = null): bool|int|null
     {
+        return $this->explain($owner, $feature, $at)['value'];
+    }
+
+    /**
+     * The answer, and whether the package or the Free-plan floor supplied it.
+     *
+     * The floor supplies it when the package has no value for the feature, or a
+     * lower one. Equal values are credited to the package, because that is the
+     * answer an operator would see change after a refresh.
+     *
+     * @return array{value: bool|int|null, source: AllowanceSource}
+     */
+    public function explain(OwnerReference $owner, string $feature, ?DateTimeImmutable $at = null): array
+    {
         $values = $this->resolver->for($owner, $at)->all();
+        $fromPackage = array_key_exists($feature, $values);
         $boolean = $this->resolver->booleanFeature($feature);
         $floor = array_key_exists($feature, $this->freeAllowances)
             ? $this->freeAllowances[$feature]
@@ -44,13 +60,17 @@ final readonly class ResolveAllowance implements AdmissionResolver
         if ($boolean) {
             throw_if(! is_bool($floor) || ! is_bool($value), FeatureTypeMismatch::class, 'invalid_boolean_grant');
 
-            return $floor || $value;
+            $answer = $floor || $value;
+
+            return ['value' => $answer, 'source' => $fromPackage && $value === $answer ? AllowanceSource::Package : AllowanceSource::Floor];
         }
 
         throw_if(($floor !== null && (! is_int($floor) || $floor < 0))
             || ($value !== null && (! is_int($value) || $value < 0)), FeatureTypeMismatch::class, 'invalid_numeric_grant');
 
-        return $floor === null || $value === null ? null : max($floor, $value);
+        $answer = $floor === null || $value === null ? null : max($floor, $value);
+
+        return ['value' => $answer, 'source' => $fromPackage && $value === $answer ? AllowanceSource::Package : AllowanceSource::Floor];
     }
 
     public function assertConnection(OwnerReference $owner, Connection $connection): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\AuditAction;
 use App\Enums\MembershipRole;
 use App\Enums\OrganizationRole;
 use App\Exceptions\Memberships\LastAdministrator;
@@ -23,7 +24,10 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class ChangeOrganizationMemberRole
 {
-    public function __construct(private TenantContext $tenant) {}
+    public function __construct(
+        private TenantContext $tenant,
+        private RecordAuditEvent $audit,
+    ) {}
 
     public function handle(Membership $membership, MembershipRole $role): Membership
     {
@@ -36,6 +40,8 @@ final readonly class ChangeOrganizationMemberRole
             function () use ($membership, $role): Membership {
                 $this->assertTheDemotionIsSafe($membership, $role);
 
+                $previous = $membership->role;
+
                 $membership->forceFill(['role' => $role])->save();
 
                 // Loaded by key rather than through the relation: lazy loading
@@ -43,6 +49,12 @@ final readonly class ChangeOrganizationMemberRole
                 // may have arrived without its user.
                 User::query()->findOrFail($membership->user_id)
                     ->syncRoles([OrganizationRole::forRank($role)->value]);
+
+                $this->audit->handle($membership->organization_id, AuditAction::MemberRankChanged, $membership, [
+                    'user_id' => $membership->user_id,
+                    'from' => $previous->value,
+                    'to' => $role->value,
+                ]);
 
                 return $membership->refresh();
             },

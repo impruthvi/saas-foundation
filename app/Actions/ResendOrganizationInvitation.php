@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
 use App\Exceptions\Invitations\InvitationAlreadyAccepted;
 use App\Exceptions\Invitations\InvitationDeclined;
@@ -26,6 +27,8 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class ResendOrganizationInvitation
 {
+    public function __construct(private RecordAuditEvent $audit) {}
+
     /**
      * @return array{invitation: Invitation, token: string}
      */
@@ -44,6 +47,10 @@ final readonly class ResendOrganizationInvitation
             $invitation->forceFill([
                 'expires_at' => now()->addDays(config()->integer('organizations.invitations.expires_after_days')),
             ])->save();
+
+            $this->audit->handle($invitation->organization_id, AuditAction::InvitationResent, $invitation, [
+                'email' => $invitation->email,
+            ]);
 
             return ['invitation' => $invitation, 'token' => $token];
         });

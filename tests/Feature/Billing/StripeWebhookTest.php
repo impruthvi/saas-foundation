@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Enums\WebhookOutcome;
 use App\Exceptions\CrossTenantAccess;
 use App\Exceptions\TenantContextMissing;
-use App\Models\FailedWebhookEvent;
 use App\Models\Organization;
 use App\Models\Subscription;
+use App\Models\WebhookEvent;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\TestResponse;
@@ -92,11 +93,12 @@ it('retains an event whose Stripe customer has no organization', function (): vo
         ->assertOk()
         ->assertSeeText('Webhook retained.');
 
-    $failedEvent = FailedWebhookEvent::query()->sole();
+    $failedEvent = WebhookEvent::query()->sole();
 
     expect($failedEvent->stripe_event_id)->toBe('evt_subscription_created')
         ->and($failedEvent->stripe_customer_id)->toBe('cus_deleted')
-        ->and($failedEvent->reason)->toBe('OrganizationNotFound')
+        ->and($failedEvent->outcome)->toBe(WebhookOutcome::Unplaceable)
+        ->and($failedEvent->outcome_reason)->toBe('OrganizationNotFound')
         ->and($failedEvent->payload)->toBe(subscriptionWebhookPayload(customerId: 'cus_deleted'));
 });
 
@@ -111,7 +113,9 @@ it('retains tenant boundary failures and acknowledges them to Stripe', function 
         ->assertOk()
         ->assertSeeText('Webhook retained.');
 
-    expect(FailedWebhookEvent::query()->sole()->reason)->toBe($reason);
+    expect(WebhookEvent::query()->sole())
+        ->outcome->toBe(WebhookOutcome::Unplaceable)
+        ->outcome_reason->toBe($reason);
 })->with([
     'missing tenant' => [TenantContextMissing::forModel(Subscription::class), 'TenantContextMissing'],
     'cross-tenant access' => [CrossTenantAccess::forModel(Subscription::class, 2, 1), 'CrossTenantAccess'],
@@ -126,7 +130,9 @@ it('lets Stripe retry failures unrelated to tenancy', function (): void {
 
     postStripeWebhook(subscriptionWebhookPayload())->assertServerError();
 
-    $this->assertDatabaseEmpty('failed_webhook_events');
+    expect(WebhookEvent::query()->sole())
+        ->outcome->toBe(WebhookOutcome::Errored)
+        ->outcome_reason->toBe('RuntimeException');
 });
 
 it('passes events without a customer through to Cashier', function (): void {
@@ -136,7 +142,7 @@ it('passes events without a customer through to Cashier', function (): void {
         'data' => ['object' => []],
     ])->assertOk();
 
-    $this->assertDatabaseEmpty('failed_webhook_events');
+    expect(WebhookEvent::query()->sole()->outcome)->toBe(WebhookOutcome::Applied);
 });
 
 it('rejects a webhook with an invalid Stripe signature', function (): void {
@@ -149,5 +155,5 @@ it('rejects a webhook with an invalid Stripe signature', function (): void {
         'organization_id' => $organization->id,
         'stripe_id' => 'sub_pro',
     ]);
-    $this->assertDatabaseEmpty('failed_webhook_events');
+    $this->assertDatabaseEmpty('webhook_events');
 });

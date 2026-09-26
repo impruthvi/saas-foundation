@@ -46,3 +46,17 @@ it('excludes the billing replay provider from production', function (): void {
 
     expect($providers)->not->toContain(BillingReplayServiceProvider::class);
 });
+
+it('reads the entitlement package tables in exactly one place', function (): void {
+    $offenders = [];
+
+    foreach (Finder::create()->files()->in(app_path())->name('*.php') as $file) {
+        $path = 'app/'.str_replace(DIRECTORY_SEPARATOR, '/', $file->getRelativePathname());
+
+        if ($path !== 'app/Entitlements/RefreshReceipts.php' && str_contains((string) file_get_contents($file->getRealPath()), 'cashier_entitlement_')) {
+            $offenders[] = $path;
+        }
+    }
+
+    expect($offenders)->toBe([], 'The package tables are read only through RefreshReceipts: '.implode(', ', $offenders));
+});
