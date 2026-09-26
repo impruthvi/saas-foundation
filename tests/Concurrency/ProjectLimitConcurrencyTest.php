@@ -12,7 +12,6 @@ use Impruthvi\CashierEntitlements\Usage\LimitExceeded;
 use Tests\Support\Contenders;
 use Tests\Support\Outcome;
 
-/** Attempt one project creation from inside a forked process. */
 function attemptProjectCreation(int $organizationId, string $name, string $token): Outcome
 {
     $organization = Organization::query()->findOrFail($organizationId);

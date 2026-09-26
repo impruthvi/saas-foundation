@@ -9,19 +9,13 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Runs several attempts in forked processes that start at the same instant.
- *
- * A forked child inherits its parent's open connection, so the first thing each
- * one does is throw that away and dial its own: two processes sharing a socket
- * are not two clients, they are one client corrupting itself. The start time is
- * computed before the fork, so every child waits for the same moment and the
- * overlap is arranged rather than hoped for.
+ * Each fork drops the inherited connection and dials its own: two processes sharing a
+ * socket are one client corrupting itself. The start time is computed before the fork
+ * so every child starts at the same moment.
  */
 final class Contenders
 {
     /**
-     * Run each attempt in its own process and collect what each one came to.
-     *
      * @param  list<callable(): Outcome>  $attempts
      * @return list<Outcome>
      */

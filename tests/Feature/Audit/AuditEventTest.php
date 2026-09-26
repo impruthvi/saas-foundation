@@ -38,8 +38,6 @@ use Tests\Fixtures\RecordAuditedAct;
 use Tests\Support\FakeStripeClient;
 
 /**
- * The organization's audit log, oldest first.
- *
  * @return Collection<int, AuditEvent>
  */
 function auditTrailOf(Organization $organization): Collection

@@ -12,9 +12,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 
-/**
- * Records whether a user held a permission at the moment the job ran.
- */
 final class RecordPermissionInJob implements ShouldQueue
 {
     use Dispatchable;

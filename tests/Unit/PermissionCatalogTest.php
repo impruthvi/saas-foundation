@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\DB;
 use Tests\Support\TenantQueryGuard;
 
 /**
- * The permission names one role currently holds.
- *
  * @return list<string>
  */
 function grantedTo(string $role): array
@@ -65,13 +63,13 @@ it('names a role for every rank a membership can carry', function (MembershipRol
 })->with(MembershipRole::cases());
 
 it('adds and removes the projects permission with its own migration', function (): void {
-    // Named rather than counted, so a migration added after this one cannot
-    // turn the rollback into a no-op that passes for the wrong reason.
+    // Named rather than counted, so a later migration cannot turn the rollback into a
+    // no-op that passes for the wrong reason.
     $migration = 'database/migrations/2026_09_21_130000_add_manage_projects_permission.php';
     $permission = Permission::ManageProjects->value;
 
-    // Withdrawing a permission clears it from every organization that granted
-    // it directly, so the rollback crosses tenants on purpose.
+    // Withdrawing a permission clears it from every organization that granted it, so
+    // the rollback crosses tenants on purpose.
     TenantQueryGuard::allowUnscoped(
         fn () => Artisan::call('migrate:rollback', ['--path' => $migration, '--force' => true]),
     );

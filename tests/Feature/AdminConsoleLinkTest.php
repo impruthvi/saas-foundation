@@ -6,11 +6,8 @@ use App\Models\Operator;
 use App\Providers\Filament\AdminConsoleServiceProvider;
 use Inertia\Testing\AssertableInertia;
 
-/*
- * Lives outside tests/Feature/AdminConsole so it survives the console's
- * removal: with the console installed it proves the link reaches operators
- * only, and with it removed it proves the link reaches nobody.
- */
+// Outside tests/Feature/AdminConsole so it survives the console's removal and then
+// proves the link reaches nobody.
 
 it('shares the console address with an operator', function (): void {
     [, $operator] = organizationOwnedBySomeone();

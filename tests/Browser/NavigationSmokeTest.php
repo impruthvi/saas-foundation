@@ -6,11 +6,8 @@ use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Operator;
 use App\Providers\Filament\AdminConsoleServiceProvider;
 
-/*
- * Clicks every link the product's navigation offers. The sidebar's links are
- * compiled into the frontend, so only a browser can see a dead one. This runs
- * in the ordinary browser job and again with the admin console removed.
- */
+// The sidebar's links are compiled into the frontend, so only a browser can find a dead
+// one. Runs again with the admin console removed.
 
 function signedInMember(): void
 {

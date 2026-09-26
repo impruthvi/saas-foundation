@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace Tests\Support;
 
 /**
- * What one contender's attempt came to.
- *
- * Carried between processes as an exit status, so the values are small integers
- * rather than anything a child could serialize.
+ * Carried between processes as an exit status, so the values are small integers.
  */
 enum Outcome: int
 {

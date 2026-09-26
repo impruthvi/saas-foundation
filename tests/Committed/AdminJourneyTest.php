@@ -14,12 +14,7 @@ use Tests\Support\FakeStripeClient;
 use Tests\Support\StripeWebhook;
 
 /**
- * Ab1: the last clause of the ten-minute journey.
- *
- * An organization subscribes to Pro, Stripe says so by webhook, and an operator
- * opens the organization in the console to find the entitlement that resulted,
- * the usage against it, and the Stripe event that set it. It lives in the
- * committed lane because the entitlement only moves after a refresh, and a
+ * In the committed lane because the entitlement only moves after a refresh, and a
  * refresh refuses to run inside a transaction.
  */
 beforeEach(function (): void {

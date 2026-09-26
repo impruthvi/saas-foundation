@@ -21,14 +21,9 @@ use Impruthvi\CashierEntitlements\Reconciliation\SweepManager;
 use Laravel\Cashier\Cashier;
 
 /**
- * D41: the queue and the console each resolve the tenant before the refresh
- * reads the owner's subscriptions.
- *
- * How these tests tell the two failures apart, since the refresh reports a
- * stage rather than an exception: reaching the provider is `provider_unavailable`,
- * and dying earlier at the tenant-scoped relation is the generic `provider_failed`.
- * The provider is pointed at a closed port so nothing here touches the network
- * and the distinction costs a refused connection rather than a round trip.
+ * The refresh reports a stage, not an exception: reaching the provider is
+ * provider_unavailable, while failing earlier at the tenant-scoped relation is
+ * provider_failed. The provider points at a closed port so nothing touches the network.
  */
 $reachableStripeApiBaseUrl = Cashier::$apiBaseUrl;
 
@@ -36,9 +31,8 @@ beforeEach(function (): void {
     Cashier::$apiBaseUrl = 'http://127.0.0.1:1';
 });
 
-// Restored unconditionally: this lane skips on a database that cannot be
-// truncated, and a skipped test must not leave the provider pointed at a
-// closed port for the suites that follow.
+// Restored unconditionally: a skipped test must not leave the provider pointed at a
+// closed port for later suites.
 afterEach(function () use ($reachableStripeApiBaseUrl): void {
     Cashier::$apiBaseUrl = $reachableStripeApiBaseUrl;
 });

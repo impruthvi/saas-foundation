@@ -148,8 +148,8 @@ it('agrees with the policy about every membership it refuses', function (): void
         return $policy;
     });
 
-    // The owner is refused; the other two are not, because one administrator
-    // remains either way.
+    // The owner is refused; the other two are not, because one administrator remains
+    // either way.
     expect($verdicts)->toBe([
         $owner->id => false,
         $admin->id => true,

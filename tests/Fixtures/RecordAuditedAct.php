@@ -12,8 +12,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 
 /**
- * An audited act performed on the queue, with no actor of its own.
- *
  * Whoever it records as acting came from the payload.
  */
 final class RecordAuditedAct implements ShouldQueue

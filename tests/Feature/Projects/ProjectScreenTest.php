@@ -15,7 +15,6 @@ use Illuminate\Testing\TestResponse;
 use Impruthvi\CashierEntitlements\Billing\BillingDecision;
 use Inertia\Testing\AssertableInertia as Assert;
 
-/** Spend allowance the only way the application ever spends it. */
 function createProjectsFor(Organization $organization, int $count): void
 {
     resolve(TenantContext::class)->runFor($organization, function () use ($organization, $count): void {

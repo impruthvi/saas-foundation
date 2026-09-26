@@ -8,11 +8,6 @@ use App\Models\Operator;
 use App\Models\User;
 use App\Providers\Filament\AdminConsoleServiceProvider;
 
-/*
- * Ab2: an operator starts acting as a user from the console, works in the
- * product under a banner that says so, and ends it from that banner.
- */
-
 it('acts as a user from the console and ends it from the banner', function (): void {
     [, $alice] = organizationOwnedBySomeone('Alice Co');
     $alice->forceFill(['name' => 'Alice Customer'])->save();

@@ -40,10 +40,8 @@ it('leaves nothing resolved for the next job on the same worker', function (): v
     $organization = Organization::factory()->create();
     $tenant = resolve(TenantContext::class);
 
-    // A statement, not a returned expression: dispatch() hands back a
-    // PendingDispatch that pushes the job when it is destructed, so returning it
-    // out of runFor() would push it after the tenant had already been restored,
-    // and the payload would carry the wrong context or none at all.
+    // A statement, not a returned expression: dispatch() returns a PendingDispatch that
+    // pushes on destruction, which would be after runFor() restored the tenant.
     $tenant->runFor($organization, function (): void {
         dispatch(new RecordResolvedTenant('tenanted'));
     });

@@ -32,8 +32,7 @@ beforeEach(function (): void {
 });
 
 /**
- * An operator who is also a member of an organization of their own, with it
- * selected, the way the `web` group would resolve it on a Livewire update.
+ * Selected the way the web group resolves it on a Livewire update.
  *
  * @return array{0: User, 1: Organization}
  */

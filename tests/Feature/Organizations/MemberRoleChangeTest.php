@@ -15,9 +15,6 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 
-/**
- * The membership row for one person in one organization.
- */
 function membershipOf(User $user, Organization $organization): Membership
 {
     return resolve(TenantContext::class)->runFor(
@@ -94,8 +91,8 @@ it('refuses to demote the last administrator who is not the owner', function ():
     $admin = User::factory()->create();
     $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
 
-    // The owner is suspended, so they hold the rank and grant nothing. The
-    // other administrator is the only one actually running the organization.
+    // The suspended owner holds the rank and grants nothing, so the other administrator
+    // is the only one running the organization.
     membershipOf($owner, $organization)
         ->forceFill(['status' => MembershipStatus::Suspended])->save();
 

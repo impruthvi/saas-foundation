@@ -11,29 +11,18 @@ use Impruthvi\CashierEntitlements\Billing\BillingDecision;
 use Tests\Support\StripeWebhook;
 
 /**
- * Pt12b: the state a delivery leaves behind resolves to the same entitlement
- * whatever order the delivery arrived in.
- *
- * Asserted here rather than inside the dunning replay, which wraps its work in
- * a transaction it rolls back: a refresh requested after commit is discarded
- * there, so nothing it leaves behind can be resolved. `DunningReplayConvergenceTest`
- * owns the claim that the subscription facts converge; this owns the claim that
- * the answer read off those facts converges too. M4's replay registered no
- * resolver at all, which is the gap this closes.
+ * Asserted outside the dunning replay, which rolls back and discards any refresh;
+ * DunningReplayConvergenceTest owns the subscription facts, this owns the resolved
+ * answer.
  */
 beforeEach(function (): void {
     config(['cashier.webhook.secret' => StripeWebhook::SECRET]);
 });
 
 /**
- * One subscription lifecycle, as a list of deliveries that can be reordered.
- *
- * Each carries its own `created`, because the watermark decides what an
- * out-of-order arrival is allowed to overwrite. Reordering the list is
- * therefore meant to change nothing at all.
- *
- * A Stripe subscription id is globally unique and the watermark table says so,
- * so each caller brings its own rather than sharing one across organizations.
+ * Each delivery carries its own created timestamp, because the watermark decides what
+ * an out-of-order arrival may overwrite. Subscription ids are globally unique, so each
+ * caller brings its own.
  *
  * @return list<array<string, mixed>>
  */
@@ -57,11 +46,8 @@ function subscriptionLifecycle(string $customerId, string $subscriptionId): arra
 }
 
 /**
- * Deliver one ordering into a fresh organization and report what it resolved to.
- *
- * The decision is landed first so the resolver has a paid answer to return.
- * A delivery that perturbed the facts would show up as a different allowance
- * or a different status, not as a silently identical floor.
+ * The decision lands first so the resolver has a paid answer; a perturbed delivery
+ * shows up as a different allowance or status, not a silently identical floor.
  *
  * @param  list<int>  $order
  * @return array{allowance: int|null, status: string|null, subscriptions: int}

@@ -180,8 +180,8 @@ describe('withdrawing an invitation', function (): void {
             fn (): Invitation => Invitation::query()->withoutGlobalScopes()->sole(),
         );
 
-        // 403 would confirm the row exists. One organization must not learn
-        // that another has invited anybody.
+        // A 403 would confirm the row exists; one organization must not learn that
+        // another invited anybody.
         $this->actingAs($owner)
             ->delete(route('organizations.invitations.destroy', $theirInvitation))
             ->assertNotFound();
@@ -312,8 +312,8 @@ it('pages the member list once it outgrows one page', function (): void {
         ->assertInertia(fn ($page) => $page
             ->where('members.total', 31)
             ->has('members.data', 25)
-            // Fewer than four links means the paginator rendered a single page
-            // and the component hides itself, leaving later members unreachable.
+            // Fewer than four links means a single page, and the component hides
+            // itself, leaving later members unreachable.
             ->has('members.links', 4));
 
     $this->actingAs($owner)
@@ -326,9 +326,8 @@ it('sends a role label to display, and the stored value only where a control nee
     [$organization, $owner] = organizationOwnedBySomeone();
     issueInvitation($organization, 'labelled@example.com', $owner);
 
-    // A member row carries both: the label is what is rendered, and the value
-    // is what the role Select binds to. An invitation has no such control, so
-    // it still carries the label alone.
+    // A member row carries a label and the value the role select binds to; an
+    // invitation has no select, so only the label.
     $this->actingAs($owner)
         ->get(route('organizations.members.index'))
         ->assertOk()
@@ -342,8 +341,8 @@ it('sends dates to the client already formatted', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     $token = issueInvitation($organization, 'dated@example.com', $owner);
 
-    // Formatting client-side lets Intl resolve a different locale than SSR did,
-    // which Vue reports as a hydration mismatch and repairs by re-rendering.
+    // Formatting client-side lets Intl pick a different locale than SSR, which Vue
+    // reports as a hydration mismatch.
     $this->actingAs($owner)
         ->get(route('organizations.members.index'))
         ->assertInertia(fn ($page) => $page

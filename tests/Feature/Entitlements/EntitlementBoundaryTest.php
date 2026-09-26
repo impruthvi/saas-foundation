@@ -18,12 +18,8 @@ use Inertia\Testing\AssertableInertia as Assert;
 use RuntimeException;
 
 /**
- * The tenant boundary on the entitlement ledgers, asserted directly.
- *
- * The suite-wide query guard now watches these tables, but it can only refuse
- * a statement that narrows on nothing. It cannot prove that a hashed counter id
- * belongs to the organization currently resolved, because the owner is not
- * recoverable from the hash. That half is what this file exists to prove.
+ * The query guard can refuse a statement that narrows on nothing, but cannot prove a
+ * hashed counter id belongs to the resolved organization; this file proves that half.
  */
 function spendProjects(Organization $organization, int $count): void
 {

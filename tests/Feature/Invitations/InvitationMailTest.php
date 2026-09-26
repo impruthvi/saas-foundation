@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Mail;
 use Tests\Support\TenantQueryGuard;
 
 /**
- * Issue an invitation and queue its email, the way a request would.
- *
  * @return array{invitation: Invitation, token: string}
  */
 function inviteAndMail(Organization $organization, string $email): array
@@ -84,18 +82,14 @@ describe('across a real queue roundtrip', function (): void {
 
         inviteAndMail($sender, 'crosstenant@example.com');
 
-        // Simulate a long-lived worker that already has another organization
-        // resolved. If hydration does not replace it,
-        // restoring the invitation raises CrossTenantAccess and the job fails.
+        // A long-lived worker already holding another organization: without hydration
+        // replacing it, restoring the invitation raises CrossTenantAccess.
         resolve(TenantContext::class)->set($other);
 
-        // `SerializesModels` restores through `newQueryForRestoration()`, which
-        // calls `newQueryWithoutScopes()` — so the restoring SELECT carries no
-        // organization_id and the suite-wide guard fails the job on sight. That
-        // is expected framework behavior, not a leak: the row is addressed
-        // by primary key from a payload the application wrote, and the
-        // `retrieved` guard is what checks it landed in the right tenant. The
-        // test below proves that guard still bites.
+        // SerializesModels restores through newQueryWithoutScopes(), so the restoring
+        // SELECT carries no organization_id. The row is addressed by primary key from
+        // our own payload, and the retrieved guard checks the tenant; the next test
+        // proves it still bites.
         TenantQueryGuard::allowUnscoped(function (): void {
             $this->artisan('queue:work --once')->assertSuccessful();
         });
@@ -110,10 +104,8 @@ describe('across a real queue roundtrip', function (): void {
 
         $issued = inviteAndMail($sender, 'guarded@example.com');
 
-        // Propagation is what normally prevents this. Standing it down leaves
-        // the worker holding the wrong organization, which is the exact
-        // condition the retrieved guard exists for. Without it, an
-        // unscoped restoration would hand one tenant another tenant's row.
+        // Standing propagation down leaves the worker on the wrong organization, the
+        // condition the retrieved guard exists for.
         resolve(TenantContext::class)->set($other);
 
         expect(fn (): mixed => TenantQueryGuard::allowUnscoped(
@@ -128,21 +120,18 @@ describe('across a real queue roundtrip', function (): void {
 
         inviteAndMail($organization, 'after@example.com');
 
-        // Queued with no tenant resolved, and queued BEFORE the mail job runs:
-        // dispatching afterwards would capture the tenant that job resolved and
-        // the test would prove nothing.
+        // Queued before the mail job runs, with no tenant; queued afterwards it would
+        // capture that job's tenant and prove nothing.
         resolve(TenantContext::class)->forget();
 
-        dispatch(function (): void {
-            //
-        });
+        dispatch(function (): void {});
 
         TenantQueryGuard::allowUnscoped(function (): void {
             $this->artisan('queue:work --once')->assertSuccessful();
         });
 
-        // The mail job resolved a tenant to do its work. Context is hydrated for
-        // every job, including ones carrying none, so this one has to forget.
+        // Context is hydrated for every job, including ones carrying none, so this one
+        // has to forget.
         $this->artisan('queue:work --once')->assertSuccessful();
 
         expect(resolve(TenantContext::class)->hasTenant())->toBeFalse();

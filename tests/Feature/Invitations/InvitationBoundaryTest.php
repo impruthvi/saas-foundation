@@ -43,8 +43,8 @@ it('resolves an invitation for a stranger who has no organization of their own',
     $organization = Organization::factory()->create();
     $token = issueInvitation($organization, 'stranger@example.com');
 
-    // A stranger has no tenant context, so token lookup must use the explicit
-    // cross-tenant path.
+    // A stranger has no tenant, so the token lookup must take the explicit cross-tenant
+    // path.
     resolve(TenantContext::class)->forget();
 
     expect(findInvitation($token))
@@ -205,8 +205,8 @@ it('retires the previous token when an invitation is resent', function (): void 
         fn (): string => resolve(ResendOrganizationInvitation::class)->handle($invitation)['token'],
     );
 
-    // The retired token resolves to nothing, which a caller renders as "no
-    // longer valid" rather than "expired" — it was replaced, not aged out.
+    // A retired token resolves to nothing, rendered as no longer valid rather than
+    // expired.
     expect(findInvitation($first))->toBeNull()
         ->and(findInvitation($second))
         ->toBeInstanceOf(Invitation::class);
@@ -221,10 +221,9 @@ it('survives the membership already existing when the invitation is accepted', f
     $invitee = User::factory()->create(['email' => 'racer@example.com']);
     $token = issueInvitation($organization, 'racer@example.com');
 
-    // The state the loser of a concurrent accept finds: the winner's membership
-    // has landed, but this request read the invitation before it did. The row
-    // lock is what normally prevents this; the caught unique violation is the
-    // backup, and this is the only way to reach it in a single process.
+    // The state the loser of a concurrent accept finds. The row lock normally prevents
+    // it; the caught unique violation is the backup, reachable in one process only like
+    // this.
     resolve(TenantContext::class)->runFor(
         $organization,
         fn (): Membership => resolve(AddOrganizationMember::class)->handle($organization, $invitee),
@@ -233,7 +232,6 @@ it('survives the membership already existing when the invitation is accepted', f
     expect(fn () => resolve(AcceptOrganizationInvitation::class)->handle(findInvitation($token), $invitee))
         ->toThrow(InvitationAlreadyAccepted::class);
 
-    // One membership, not two, and no constraint violation reached the caller.
     $count = resolve(TenantContext::class)->runFor(
         $organization,
         fn (): int => Membership::query()->where('user_id', $invitee->id)->count(),
@@ -255,8 +253,8 @@ it('keeps one organization from seeing or revoking another organization invitati
 
     expect($visible)->toBe(['ours@example.com']);
 
-    // Their invitation is a real row, and reaching it from inside our tenant is
-    // what the retrieved guard exists to stop.
+    // Reaching another organization's real row from inside our tenant is what the
+    // retrieved guard stops.
     $theirInvitation = findInvitation($theirToken);
 
     expect(fn () => resolve(TenantContext::class)->runFor(

@@ -6,9 +6,6 @@ namespace Tests\Support;
 
 use Illuminate\Testing\TestResponse;
 
-/**
- * Builds and signs Stripe deliveries for the public webhook endpoint.
- */
 final class StripeWebhook
 {
     public const string SECRET = 'whsec_testing';
@@ -36,8 +33,7 @@ final class StripeWebhook
     }
 
     /**
-     * A subscription event, with `created` omitted entirely when it is null so
-     * the no-timestamp path can be exercised.
+     * created is omitted entirely when null so the no-timestamp path can be exercised.
      *
      * @return array<string, mixed>
      */

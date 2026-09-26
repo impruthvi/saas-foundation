@@ -14,15 +14,10 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\TenantQueryGuard;
 
-/**
- * Re-run the migration that owns the RBAC tables, the way a deploy does.
- */
 function replayTheRbacMigration(): void
 {
-    // Named rather than counted: rolling back a fixed number of steps replays
-    // whichever migration happens to be last, so any migration added later
-    // silently turns this helper into a no-op and the tests below pass for the
-    // wrong reason.
+    // Named rather than counted: rolling back a fixed number of steps would replay
+    // whichever migration is last and pass for the wrong reason.
     $migration = 'database/migrations/2026_09_18_131132_create_permission_tables.php';
 
     Artisan::call('migrate:rollback', ['--path' => $migration, '--force' => true]);
@@ -30,8 +25,6 @@ function replayTheRbacMigration(): void
 }
 
 /**
- * Every assignment in one organization, as user id => role name.
- *
  * @return Collection<int, string>
  */
 function assignmentsWithin(int $organizationId): Collection
@@ -43,11 +36,8 @@ function assignmentsWithin(int $organizationId): Collection
 }
 
 /**
- * Every membership whose rank and role assignment disagree.
- *
- * Read across organizations on purpose: the invariant is about the database as
- * a whole, and scoping the query to one organization would make it unable to
- * see the case it exists for.
+ * Reads across organizations on purpose: scoping to one would hide the case this exists
+ * for.
  *
  * @return list<string>
  */
@@ -66,10 +56,8 @@ function projectionMismatches(): array
 }
 
 /**
- * Assignments with no membership behind them.
- *
- * The direction `projectionMismatches()` cannot see: it joins out from
- * memberships, so a grant whose membership is gone leaves nothing to join from.
+ * The direction projectionMismatches() cannot see: a grant whose membership is gone
+ * leaves nothing to join from.
  *
  * @return list<int>
  */
@@ -86,10 +74,8 @@ function orphanedAssignments(): array
 }
 
 /**
- * Anyone holding more than one role in one organization.
- *
- * `syncRoles` prevents it, `assignRole` would not, and the mismatch join cannot
- * see it because one of the two rows always matches.
+ * syncRoles prevents this and assignRole would not; the mismatch join cannot see it
+ * because one of the two rows always matches.
  *
  * @return list<int>
  */
@@ -136,7 +122,7 @@ it('leaves neither the membership nor the assignment when the write is rolled ba
             throw new RuntimeException('the rest of the request failed');
         });
     } catch (RuntimeException) {
-        // The point is what survives it.
+        // What matters is what survives the rollback.
     }
 
     expect(assignmentsWithin($organization->id)->all())->toBe([$owner->id => 'admin'])
@@ -220,10 +206,9 @@ it('keeps each organization assignments to itself', function (): void {
 
     replayTheRbacMigration();
 
-    // Counting every assignment regardless of organization is the assertion
-    // itself: the backfill must have written two rows and not a third. The
-    // guard is stood down by name rather than by adding an organization_id to
-    // the query, which would make the count unable to see a leak.
+    // Counting every assignment is the assertion: the backfill must write two rows, not
+    // three. The guard is stood down by name rather than scoping the query, which would
+    // hide a leak.
     $total = TenantQueryGuard::allowUnscoped(
         fn (): int => DB::table('model_has_roles')->count(),
     );

@@ -24,8 +24,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Deliver an event for a customer no organization holds yet, and keep its row.
- *
  * @param  array<string, mixed>  $overrides
  */
 function unplacedEvent(array $overrides = []): WebhookEvent

@@ -19,8 +19,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Send a webhook through the signed public endpoint.
- *
  * @param  array<string, mixed>  $payload
  */
 function postStripeWebhook(array $payload, bool $validSignature = true): TestResponse

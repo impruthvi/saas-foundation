@@ -28,8 +28,8 @@ it('reuses provider resources when checkout is retried', function (): void {
 
     expect($start($organization))->toBeInstanceOf(Checkout::class);
 
-    // Reproduce the only local state a rollback could leave after Stripe has
-    // already created the customer: no saved customer id on the organization.
+    // The only local state a rollback can leave after Stripe created the customer: no
+    // saved customer id.
     $organization->forceFill(['stripe_id' => null])->save();
     $organization->unsetRelation('subscriptions');
 

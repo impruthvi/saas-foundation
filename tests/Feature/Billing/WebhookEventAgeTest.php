@@ -15,9 +15,6 @@ beforeEach(function (): void {
     $this->organization = Organization::factory()->create(['stripe_id' => 'cus_acme']);
 });
 
-/**
- * Read a subscription fact back under the organization that owns it.
- */
 function subscriptionStatus(Organization $organization, string $stripeId = 'sub_pro'): ?string
 {
     return resolve(TenantContext::class)->runFor(

@@ -10,16 +10,11 @@ use RuntimeException;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Fails when the permission registrar's team differs from the resolved tenant.
- *
- * SQL can remain scoped while a stale permission team authorizes the wrong
- * organization, so every query also checks the two values directly.
+ * SQL can stay scoped while a stale permission team authorizes the wrong organization,
+ * so the two values are compared directly.
  */
 final class AuthorizationTeamGuard
 {
-    /**
-     * Install the listener for the current test.
-     */
     public static function install(): void
     {
         DB::listen(function (): void {
@@ -28,13 +23,9 @@ final class AuthorizationTeamGuard
     }
 
     /**
-     * Drop anything the package cached for a previous test.
-     *
-     * The permission map is cached in the cache store, which the suite runs as
-     * `array` — so it is already per-test, and this is a guard against the day
-     * that changes rather than a fix for something failing now. It matters
-     * because `RefreshDatabase` rolls the rows out from under a cache that has
-     * no idea it happened, and the resulting failures look like flake.
+     * The permission map lives in the cache store, which the suite runs as array, so
+     * this guards against that changing: RefreshDatabase rolls rows back under a cache
+     * that does not know.
      */
     public static function flush(): void
     {
