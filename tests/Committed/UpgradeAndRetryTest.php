@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Actions\CreateProject;
-use App\Billing\PlanCatalog;
 use App\Entitlements\ResolveAllowance;
 use App\Models\Organization;
 use App\Models\Project;
@@ -45,7 +44,6 @@ function createProjectFor(Organization $organization, string $name, string $toke
 
 it('lifts the Free refusal once the subscription webhook has been refreshed', function (): void {
     $organization = Organization::factory()->create(['stripe_id' => 'cus_upgrade']);
-    $proPrice = resolve(PlanCatalog::class)->findPlan('pro')?->prices[0]->id;
 
     createProjectFor($organization, 'First project', 'upgrade-one');
     createProjectFor($organization, 'Second project', 'upgrade-two');
@@ -54,14 +52,7 @@ it('lifts the Free refusal once the subscription webhook has been refreshed', fu
         ->and(fn (): Project => createProjectFor($organization, 'Third project', 'upgrade-three'))
         ->toThrow(LimitExceeded::class);
 
-    $this->stripe->withActiveSubscription('cus_upgrade', (string) $proPrice, 'sub_upgrade');
-
-    acrossEveryOwner(fn () => StripeWebhook::post(StripeWebhook::subscriptionPayload(
-        customerId: 'cus_upgrade',
-        created: 1_000,
-        subscriptionId: 'sub_upgrade',
-        itemId: 'si_upgrade',
-    ))->assertOk());
+    StripeWebhook::reportSubscription($this->stripe, 'cus_upgrade', 'sub_upgrade', 'si_upgrade');
 
     expect(projectsAllowedNow($organization))->toBe(10)
         ->and($this->stripe->requested)->toContain('get /v1/subscriptions');
@@ -79,18 +70,7 @@ it('keeps the two projects the Free plan already allowed', function (): void {
     createProjectFor($organization, 'First project', 'keep-one');
     createProjectFor($organization, 'Second project', 'keep-two');
 
-    $this->stripe->withActiveSubscription(
-        'cus_keep',
-        (string) resolve(PlanCatalog::class)->findPlan('pro')?->prices[0]->id,
-        'sub_keep',
-    );
-
-    acrossEveryOwner(fn () => StripeWebhook::post(StripeWebhook::subscriptionPayload(
-        customerId: 'cus_keep',
-        created: 1_000,
-        subscriptionId: 'sub_keep',
-        itemId: 'si_keep',
-    ))->assertOk());
+    StripeWebhook::reportSubscription($this->stripe, 'cus_keep', 'sub_keep', 'si_keep');
 
     // Usage is a lifetime meter, so upgrading raises the ceiling without forgiving what
     // was spent.

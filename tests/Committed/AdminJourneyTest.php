@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Actions\CreateProject;
-use App\Billing\PlanCatalog;
 use App\Models\Operator;
 use App\Models\User;
 use App\Providers\Filament\AdminConsoleServiceProvider;
@@ -36,18 +35,7 @@ it('shows an operator the entitlement, the usage and the Stripe event that set i
         resolve(CreateProject::class)->handle($organization, 'Pricing page revamp', 'admin-journey-two');
     });
 
-    $this->provider->withActiveSubscription(
-        'cus_journey',
-        (string) resolve(PlanCatalog::class)->findPlan('pro')?->prices[0]->id,
-        'sub_journey',
-    );
-
-    acrossEveryOwner(fn () => StripeWebhook::post(StripeWebhook::subscriptionPayload(
-        customerId: 'cus_journey',
-        created: 1_000,
-        subscriptionId: 'sub_journey',
-        itemId: 'si_journey',
-    ))->assertOk());
+    StripeWebhook::reportSubscription($this->provider, 'cus_journey', 'sub_journey', 'si_journey');
 
     $operator = User::factory()->create(['name' => 'Carol Operator']);
     Operator::factory()->create(['user_id' => $operator->id]);

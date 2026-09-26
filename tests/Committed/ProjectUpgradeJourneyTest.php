@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Actions\CreateProject;
-use App\Billing\PlanCatalog;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Organization;
 use App\Models\Project;
@@ -73,18 +72,7 @@ it('refuses at the limit, goes through checkout, and then allows the same projec
         ->press('Subscribe to Pro')
         ->assertPathIsNot('/organizations/billing');
 
-    $this->provider->withActiveSubscription(
-        'cus_journey',
-        (string) resolve(PlanCatalog::class)->findPlan('pro')?->prices[0]->id,
-        'sub_journey',
-    );
-
-    acrossEveryOwner(fn () => StripeWebhook::post(StripeWebhook::subscriptionPayload(
-        customerId: 'cus_journey',
-        created: 1_000,
-        subscriptionId: 'sub_journey',
-        itemId: 'si_journey',
-    ))->assertOk());
+    StripeWebhook::reportSubscription($this->provider, 'cus_journey', 'sub_journey', 'si_journey');
 
     // The ceiling moved because the refresh read the provider, not because the test
     // wrote an allowance.
