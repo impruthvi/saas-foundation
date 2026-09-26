@@ -1,7 +1,7 @@
 # 0005 — M6, the admin console
 
 - **Date:** 2026-09-24
-- **Status:** Proposed. Drafted and reviewed by `/plan-eng-review` including a Codex
+- **Status:** **Done** (T0–T10 on `feat/m6-admin-console`; deviations noted under each task). Drafted and reviewed by `/plan-eng-review` including a Codex
   outside voice; see the review report at the end. Fifteen decisions were taken (D2–D14
   plus three TODO dispositions). Seven changed the first draft's behaviour: the
   impersonation session, audit attribution, the inspector's event link, replay checks,
@@ -679,7 +679,7 @@ S3 and S4 both add actions that call `RecordAuditEvent`. Keep S3 and S4 in one l
     - Verify: `composer test:browser` and the committed lane
     - Landed: `tests/Committed/AdminJourneyTest.php`. The organization subscribes, Stripe's webhook lands and refreshes the entitlement, and an operator opens the organization in a real browser to find Pro's allowance from the package, the usage, and `customer.subscription.created` named as the event that set it. `tests/Browser/ImpersonationBannerTest.php` starts an impersonation from the console, sees the banner in the product, and ends it from the banner. Both skip, with their stated reason, once the console is removed.
     - Note: the organization page's two table widgets load lazily, when they scroll into view. That is Filament's default, and a full-page screenshot taken on load shows them empty.
-- [ ] **T10 (P2, human: ~2h / CC: ~10min)** — docs — `CONTEXT.md` terms, D46–D52, build plan status, `TODOS.md` entries closed and added
+- [x] **T10 (P2, human: ~2h / CC: ~10min)** — docs — `CONTEXT.md` terms, D46–D52, build plan status, `TODOS.md` entries closed and added
 
 ## Inline diagrams the implementation should carry
 

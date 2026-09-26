@@ -362,6 +362,17 @@ because a suspended administrator holds the rank and grants nothing.
 
 ---
 
+## Numbers recorded in milestone plans
+
+From M4 on, each milestone's decisions are written in full in its plan, next to the
+evidence and review that produced them. They bind exactly as the ones above do.
+
+| Numbers | Milestone         | Recorded in                                                           |
+| ------- | ----------------- | --------------------------------------------------------------------- |
+| D32–D37 | M4, billing       | [`plans/0003-m4-billing.md`](../plans/0003-m4-billing.md)             |
+| D38–D45 | M5, entitlements  | [`plans/0004-m5-entitlements.md`](../plans/0004-m5-entitlements.md)   |
+| D46–D52 | M6, admin console | [`plans/0005-m6-admin-console.md`](../plans/0005-m6-admin-console.md) |
+
 ## Numbers not reproduced here
 
 D13, D14 and D17 concern product sequencing, competitive positioning and the entitlements
