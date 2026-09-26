@@ -18,6 +18,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
+use Impruthvi\CashierEntitlements\Billing\OwnerReference;
+use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
 use Impruthvi\CashierEntitlements\Reconciliation\OwnerLocator;
 use Impruthvi\CashierEntitlements\Reconciliation\ReadFailure;
 use Impruthvi\CashierEntitlements\Resolution\FeatureTypeMismatch;
@@ -40,6 +42,7 @@ final class ProjectController extends Controller
         LocalResolver $resolver,
         PlanCatalog $catalog,
         BillingFacts $facts,
+        NativeStateStore $states,
     ): Response {
         Gate::authorize('viewAny', Project::class);
 
@@ -64,6 +67,7 @@ final class ProjectController extends Controller
                     'createdAt' => $project->created_at?->toFormattedDateString(),
                 ]),
             'allowance' => $allowance,
+            'planChangePending' => $this->planChangePending($owners->reference($organization), $states),
             'canCreate' => $request->user()?->can('create', Project::class) ?? false,
             'accessEndsAt' => $facts->state($organization) === BillingFacts::STATE_GRACE_PERIOD
                 ? $facts->currentSubscription($organization)?->ends_at?->toFormattedDateString()
@@ -141,6 +145,17 @@ final class ProjectController extends Controller
             'remaining' => $limit === null ? null : max(0, $limit - $usage),
             'upgradePlan' => $this->cheapestPlanAbove($catalog, $usage),
         ];
+    }
+
+    /**
+     * A webhook has asked for a refresh that has not landed, typically because no queue
+     * worker is running. Display only: the limit is still enforced from what resolved.
+     */
+    private function planChangePending(OwnerReference $owner, NativeStateStore $states): bool
+    {
+        $state = $states->state($owner);
+
+        return $state !== null && $state['requested_sequence'] > $state['completed_sequence'];
     }
 
     private function cheapestPlanAbove(PlanCatalog $catalog, int $usage): ?string

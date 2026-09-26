@@ -13,6 +13,7 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Testing\TestResponse;
 use Impruthvi\CashierEntitlements\Billing\BillingDecision;
+use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function createProjectsFor(Organization $organization, int $count): void
@@ -147,4 +148,42 @@ it('refuses the screen to somebody outside the organization', function (): void 
     [$organization] = organizationOwnedBySomeone();
 
     visitProjectsAs(User::factory()->create(), $organization)->assertForbidden();
+});
+
+it('says a plan change is being applied while a requested refresh has not landed', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    createProjectsFor($organization, 2);
+    resolve(NativeStateStore::class)->request(organizationEntitlementOwner($organization), Date::now()->toDateTimeImmutable());
+
+    visitProjectsAs($owner, $organization)
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('planChangePending', true)
+            ->where('allowance.limit', 2)
+            ->where('allowance.remaining', 0));
+});
+
+it('stops saying so once the refresh has landed', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    allowProjectsFor($organization, 10);
+
+    visitProjectsAs($owner, $organization)
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('planChangePending', false)
+            ->where('allowance.limit', 10));
+});
+
+it('still refuses past the limit while a plan change is pending', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    createProjectsFor($organization, 2);
+    resolve(NativeStateStore::class)->request(organizationEntitlementOwner($organization), Date::now()->toDateTimeImmutable());
+
+    $this->actingAs($owner)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+        ->postJson(route('projects.store'), [
+            'organization' => $organization->slug,
+            'name' => 'Third project',
+            'idempotency_token' => 'pending-three',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('limit', 2);
 });
