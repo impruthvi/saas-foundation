@@ -11,9 +11,8 @@ const props = defineProps<{
     email: string;
     invitedBy: string | null;
     expiresAt: string;
-    // Why this invitation cannot be taken by whoever is signed in. Rendered
-    // rather than thrown: somebody signed in to the wrong account needs to be
-    // told which account.
+    // Rendered rather than thrown: someone signed in to the wrong account needs
+    // to be told which one.
     refusal: string | null;
     authenticated: boolean;
 }>();

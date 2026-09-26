@@ -13,11 +13,8 @@ jobs:
     ci:
         runs-on: ubuntu-latest
 
-        # PostgreSQL is the documented path (D3) and SQLite is what a contributor gets
-        # from `composer setup` with no database installed. Both are supported, so both
-        # are proven on every push. Running only SQLite would let a Postgres-only
-        # failure reach a deploy; running only Postgres would break the zero-config
-        # local setup the contributing guide promises.
+        # PostgreSQL is the documented path and SQLite is what `composer setup` gives a
+        # contributor with no database installed, so both run on every push.
         strategy:
             fail-fast: false
             matrix:
@@ -67,10 +64,9 @@ jobs:
             - name: Setup Application
               run: composer setup
 
-            # The committed suite holds one browser test, because the upgrade journey
-            # needs both a real browser and a refresh, and a refresh will not run
-            # inside a transaction. The browser job cannot host it: that job runs on
-            # `:memory:`, whose schema does not survive the reconnect truncation needs.
+            # The committed suite needs a real browser and a refresh, which will not run
+            # inside a transaction; the browser job's `:memory:` schema does not survive
+            # the reconnect truncation needs.
             - name: Install Chromium
               run: bunx playwright install --with-deps chromium
 
@@ -128,11 +124,9 @@ jobs:
             - name: Run Browser Tests
               run: composer test:browser
 
-    # The admin console must be removable without breaking anything or leaving a
-    # link behind (D4, D52). This job removes it the way an adopter would, then
-    # runs the whole gate against what is left: the suite, the type check, the
-    # frontend build (which fails if any Vue file still imports a console route)
-    # and the browser smoke test that clicks every navigation link.
+    # The admin console must be removable without a failing test or a dead link.
+    # Remove it the way an adopter would, then run the whole gate: the build fails
+    # on a leftover console route import, and the smoke test clicks every link.
     admin-removed:
         runs-on: ubuntu-latest
 
