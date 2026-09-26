@@ -83,6 +83,15 @@ if ($exitCode !== 0) {
     exit($exitCode);
 }
 
+// Views compiled while Livewire was installed carry its Blade hooks, and
+// anything that renders them afterwards, Wayfinder included, fails on the
+// missing class. Every cache built against the old dependency set goes.
+passthru('php artisan optimize:clear', $exitCode);
+
+if ($exitCode !== 0) {
+    exit($exitCode);
+}
+
 // Cutting a method out of User leaves the blank lines around it behind.
 passthru('vendor/bin/pint app/Models/User.php bootstrap/providers.php', $exitCode);
 
