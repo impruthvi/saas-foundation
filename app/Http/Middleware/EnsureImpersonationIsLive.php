@@ -14,25 +14,13 @@ use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Keeps an impersonation inside the bounds it was started with.
- *
- *   session names an impersonation
- *     ├─ row gone, ended, or naming another operator ──▶ signed out
- *     ├─ operator no longer an operator ──────────────▶ ended (revoked), signed out
- *     ├─ past its expiry ─────────────────────────────▶ ended (expiry), operator back
- *     ├─ logout ──────────────────────────────────────▶ ended (logout), this device only
- *     ├─ a refused route ─────────────────────────────▶ 403
- *     └─ otherwise ───────────────────────────────────▶ continue as the user
- *
- * Runs before the tenant is resolved, because ending an impersonation changes
- * who is signed in and therefore which organization applies.
+ * Runs before the tenant is resolved, because ending an impersonation changes who is
+ * signed in.
  */
 final readonly class EnsureImpersonationIsLive
 {
     /**
-     * What an operator may not do while acting as someone else: change how the
-     * user signs in, close their account, move money, or join or turn down an
-     * organization on their behalf.
+     * Sign-in, account closure, money and organization membership stay the user's own.
      *
      * @var list<string>
      */

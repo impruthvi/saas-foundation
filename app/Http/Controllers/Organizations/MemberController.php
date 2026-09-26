@@ -20,18 +20,9 @@ use Inertia\Response;
 use RuntimeException;
 
 /**
- * Who is in this organization, who has been asked, and what may be done about it.
- *
- * Both are also eager-loaded and paginated deliberately. Under
- * `ShouldBeStrict`, which `config/essentials.php` enables for every
- * environment and not only for tests, reading `$membership->user` without
- * loading it raises `LazyLoadingViolationException`. A missed eager load here
- * is a broken page on the second member, not a slow one.
- *
- * The per-row flags are derived from one policy call plus one aggregate, never
- * from a policy call per row: `Membership::mayBeRemovedFrom()` is the same
- * predicate `MembershipPolicy` uses, so a button can only appear where the
- * endpoint would also allow it.
+ * Eager-loaded because ShouldBeStrict raises on lazy loading in every environment. Row
+ * flags come from one policy call and one aggregate, using the same predicate as
+ * MembershipPolicy, so a button appears only where the endpoint allows it.
  */
 final class MemberController extends Controller
 {
@@ -46,9 +37,7 @@ final class MemberController extends Controller
 
         $mayManage = $user?->can('manage', Membership::class) ?? false;
 
-        // One aggregate for the whole screen: "is anyone else still running
-        // this organization" is not a row-local question, and the last
-        // administrator can sit on any page.
+        // One aggregate for the screen: the last administrator can be on any page.
         $administrators = Membership::query()->administrators()->count();
 
         return Inertia::render('organizations/Members', [

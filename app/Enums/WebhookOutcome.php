@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/**
- * What happened to the latest delivery of a Stripe event.
- */
 enum WebhookOutcome: string
 {
     case Applied = 'applied';
@@ -17,11 +14,8 @@ enum WebhookOutcome: string
     case Refused = 'refused';
 
     /**
-     * How long a row with this outcome is kept, in days.
-     *
-     * An event that still needs recovering is kept twice as long as one that
-     * has nothing left to do. A replayed or refused event keeps the window of
-     * the problem it came from.
+     * Unrecovered events are kept twice as long; replayed and refused keep the window
+     * of the problem they came from.
      */
     public function retentionDays(): int
     {

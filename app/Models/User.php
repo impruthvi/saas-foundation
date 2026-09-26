@@ -74,11 +74,8 @@ final class User extends Authenticatable implements FilamentUser, PasskeyUser
 
     /* @chisel-admin-console */
     /**
-     * Whether this person may use the admin console.
-     *
-     * An operator, with a verified address, and outside local development with
-     * two-factor authentication confirmed: a console that can act as any user is
-     * worth more to an attacker than any one account.
+     * Two-factor is required outside local development: a console that can act as any
+     * user is worth more than any one account.
      */
     public function canAccessPanel(Panel $panel): bool
     {

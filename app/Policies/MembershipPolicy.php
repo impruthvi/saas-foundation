@@ -13,16 +13,9 @@ use App\Tenancy\MembershipRepository;
 use App\Tenancy\TenantContext;
 
 /**
- * Who may manage who else is in the organization.
- *
- * Two questions layered: may this person manage members at all, and may *this
- * membership* be touched. The first is the shared ladder; the second is
- * `Membership::mayBeRemovedFrom()`, which the members screen calls with the
- * same arguments so the buttons and the policy cannot disagree.
- *
- * Removing yourself is allowed, and deliberately not special-cased: an
- * administrator leaving is the same question as an administrator being removed,
- * and the last-administrator rule already covers the case that matters.
+ * Row rules come from Membership::mayBeRemovedFrom(), which the members screen also
+ * calls, so buttons and policy agree. Removing yourself is not special-cased; the
+ * last-administrator rule covers it.
  */
 final readonly class MembershipPolicy
 {
@@ -38,10 +31,6 @@ final readonly class MembershipPolicy
         return $this->allows($user, Permission::ViewMembers);
     }
 
-    /**
-     * Whether this person manages members at all, before any particular row is
-     * considered. The members screen asks once and derives each row from it.
-     */
     public function manage(User $user): bool
     {
         return $this->allows($user, Permission::ManageMembers);

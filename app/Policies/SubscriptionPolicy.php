@@ -12,7 +12,6 @@ use App\Models\User;
 use App\Tenancy\MembershipRepository;
 use App\Tenancy\TenantContext;
 
-/** Who may see or change billing for the resolved organization. */
 final readonly class SubscriptionPolicy
 {
     use ChecksOrganizationPermissions;

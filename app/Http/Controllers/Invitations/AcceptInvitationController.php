@@ -21,22 +21,9 @@ use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
- * What a stranger holding a token sees, and what happens when they act on it.
- *
- * Keyed by token rather than route-model-bound because the request has no tenant
- * until the invitation is resolved.
- *
- *   GET /invitations/{token}
- *        │
- *        ├─ token resolves to nothing ──► 404, worded as "no longer valid"
- *        │                                 (never "expired" — a rotated token
- *        │                                  was replaced, not aged out)
- *        ├─ nobody signed in ──► park the token, offer register or sign in
- *        └─ signed in ──► show the offer, or the reason it cannot be taken
- *
- * The organization is named before authentication on purpose. The token is the
- * secret; an accept screen that names nothing is indistinguishable from
- * phishing, and the recipient cannot tell whether it is worth trusting.
+ * Keyed by token, not route-model-bound: there is no tenant until the invitation
+ * resolves. The organization is named before sign-in on purpose, because an accept
+ * screen that names nothing is indistinguishable from phishing.
  */
 final class AcceptInvitationController extends Controller
 {
@@ -83,8 +70,7 @@ final class AcceptInvitationController extends Controller
             return back()->withErrors(['invitation' => $invitationRefused->getMessage()]);
         }
 
-        // Land them inside the organization that invited them, not wherever
-        // their session happened to be pointing.
+        // Land in the inviting organization, not wherever the session pointed.
         $request->session()->put(ResolveTenantContext::SESSION_KEY, $invitation->organization_id);
         $request->session()->forget(ConsumePendingInvitation::SESSION_KEY);
 
@@ -108,9 +94,8 @@ final class AcceptInvitationController extends Controller
 
         $user = $request->user();
 
-        // Declining is authorized by holding the token AND being the addressee.
-        // Without the second half, anyone who saw the link could close somebody
-        // else's invitation.
+        // Declining requires the token and being the addressee; otherwise anyone who
+        // saw the link could close it.
         abort_unless(
             $user instanceof User && $invitation->wasAddressedTo($user->email),
             HttpResponse::HTTP_FORBIDDEN,
@@ -126,7 +111,7 @@ final class AcceptInvitationController extends Controller
     }
 
     /**
-     * A token that names nothing is a 404, and says so honestly.
+     * A rotated token is worded as no longer valid, never as expired.
      */
     private function findOrFail(string $token, InvitationRepository $invitations): Invitation
     {
@@ -141,13 +126,6 @@ final class AcceptInvitationController extends Controller
         return $invitation;
     }
 
-    /**
-     * Why this person cannot take this invitation, in their own words.
-     *
-     * Rendered rather than thrown: the screen exists to explain, and a stranger
-     * who is signed in to the wrong account needs to be told which account, not
-     * shown an error page.
-     */
     private function refusalFor(Invitation $invitation, ?User $user, AcceptOrganizationInvitation $accept): ?string
     {
         if (! $user instanceof User) {
@@ -155,8 +133,8 @@ final class AcceptInvitationController extends Controller
         }
 
         try {
-            // The action's own ladder, asked without acting on the answer, so
-            // this screen and the endpoint cannot drift apart about the reason.
+            // Same ladder as the action, so the screen and the endpoint agree on the
+            // reason.
             $accept->assertAcceptableBy($invitation, $user);
         } catch (InvitationRefused $invitationRefused) {
             return $invitationRefused->getMessage();
@@ -166,12 +144,7 @@ final class AcceptInvitationController extends Controller
     }
 
     /**
-     * The organization this invitation belongs to.
-     *
-     * `organizations` is not tenant-owned — it IS the tenant — so no scope is
-     * stood down to read it, and none needs to be. It is a query rather than
-     * `$invitation->organization` because lazy loading is prevented application
-     * wide and this request has no tenant resolved.
+     * Queried by key: lazy loading is prevented and no tenant is resolved.
      */
     private function organizationOf(Invitation $invitation): Organization
     {

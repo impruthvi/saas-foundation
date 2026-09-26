@@ -13,13 +13,7 @@ use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Tells the product where the console is, and only an operator.
- *
- * The product never names the console itself. This middleware belongs to the
- * console and joins the `web` group from the console's provider, so once the
- * console is removed the address is never shared and the link cannot outlive
- * what it points at. It shares per request because shared props do not survive
- * between requests everywhere this app runs.
+ * Registered by the console's provider, so the link disappears with the console.
  */
 final readonly class ShareAdminConsoleLink
 {

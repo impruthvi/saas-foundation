@@ -9,13 +9,9 @@ use Laravel\Cashier\Http\Controllers\WebhookController;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Cashier's per-event handlers, run for a recorded event, announcing nothing.
- *
- * Cashier keeps its handlers on its webhook controller, so this extends it only
- * to reach them. It is never routed. A live delivery dispatches WebhookReceived
- * and WebhookHandled around the handler; the entitlement package listens for the
- * second and re-verifies the Stripe signature against the current request, which
- * a replay does not have. The replay asks for the refresh itself instead.
+ * Extends Cashier's controller only to reach its handlers and is never routed. It fires
+ * no WebhookHandled, because the entitlement listener re-verifies a signature a replay
+ * does not have.
  */
 final class CashierEventHandlers extends WebhookController
 {

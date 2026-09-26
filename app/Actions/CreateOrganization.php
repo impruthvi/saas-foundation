@@ -13,11 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Creates an organization and the membership that makes its owner a member of it.
- *
- * Membership creation is delegated so its rank and RBAC role remain atomic.
- * Slug collisions are resolved after the unique index rejects an insert,
- * avoiding a check-then-insert race.
+ * Slug collisions are handled after the unique index rejects the insert, avoiding a
+ * check-then-insert race.
  */
 final readonly class CreateOrganization
 {

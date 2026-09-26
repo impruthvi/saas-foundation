@@ -19,29 +19,14 @@ use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
- * Apply a recorded Stripe event that was never applied, as if it had just been
- * delivered.
- *
- * It goes through the same placing and ordering as a live delivery. It skips
- * the package listener, which needs a live signed request, but not the listener's
- * other checks: the event must be one that affects entitlements, from the mode
- * and account this application serves, for exactly one organization. A replayed
- * `customer.deleted` therefore never asks for a refresh that would fail once the
- * customer is gone.
- *
- *   unplaceable / errored only
- *     ├─ livemode or account differ ──▶ refused, nothing applied
- *     ├─ still no organization ───────▶ unplaceable
- *     ├─ a newer event won ───────────▶ superseded
- *     ├─ Cashier's handler throws ────▶ errored
- *     └─ applied ─────────────────────▶ refresh requested if it affects entitlements
- *                                       ─▶ replayed
+ * Skips the package listener, which needs a live signed request, but repeats its
+ * checks: an entitlement-affecting type, this application's mode and account, and
+ * exactly one organization.
  */
 final readonly class ReplayWebhookEvent
 {
     /**
-     * The event types the entitlement package refreshes on. Mirrors
-     * `QueueRefreshFromWebhook`, and a test fails if the two drift apart.
+     * Mirrors QueueRefreshFromWebhook; a test fails if they drift.
      *
      * @var list<string>
      */
@@ -109,10 +94,6 @@ final readonly class ReplayWebhookEvent
             && ($payload['account'] ?? 'platform') === config('cashier-entitlements.provider_context');
     }
 
-    /**
-     * Settle the row on this replay's outcome and audit it where there is an
-     * organization to audit it under.
-     */
     private function finish(WebhookEvent $event, WebhookOutcome $outcome, ?string $reason = null, ?string $message = null): WebhookOutcome
     {
         $event->refresh();

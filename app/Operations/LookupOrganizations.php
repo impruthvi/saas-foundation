@@ -9,12 +9,8 @@ use App\Models\User;
 use App\Tenancy\MembershipRepository;
 
 /**
- * Which organizations an email address is a member of.
- *
- * The organization lookup matches names, slugs and Stripe customers on the
- * organizations table itself. A member's address needs memberships, which are
- * tenant-owned, so it goes through the one repository allowed to read them
- * before an organization is known.
+ * A member's address needs memberships, which are tenant-owned, so it goes through the
+ * one repository allowed to read them before an organization is known.
  */
 final readonly class LookupOrganizations
 {

@@ -27,8 +27,8 @@ final class ChangeMemberRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Listing allowed ranks explicitly forces new enum cases to be
-            // considered before they become assignable.
+            // Listing ranks explicitly forces new enum cases to be considered before
+            // they become assignable.
             'role' => ['required', new Enum(MembershipRole::class), Rule::in([
                 MembershipRole::Member->value,
                 MembershipRole::Admin->value,

@@ -12,9 +12,9 @@ use App\Tenancy\MembershipRepository;
 use App\Tenancy\TenantContext;
 
 /**
- * Centralizes the policy ladder: resolved tenant, active membership, owner
- * fallback, then the tenant-scoped permission. The order prevents suspended
- * members acting while preserving an owner's recovery path if roles drift.
+ * Order matters: resolved tenant, active membership, owner fallback, then the
+ * permission, so suspended members cannot act and an owner keeps a recovery path if
+ * roles drift.
  */
 trait ChecksOrganizationPermissions
 {
@@ -39,12 +39,9 @@ trait ChecksOrganizationPermissions
     }
 
     /**
-     * Whether the user holds the permission in the resolved organization.
-     *
-     * `hasPermissionTo()` is required because the package's gate hook is
-     * disabled. The relations are unset
-     * first because they are cached per instance and the resolved organization
-     * can change within one request.
+     * hasPermissionTo() because the package's gate hook is disabled. Relations are
+     * unset because they are cached per instance and the organization can change within
+     * a request.
      */
     private function may(User $user, Permission $permission): bool
     {

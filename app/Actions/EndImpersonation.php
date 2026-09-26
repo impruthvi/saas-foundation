@@ -13,14 +13,9 @@ use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Session\Session;
 
 /**
- * Stop acting as a user, and hand the operator back if they may have it.
- *
- * The session is invalidated for the same reason it was on the way in, so
- * nothing from the user's session reaches the operator's. The operator is signed
- * back in only when the impersonation ended by their choice or by its clock, and
- * only while they are still an operator. Otherwise the browser is signed out on
- * this device alone. A full logout would cycle the user's remember token and end
- * their own sessions everywhere, which is not the operator's to do.
+ * The session is invalidated so nothing from the user's session reaches the operator's.
+ * A full logout would cycle the user's remember token and end their sessions
+ * everywhere, so the browser is signed out on this device only.
  */
 final readonly class EndImpersonation
 {

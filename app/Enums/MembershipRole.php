@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * A member's rank inside an organization.
- *
- * Ownership is stored only in `organizations.owner_id`; permissions belong to
- * the RBAC role derived from this rank.
+ * Ownership lives only in organizations.owner_id.
  */
 enum MembershipRole: string
 {

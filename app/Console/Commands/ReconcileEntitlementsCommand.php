@@ -13,19 +13,10 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Impruthvi\CashierEntitlements\Commands\ReconcileCommand;
 
 /**
- * Runs the package's reconcile command with the owner's organization resolved.
- *
- * `entitlements:reconcile` never goes near the queue: `--apply` calls the
- * refresh manager in process, and the dry run reads the same subscriptions
- * through the reconciler. Both read a tenant-scoped relation, so a job pipe
- * alone leaves every console invocation broken.
- *
- * This replaces the package's registration by name rather than extending it,
- * because the package command is final, and it delegates rather than
- * reimplementing so the report shape stays the package's to define.
- *
- * `--all` is refused: it audits every owner in one in-package loop, which
- * cannot be given one organization from out here.
+ * Wraps the package command with the owner's organization resolved, because --apply and
+ * the dry run both read a tenant-scoped relation. Replaces rather than extends it
+ * because the package command is final. --all is refused: its loop cannot be given one
+ * organization from here.
  */
 #[Description('Compare Stripe with Cashier, or explicitly apply native access for one owner')]
 #[Signature('entitlements:reconcile
@@ -51,9 +42,6 @@ final class ReconcileEntitlementsCommand extends Command
             : $tenant->runForId($organizationId, fn (): int => $this->delegate());
     }
 
-    /**
-     * The organization to resolve, or null to let the package refuse the input.
-     */
     private function organizationScope(): ?int
     {
         $alias = $this->option('owner-type');

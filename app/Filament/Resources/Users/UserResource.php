@@ -22,9 +22,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-/**
- * People with an account. Read-only, with impersonation on the view page.
- */
 final class UserResource extends Resource
 {
     protected static ?string $model = User::class;

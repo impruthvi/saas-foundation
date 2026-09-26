@@ -118,13 +118,8 @@ final class ProjectController extends Controller
     }
 
     /**
-     * The scalars the screen and the refusal message are both projections of.
-     *
-     * `remaining` is computed here rather than in the renderer so the screen
-     * never carries a threshold of its own: a hidden button is not a limit, and
-     * the endpoint refuses whatever the screen decided to show. It is clamped
-     * because usage above the limit is a real state after a downgrade, not an
-     * error — `null` means unlimited, and `0` means no allowance at all.
+     * `remaining` is computed here so the screen has no threshold of its own. Clamped
+     * because usage above the limit is real after a downgrade; null means unlimited.
      *
      * @return array{limit: int|null, usage: int, remaining: int|null, upgradePlan: string|null}
      */

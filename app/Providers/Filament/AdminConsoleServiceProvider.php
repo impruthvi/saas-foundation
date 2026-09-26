@@ -26,18 +26,9 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
- * The admin console: screens over application services, and nothing else.
- *
- * It has no login page of its own. An unauthenticated visit falls through to
- * the product's Fortify login, so passkeys, two-factor and throttling apply to
- * operators unchanged.
- *
- *   page load        ─▶ panel middleware (no `web` group) ─▶ no organization
- *   Livewire update  ─▶ `web` group ─▶ operator's own organization resolved
- *                                    ─▶ ForgetTenantContext (persistent) ─▶ none
- *
- * Authentication is persistent too, so revoking an operator stops the actions
- * on a page they already have open, not only the next page they load.
+ * No login page of its own: unauthenticated visits fall through to Fortify, so
+ * passkeys, two-factor and throttling apply. Authentication is persistent so a revoked
+ * operator's open page stops working.
  */
 final class AdminConsoleServiceProvider extends PanelProvider
 {
@@ -49,11 +40,8 @@ final class AdminConsoleServiceProvider extends PanelProvider
     }
 
     /**
-     * The product links to the console only through a prop this adds.
-     *
-     * It is appended to the `web` group rather than placed in the order
-     * `bootstrap/app.php` owns, because its position does not matter: it only
-     * shares a prop, and it must leave with the console.
+     * Appended to the web group rather than placed in bootstrap/app.php's order: it
+     * only shares a prop and must leave with the console.
      */
     public function boot(): void
     {

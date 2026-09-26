@@ -11,11 +11,8 @@ use App\Tenancy\MembershipRepository;
 use App\Tenancy\TenantContext;
 
 /**
- * Who may see and manage an organization's invitations.
- *
- * The organization is the resolved tenant rather than an argument, because
- * these questions are only asked about the organization the request is acting
- * for. An invitation from anywhere else has already failed the global scope.
+ * Asks about the resolved tenant only; an invitation from elsewhere has already failed
+ * the global scope.
  */
 final readonly class InvitationPolicy
 {

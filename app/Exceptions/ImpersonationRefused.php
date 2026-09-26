@@ -6,9 +6,6 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-/**
- * Why an impersonation was not started. Each reason is shown to the operator.
- */
 final class ImpersonationRefused extends RuntimeException
 {
     public static function notAnOperator(): self

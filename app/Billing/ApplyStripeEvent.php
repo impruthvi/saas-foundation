@@ -20,30 +20,14 @@ use Laravel\Cashier\Cashier;
 use Throwable;
 
 /**
- * Applies one Stripe event on behalf of the organization it concerns.
- *
- * Cashier's handlers write subscription rows, and those rows are tenant-scoped,
- * so the organization has to be resolved before a handler runs. It is recovered
- * from the Stripe customer in the payload, which is safe because organizations
- * are bounded by membership rather than by the tenant scope.
- *
- * Delivery is at least once and unordered, so a subscription event is applied
- * only when it is at least as recent as the newest one already applied for that
- * subscription. An event that cannot be placed, and one that has been
- * superseded, are both kept rather than applied. Other failures propagate so
- * the caller can report them.
- *
- * Every delivery is recorded in `webhook_events`, whatever became of it, so the
- * event behind an organization's current plan can always be named.
- *
- * The caller supplies how the event is applied, because Cashier's handlers are
- * reachable only through its webhook controller.
+ * The organization is recovered from the Stripe customer before Cashier's handlers
+ * write tenant-scoped rows. Delivery is at-least-once and unordered, so a subscription
+ * event applies only if it is at least as recent as the newest applied one.
  */
 final readonly class ApplyStripeEvent
 {
     /**
-     * Events whose subject is the customer itself, and which therefore carry the
-     * customer in `id` rather than in `customer`.
+     * These carry the customer in `id` rather than in `customer`.
      *
      * @var list<string>
      */
@@ -53,7 +37,7 @@ final readonly class ApplyStripeEvent
     ];
 
     /**
-     * Events that write the subscription row, and are therefore order-sensitive.
+     * Order-sensitive: these write the subscription row.
      *
      * @var list<string>
      */
@@ -122,11 +106,8 @@ final readonly class ApplyStripeEvent
     }
 
     /**
-     * Apply the event and record how that went.
-     *
-     * A tenant failure is left for the caller to keep as unplaceable. Anything
-     * else is recorded as errored before it propagates, so a delivery Stripe
-     * will retry still leaves a trace of why it failed.
+     * A tenant failure is left to the caller as unplaceable; anything else is recorded
+     * as errored before it propagates.
      *
      * @template TApplied
      *
@@ -152,12 +133,6 @@ final readonly class ApplyStripeEvent
     }
 
     /**
-     * Stripe puts the customer in different places depending on the event.
-     *
-     * Events about a customer carry it as the object's own `id`; events about a
-     * subscription, an invoice or a payment method carry it in `customer`.
-     * Reading only one of the two leaves those events running with no tenant.
-     *
      * @param  array<string, mixed>  $payload
      */
     private function customerIdFor(array $payload): ?string
@@ -178,17 +153,9 @@ final readonly class ApplyStripeEvent
     }
 
     /**
-     * Claim this delivery, reporting whether a newer one already beat it here.
-     *
-     * The comparison and the claim happen under one lock, so two deliveries
-     * handled at once cannot both read the same watermark and both apply.
-     *
-     * Two deliveries are deliberately let through. An event carrying the same
-     * timestamp as the watermark applies, because Stripe can emit two events in
-     * the same second and because a redelivery of a failed event carries the
-     * timestamp it already wrote. So does an event with no usable timestamp:
-     * applying one out of order is recoverable by a later event, and dropping a
-     * legitimate update is not.
+     * Compare and claim under one lock so concurrent deliveries cannot both apply.
+     * Equal and missing timestamps apply: Stripe emits several events per second, and
+     * dropping a legitimate update is worse than applying one late.
      *
      * @param  array<string, mixed>  $payload
      */
@@ -231,8 +198,6 @@ final readonly class ApplyStripeEvent
     }
 
     /**
-     * Keep an event this application cannot apply.
-     *
      * @param  array<string, mixed>  $payload
      */
     private function retain(array $payload, string $reason, string $message): WebhookOutcome
@@ -248,8 +213,6 @@ final readonly class ApplyStripeEvent
     }
 
     /**
-     * Keep an event a newer one has already overtaken.
-     *
      * @param  array<string, mixed>  $payload
      */
     private function discard(array $payload): WebhookOutcome
@@ -265,11 +228,8 @@ final readonly class ApplyStripeEvent
     }
 
     /**
-     * Write this delivery onto the event's single row.
-     *
-     * A redelivery updates the row rather than adding one. `applied_at` is set
-     * the first time the event applies and never cleared, so a late redelivery
-     * that is superseded does not erase what the event already did.
+     * `applied_at` is set once and never cleared, so a late superseded redelivery does
+     * not erase what the event did.
      *
      * @param  array<string, mixed>  $payload
      */

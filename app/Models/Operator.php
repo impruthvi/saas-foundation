@@ -14,8 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A person allowed into the admin console.
- *
  * @property int $id
  * @property int $user_id
  * @property int|null $granted_by

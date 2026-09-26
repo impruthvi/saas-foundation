@@ -11,12 +11,7 @@ use App\Models\Invitation;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Turns an offer down, on the recipient's side.
- *
- * The mirror of RevokeOrganizationInvitation: same transition, different actor,
- * different authorization. Declining closes this invitation and not the address
- * — an administrator can invite again, which rotates the row and mints a new
- * token.
+ * Declining closes this invitation, not the address: an administrator can invite again.
  */
 final readonly class DeclineOrganizationInvitation
 {

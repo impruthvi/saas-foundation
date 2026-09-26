@@ -6,7 +6,7 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-/** Catches cross-tenant rows restored through paths that bypass global scopes. */
+/** Raised for rows restored through paths that bypass global scopes. */
 final class CrossTenantAccess extends RuntimeException
 {
     public static function forModel(string $model, ?int $rowOrganizationId, int $resolvedOrganizationId): self

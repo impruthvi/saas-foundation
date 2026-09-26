@@ -14,12 +14,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Changes which organization the session is acting for.
- *
- * Membership is checked here rather than trusted from the request, and an
- * organization the user has no active membership of is a 403 rather than a
- * silent no-op: a switch that appears to work and does not is worse than a
- * refusal.
+ * A switch to an organization without an active membership is a 403, not a silent
+ * no-op.
  */
 final class SwitchOrganizationController extends Controller
 {

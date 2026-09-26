@@ -15,12 +15,6 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
-/**
- * Hands an organization to a different owner.
- *
- * The new owner must already be active, and personal organizations cannot be
- * transferred. The outgoing owner keeps their membership and Admin rank.
- */
 final readonly class TransferOrganizationOwnership
 {
     public function __construct(
@@ -44,10 +38,9 @@ final readonly class TransferOrganizationOwnership
                 ->where('user_id', $newOwner->id)
                 ->update(['role' => MembershipRole::Admin]);
 
-            // The bulk update fires no model events, so update the projected
-            // role explicitly. Use syncRoles rather than
-            // assignRole: the new owner was a member a line ago, and a promotion
-            // that accumulates leaves them holding both roles.
+            // The bulk update fires no model events, so the role is synced explicitly.
+            // syncRoles, not assignRole, so the promoted member does not keep both
+            // roles.
             $newOwner->syncRoles([OrganizationRole::forRank(MembershipRole::Admin)->value]);
 
             $this->audit->handle($organization->id, AuditAction::OwnershipTransferred, $organization, [

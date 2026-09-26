@@ -11,13 +11,8 @@ use Laravel\Cashier\Http\Controllers\WebhookController;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Stripe's events, delivered over HTTP.
- *
- * Placing the event, guarding its order and keeping what cannot be applied
- * belong to ApplyStripeEvent. This controller only hands it Cashier's handlers
- * and turns the result into what Stripe is told: an event kept rather than
- * applied is still acknowledged, so Stripe stops redelivering it. Other
- * failures return an error so Stripe can deliver them again.
+ * Events kept rather than applied are acknowledged so Stripe stops redelivering; other
+ * failures return an error so Stripe retries.
  */
 final class StripeWebhookController extends WebhookController
 {

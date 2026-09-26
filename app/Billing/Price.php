@@ -6,14 +6,13 @@ namespace App\Billing;
 
 use InvalidArgumentException;
 
-/** A provider-specific way to pay for one plan. */
 final readonly class Price
 {
     /** @var array<string, bool|int|null> */
     public array $allowances;
 
     /**
-     * Amount is expressed in the currency's smallest unit.
+     * Amount in the currency's smallest unit.
      *
      * @param  array<array-key, mixed>  $allowances
      */

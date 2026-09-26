@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * A member capability within the resolved organization.
- *
- * The migration writes its historical catalog literally; the catalog test
- * keeps those rows synchronized with this enum.
+ * The migration writes its catalog literally; a test keeps it in sync with this enum.
  */
 enum Permission: string
 {

@@ -17,22 +17,9 @@ use Impruthvi\CashierEntitlements\Usage\UsageReceipt;
 use LogicException;
 
 /**
- * Create one metered project without a stale allowance read.
- *
- * resolved tenant ──mismatch──▶ CrossTenantAccess (admit does not authorize tenants)
- *        │
- *        ▼
- * admit() ──existing receipt──▶ recover the original project
- *        │
- *        ├─ over effective allowance ──▶ LimitExceeded
- *        │
- *        ▼
- * synchronized transaction: usage event + raw project insert ──▶ commit together
- *
- * The callback deliberately uses the package's Connection rather than Eloquent so
- * the domain row shares admit's transaction. That bypasses model events and the
- * BelongsToOrganization guards, so the tenant comparison happens before admission
- * and every normally event-filled column is supplied explicitly below.
+ * Uses the package connection rather than Eloquent so the project row shares admit()'s
+ * transaction. That bypasses model events and BelongsToOrganization, so the tenant is
+ * compared before admission and every event-filled column is set explicitly.
  */
 final readonly class CreateProject
 {

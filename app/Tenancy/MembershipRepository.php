@@ -11,16 +11,14 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
- * Handles membership lookups that run before an organization is resolved.
- * Both the tenant scope and retrieved guard must stand down for these queries.
+ * Lookups that run before an organization is resolved; both the tenant scope and the
+ * retrieved guard stand down.
  */
 final readonly class MembershipRepository
 {
     public function __construct(private TenantContext $tenant) {}
 
     /**
-     * Every organization the user is an active member of, personal one first.
-     *
      * @return Collection<int, Organization>
      */
     public function organizationsFor(User $user): Collection
@@ -36,9 +34,6 @@ final readonly class MembershipRepository
             ->get());
     }
 
-    /**
-     * The user's active membership of one organization, if there is one.
-     */
     public function activeMembership(User $user, Organization $organization): ?Membership
     {
         return $this->tenant->runWithoutTenant(fn (): ?Membership => Membership::query()
@@ -49,19 +44,12 @@ final readonly class MembershipRepository
             ->first());
     }
 
-    /**
-     * The organization to resolve when the user has not chosen one.
-     *
-     * Prefer the user's personal organization when the session names none.
-     */
     public function defaultFor(User $user): ?Organization
     {
         return $this->organizationsFor($user)->first();
     }
 
     /**
-     * Whether the user still solely owns an organization with other members.
-     *
      * @return Collection<int, Organization>
      */
     public function sharedOrganizationsOwnedBy(User $user): Collection

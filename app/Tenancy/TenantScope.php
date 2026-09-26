@@ -11,9 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 
 /**
- * Constrains every query on a tenant-owned model to the resolved organization.
- *
- * Missing context raises rather than falling back to an unconstrained query.
+ * Raises when no tenant is resolved rather than returning every organization's rows.
  */
 /**
  * @implements Scope<Model>

@@ -12,14 +12,8 @@ use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Session\Session;
 
 /**
- * Sign an operator in as another user, for a bounded and stated purpose.
- *
- * The session is invalidated rather than regenerated. Regenerating keeps every
- * attribute, including the operator's own password confirmation, which would
- * pass the user's "confirm your password" gates. Only the two impersonation keys
- * are written back, so anything nobody thought of is dropped rather than carried.
- * The organization the operator had selected goes with the rest, and the user's
- * default is resolved on the next request.
+ * Invalidated rather than regenerated: regenerate() keeps every attribute, including
+ * the operator's password confirmation. Only the impersonation keys are written back.
  */
 final readonly class StartImpersonation
 {

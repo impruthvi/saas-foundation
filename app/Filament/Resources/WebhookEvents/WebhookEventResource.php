@@ -23,9 +23,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
-/**
- * Every Stripe delivery, including the ones no organization could claim.
- */
 final class WebhookEventResource extends Resource
 {
     protected static ?string $model = WebhookEvent::class;

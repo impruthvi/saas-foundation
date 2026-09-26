@@ -17,8 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Cashier\Billable;
 
 /**
- * The tenant, data owner, subscription holder, and entitlement subject.
- * It is bounded by membership rather than a tenant scope of its own.
+ * Bounded by membership rather than a tenant scope of its own.
  *
  * @property int $id
  * @property string $name
@@ -61,8 +60,6 @@ final class Organization extends Model
     }
 
     /**
-     * The user who owns the organization and is billed for it.
-     *
      * @return BelongsTo<User, $this>
      */
     public function owner(): BelongsTo
@@ -92,11 +89,8 @@ final class Organization extends Model
     }
 
     /**
-     * The address Stripe sends receipts to.
-     *
-     * An organization has no address of its own, and a customer created without
-     * one is identifiable in Stripe only by its key. The owner is loaded rather
-     * than read, because lazy loading raises everywhere in this application.
+     * Organizations have no address of their own, and a customer created without one
+     * gets no receipts. The owner is loaded, not read, because lazy loading raises.
      */
     public function stripeEmail(): string
     {

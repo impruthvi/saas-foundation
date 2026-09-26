@@ -11,12 +11,8 @@ use App\Models\WebhookEvent;
 use App\Tenancy\TenantContext;
 
 /**
- * An organization's subscription as it stands, and every Stripe event about it.
- *
- * Cashier keeps only the current subscription row, so the history is the
- * webhook log for the organization's Stripe customer. The event that wrote the
- * row as it stands now is marked: its Stripe timestamp matches the watermark
- * for its subscription and it was applied.
+ * Cashier keeps only the current row, so the history is the webhook log for the
+ * organization's Stripe customer.
  */
 final readonly class SubscriptionTimeline
 {
@@ -43,7 +39,7 @@ final readonly class SubscriptionTimeline
     }
 
     /**
-     * Newest first, by Stripe's own clock rather than arrival order.
+     * By Stripe's clock, not arrival order.
      *
      * @return array{rows: list<array{id: int, stripe_event_id: string|null, type: string|null, outcome: string, outcome_reason: string|null, applied_at: string|null, deliveries: int, stripe_created_at: int|null, wrote_current_state: bool}>, total: int}
      */

@@ -9,14 +9,7 @@ use App\Models\Subscription;
 use LogicException;
 
 /**
- * Reads an organization's provider-owned subscription facts.
- *
- * Read path:      Organization --subscriptions.items--> Cashier status helpers
- * Lifecycle path: Subscription --owner set by action--> Cashier write helpers
- * Webhook path:   Stripe customer --organization resolved--> Cashier handlers
- *
- * Only the read path belongs here. Its relations are loaded before Cashier can
- * dereference them, because this application forbids lazy loading everywhere.
+ * Loads relations before Cashier dereferences them, because lazy loading is prevented.
  */
 final readonly class BillingFacts
 {

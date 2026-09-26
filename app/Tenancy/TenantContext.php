@@ -11,14 +11,14 @@ use Illuminate\Support\Facades\Context;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Keeps the resolved organization synchronized with queue context and the
- * permission registrar. Clearing all three stores prevents a long-lived worker
- * from authorizing against the previous job's organization.
+ * Clears the organization from context, queue payloads and the permission registrar
+ * together, so a long-lived worker cannot authorize against the previous job's
+ * organization.
  */
 final class TenantContext
 {
     /**
-     * The context key mirrored into queue payloads.
+     * Mirrored into queue payloads.
      */
     public const string KEY = 'tenant.organization_id';
 
@@ -26,17 +26,11 @@ final class TenantContext
 
     private ?Organization $organization = null;
 
-    /**
-     * The resolved organization's key, or null when no tenant is resolved.
-     */
     public function id(): ?int
     {
         return $this->organizationId;
     }
 
-    /**
-     * The resolved organization's key, failing loudly when there is none.
-     */
     public function idOrFail(): int
     {
         return $this->organizationId ?? throw TenantContextMissing::forModel(self::class);
@@ -47,9 +41,6 @@ final class TenantContext
         return $this->organizationId !== null;
     }
 
-    /**
-     * Resolve a tenant for the current unit of work and mirror it into the context.
-     */
     public function setId(int $organizationId): void
     {
         if ($organizationId !== $this->organizationId) {
@@ -63,9 +54,6 @@ final class TenantContext
         $this->resolveAuthorization()->setPermissionsTeamId($organizationId);
     }
 
-    /**
-     * Resolve a tenant from an organization already in hand.
-     */
     public function set(Organization $organization): void
     {
         $this->setId($organization->id);
@@ -73,12 +61,6 @@ final class TenantContext
         $this->organization = $organization;
     }
 
-    /**
-     * The resolved organization, loaded once per unit of work.
-     *
-     * Reads the organizations table, which is not tenant-owned, so no scope is
-     * stood down to answer this.
-     */
     public function current(): ?Organization
     {
         if ($this->organizationId === null) {
@@ -88,9 +70,6 @@ final class TenantContext
         return $this->organization ??= Organization::query()->find($this->organizationId);
     }
 
-    /**
-     * Drop the resolved tenant, including from the mirrored context.
-     */
     public function forget(): void
     {
         $this->organizationId = null;
@@ -102,8 +81,6 @@ final class TenantContext
     }
 
     /**
-     * Run the callback with the given organization resolved, then restore what was there.
-     *
      * @template TReturn
      *
      * @param  Closure(): TReturn  $callback
@@ -123,12 +100,6 @@ final class TenantContext
     }
 
     /**
-     * Run the callback with the given organization resolved, then restore what was there.
-     *
-     * The entry point for work with no ambient tenant of its own: scheduled
-     * commands, webhook processing, and anything else that knows which
-     * organization it is acting for and must not inherit one.
-     *
      * @template TReturn
      *
      * @param  Closure(): TReturn  $callback
@@ -140,12 +111,6 @@ final class TenantContext
     }
 
     /**
-     * Run the callback with no tenant resolved, then restore what was there.
-     *
-     * For work that is legitimately cross-tenant: console commands, the admin
-     * console, and the one membership lookup that answers "which organizations
-     * does this user belong to".
-     *
      * @template TReturn
      *
      * @param  Closure(): TReturn  $callback
@@ -167,13 +132,8 @@ final class TenantContext
     }
 
     /**
-     * The registrar holding the team every role assignment is read against.
-     *
-     * Resolved here rather than injected. The package binds it as a singleton
-     * from its `packageBooted()`, so a constructor argument would be filled by
-     * whatever the container could auto-wire if anything resolved this class
-     * first — a second, unshared registrar, written to here and never read by
-     * the package. Asking for it at call time is always after boot.
+     * Resolved at call time, not injected: the package binds the singleton in
+     * packageBooted(), so early auto-wiring would create a second, unshared registrar.
      */
     private function resolveAuthorization(): PermissionRegistrar
     {

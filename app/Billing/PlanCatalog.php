@@ -115,8 +115,6 @@ final readonly class PlanCatalog
     }
 
     /**
-     * Every declared feature, with a representative allowance of its fixed type.
-     *
      * @return array<string, bool|int|null>
      */
     public function features(): array
