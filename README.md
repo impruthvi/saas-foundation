@@ -19,10 +19,11 @@ tested.** Four claims, and no race to ship the largest feature checklist.
 The definition of done is one journey, which is simultaneously the demo, the
 specification, and an automated end-to-end test:
 
-> Register → a personal organization is created → invite a teammate → subscribe to Pro
-> via Stripe Checkout in test mode → create projects until the plan limit is hit and the
-> upgrade prompt appears → open admin and inspect the resolved entitlement, the usage
-> counter, and the webhook event that set it.
+> Register → a personal organization is created → invite a teammate → create projects
+> until the Free plan's limit refuses one and the upgrade prompt appears → subscribe to
+> Pro through Stripe Checkout in test mode → create the project that was refused → open
+> the admin console and inspect the resolved entitlement, the usage counter, and the
+> Stripe event that set it.
 
 If that journey cannot be demonstrated, the project is not done, regardless of how much
 code exists.
