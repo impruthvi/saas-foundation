@@ -7,13 +7,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Cashier ships this table keyed by `user_id`. It is keyed by `organization_id`
- * here, because Cashier resolves the column name from the configured customer
- * model and because a subscription belonging to a person rather than a tenant is
- * the failure this schema exists to make impossible.
- *
- * Deleting an organization takes its subscription rows with it; a row naming a
- * tenant that no longer exists could never be scoped or answered for.
+ * Keyed by organization_id rather than Cashier's user_id: a subscription belonging to a
+ * person is what this schema makes impossible. Rows go with their organization.
  */
 return new class extends Migration
 {

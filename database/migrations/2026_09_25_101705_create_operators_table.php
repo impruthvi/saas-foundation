@@ -7,11 +7,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The people allowed into the admin console.
- *
- * A table of its own rather than a flag on `users`, so the grant cannot be set
- * through a profile form, and so it leaves with the console when the console is
- * removed.
+ * A table rather than a users flag, so the grant cannot be set through a profile form
+ * and leaves with the console.
  */
 return new class extends Migration
 {

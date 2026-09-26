@@ -7,15 +7,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Billing events this application answered for but could not place against an
- * organization.
- *
- * Stripe stops redelivering once an endpoint answers, so an event dropped here
- * is gone from its side. The whole payload is kept so the work can be replayed
- * after whatever made it unplaceable is fixed.
- *
- * Rows are never updated and carry no organization: not belonging to one is the
- * reason they exist.
+ * Stripe stops redelivering once answered, so the whole payload is kept for replay. No
+ * organization column: not belonging to one is why a row exists.
  */
 return new class extends Migration
 {

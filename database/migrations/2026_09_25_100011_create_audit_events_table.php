@@ -7,11 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Intentional, attributed acts inside an organization, append-only.
- *
- * Rows go when their organization goes: keeping a tenant's history after the
- * tenant is deleted would be a retention promise nothing here has made. An actor
- * who is deleted leaves the row behind with no actor rather than taking it away.
+ * Rows go with their organization; a deleted actor leaves the row with no actor.
  */
 return new class extends Migration
 {

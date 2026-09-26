@@ -8,8 +8,7 @@ use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Billing\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
-// This route stays outside the web group because Stripe sends neither a
-// session nor a CSRF token. The controller resolves its tenant from the event.
+// Outside the web group: Stripe sends neither a session nor a CSRF token.
 Route::post(config('cashier.path', 'stripe').'/webhook', StripeWebhookController::class)
     ->name('cashier.webhook');
 

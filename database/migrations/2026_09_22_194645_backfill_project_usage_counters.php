@@ -60,7 +60,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Usage may advance after deployment, so a rollback cannot safely restore earlier totals.
+        // Usage may advance after deployment, so a rollback cannot safely restore
+        // earlier totals.
     }
 
     private function counterId(string $ownerId, UsagePeriod $period): string
