@@ -13,6 +13,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Stripe\Exception\ApiConnectionException;
+use Stripe\Exception\InvalidRequestException;
 use Stripe\StripeClient;
 use Tests\Support\FakeStripeClient;
 
@@ -169,6 +170,29 @@ it('refuses an organization that is not usable before contacting Stripe', functi
     ))->toThrow(OrganizationNotBillable::class, 'is archived')
         ->and($stripe->customerRequests)->toBeEmpty()
         ->and($stripe->checkoutRequests)->toBeEmpty();
+});
+
+it('says the Stripe account has no price for the plan instead of reporting an outage', function (): void {
+    [$organization, $owner] = organizationOwnedBySomeone();
+    $priceId = resolve(PlanCatalog::class)->findPlan('pro')?->prices[0]->id;
+    $stripe = fakeStripeForCheckout();
+    $stripe->checkoutFailure = InvalidRequestException::factory(
+        "No such price: '{$priceId}'",
+        stripeCode: 'resource_missing',
+        stripeParam: 'line_items[0][price]',
+    );
+
+    $this->actingAs($owner)
+        ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+        ->from(route('organizations.billing.index'))
+        ->post(route('organizations.billing.checkout.store'), [
+            'organization' => $organization->slug,
+            'price' => $priceId,
+        ])
+        ->assertRedirect(route('organizations.billing.index'))
+        ->assertSessionHasErrors([
+            'billing' => 'This Stripe account has no price for this plan yet.',
+        ]);
 });
 
 it('turns a Stripe outage into a recoverable billing error', function (): void {

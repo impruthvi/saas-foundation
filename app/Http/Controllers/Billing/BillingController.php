@@ -8,6 +8,7 @@ use App\Billing\BillingFacts;
 use App\Billing\Plan;
 use App\Billing\PlanCatalog;
 use App\Billing\Price;
+use App\Billing\StripeSecret;
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\Subscription;
@@ -48,6 +49,10 @@ final class BillingController extends Controller
                 'endsAt' => $subscription?->ends_at?->toFormattedDateString(),
             ],
             'canManageBilling' => $request->user()?->can('manage', Subscription::class) ?? false,
+            'stripe' => [
+                'configured' => StripeSecret::configured(),
+                'setupHint' => StripeSecret::setupHint(),
+            ],
         ]);
     }
 

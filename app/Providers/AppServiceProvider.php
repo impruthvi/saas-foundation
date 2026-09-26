@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Audit\AuditActor;
 use App\Billing\Plan;
 use App\Billing\PlanCatalog;
+use App\Billing\StripeWebhookForwarding;
 use App\Console\Commands\ReconcileEntitlementsCommand;
 use App\Contracts\Operators;
 use App\Entitlements\ResolveAllowance;
@@ -62,6 +63,7 @@ final class AppServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([ReconcileEntitlementsCommand::class]);
+            StripeWebhookForwarding::registerDevCommand();
         }
 
         // Console acts have no person behind them; a queued job replaces this with its
