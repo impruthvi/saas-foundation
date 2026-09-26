@@ -316,8 +316,8 @@ If `visit()` is undefined (or the package is not installed), **do not install it
 
 ```bash
 composer require pestphp/pest-plugin-browser --dev   # the browser plugin (needs Node.js)
-bun add --dev playwright@latest                       # Playwright driver
-bunx playwright install                               # download the browser binaries
+npm install playwright@latest                         # Playwright driver
+npx playwright install                                # download the browser binaries
 ```
 
 Once the user approves and it's installed, add `tests/Browser/Screenshots` to `.gitignore` so captured screenshots aren't committed. Browser assertions then run through the same `vendor/bin/pest --agent='…'` flow:
