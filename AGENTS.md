@@ -6,41 +6,72 @@ operations console. Built above Laravel's official starter kits, never duplicati
 
 ## Before writing code here
 
-Read **`docs/README.md`** first. It points at four documents, in order: the domain
-vocabulary (`CONTEXT.md`), the numbered architecture decisions, the inherited-tooling
-audit, and the build plan.
-
 Three things that will otherwise surprise you:
 
 - **The organization is the tenant and the billing subject. Never the user.** A
   subscription belongs to an `Organization`. An architecture test forbids the alternative.
 - **A milestone is done when its segment of the ten-minute journey runs**, not when its
-  code exists. The journey is D8.
-- **The domain vocabulary is fixed.** `CONTEXT.md` lists each term and the words it
-  displaces. Do not introduce synonyms.
+  code exists. The journey is the README demo, the definition of done, and one
+  browser test:
 
-Current state: **M0 through M3 complete.** Organizations, memberships, the personal
-organization created at registration, and the tenant context that reaches queued work
-are all in, with the boundary asserted against queries rather than declarations (D20).
-Invitations are in: expiring, revocable, audited, with eight distinct refusals and a
-second audited way around the tenant scope for the token lookup (D27). So is
-tenant-scoped RBAC on `spatie/laravel-permission`, with member removal and role changes
-on the members screen (D29-D31). M4 (Cashier on the organization) is next.
+    > Register → a personal organization is created → invite a teammate → create projects
+    > until the Free plan's limit refuses one and the upgrade prompt appears → subscribe to
+    > Pro through Stripe Checkout in test mode → create the project that was refused → open
+    > the admin console and inspect the resolved entitlement, the usage counter, and the
+    > Stripe event that set it.
 
-Four traps these milestones left behind, all load-bearing:
+- **The domain vocabulary is fixed.** Use the terms below and never the words they
+  displace, in code, tests, copy and commit messages.
+
+Current state: **M0 through M6 complete.** Organizations, invitations, tenant-scoped
+RBAC, Cashier on the organization, entitlements with the `projects` limit, and the
+removable Filament admin console are all in. M7 (`saas:demo`, the journey as one browser
+test, the README, agent discoverability) is in progress.
+
+Four traps, all load-bearing:
 
 - Any test that resolves an invitation by token, or any queued job carrying a
   tenant-owned model, trips the suite-wide query guard and must say so with
   `throughTheAuditedDoor()` or `TenantQueryGuard::allowUnscoped()`. Closing an account
   does too, through `whileClosingAnAccount()`.
 - `bootstrap/app.php` owns the web middleware order, because binding a tenant-owned
-  model has to happen after the tenant is resolved (D28).
+  model has to happen after the tenant is resolved.
 - **Permissions are asked with `hasPermissionTo()`, never `can('some.permission')`.**
-  D29 turns off the package's gate hook, so the latter is false for everybody. `can()`
-  with a policy ability is unaffected.
-- A membership's **rank** and its RBAC **role** are different words for different things
-  (`CONTEXT.md`). Rank is written; the role is derived from it and never written alone
-  (D31).
+  The permission package's gate hook is turned off, so the latter is false for
+  everybody. `can()` with a policy ability is unaffected.
+- A membership's **rank** and its RBAC **role** are different words for different
+  things. Rank is written; the role is derived from it and never written alone.
+
+## Vocabulary
+
+| Term                    | Meaning                                                                                      | Avoid                                           |
+| ----------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **Organization**        | The tenant. Owns data, holds the subscription, is the subject of every entitlement question. | team, workspace (UI copy only), account, tenant |
+| **Membership**          | The link between a user and an organization, carrying rank and status.                       | team member, seat (a seat is a billed quantity) |
+| **Rank**                | What a membership says a person is: Admin or Member. Ownership is `organizations.owner_id`.  | role, level, tier                               |
+| **Role**                | A named bundle of permissions inside one organization. Derived from rank.                    | group, rank                                     |
+| **User**                | A human identity. Never the subject of billing or entitlements.                              | account, customer                               |
+| **Plan**                | A named commercial offering that grants allowances. Application-owned.                       | tier, package, product                          |
+| **Price**               | A provider-specific way to pay for a plan.                                                   | plan id, SKU                                    |
+| **Subscription**        | An organization's ongoing relationship to a plan, as last reported by the provider.          | membership, plan                                |
+| **Billing fact**        | Something the provider asserts. An input to resolution, never the answer.                    | subscription status, Stripe state               |
+| **Feature**             | A stable application capability key, such as `projects`.                                     | permission, flag, capability                    |
+| **Entitlement**         | What an organization may do with a feature right now: the resolved answer.                   | subscription feature, plan feature              |
+| **Allowance**           | The value an entitlement resolves to: a boolean, or a number.                                | quota, grant                                    |
+| **Limit**               | A numeric allowance.                                                                         | cap, max, quota                                 |
+| **Override**            | A time-bound, reasoned, audited adjustment to one organization's allowance.                  | exception, grandfather, custom plan             |
+| **Usage meter**         | A named counter of consumption in a period.                                                  | usage record, counter (alone), metric           |
+| **Usage period**        | The window a meter counts within. Rollover starts a new count.                               | cycle, month, billing period                    |
+| **Increment**           | One idempotent addition to a meter, with a caller-supplied key.                              | usage event, tick, report                       |
+| **Remaining**           | Limit minus usage for the current period.                                                    | available, left, balance                        |
+| **Resolution**          | Computing an entitlement locally. Never calls the provider.                                  | check, evaluation, lookup                       |
+| **Reconciliation**      | Bringing local entitlements into agreement with provider billing facts, in background work.  | replay, local recomputation                     |
+| **Webhook event**       | One Stripe delivery as received, with its outcome.                                           | webhook log, event (alone), failed event        |
+| **Audit event**         | One intentional, attributed act that changed access or billing. Append-only.                 | activity, log entry, history                    |
+| **Operator**            | A person allowed into the admin console. Unrelated to any organization.                      | admin (that is a rank), superuser, staff        |
+| **Admin console**       | The removable Filament panel operators use. Screens only, no business rules.                 | admin panel, backoffice, dashboard              |
+| **Organization lookup** | Finding an organization by name, slug, Stripe customer id, or a member's address.            | customer lookup                                 |
+| **Impersonation**       | A bounded, reasoned period in which an operator acts as a user.                              | login as, sudo, masquerade                      |
 
 <!-- Everything below this line is generated by Laravel Boost. Run `php artisan
      boost:update` to refresh it; content outside the tags is preserved. -->
