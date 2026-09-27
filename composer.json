@@ -85,11 +85,13 @@
             "bun run lint:check",
             "bun run format:check",
             "bun run types:check",
+            "@llms:check",
             "@test:billing",
             "@test:committed",
             "@test:concurrency",
             "@test"
         ],
+        "llms:check": "@php scripts/build-llms.php --check",
         "types:check": [
             "phpstan analyse"
         ],
