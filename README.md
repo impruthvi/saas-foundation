@@ -6,8 +6,9 @@ operations console.
 
 Built **above** Laravel's official starter kits, never duplicating them.
 
-> **Status: pre-alpha.** Every milestone of V1 runs and is tested, but there is no tagged
-> release yet, and nothing here is ready to depend on in production.
+> **Status: v0.1.0, pre-1.0.** Every milestone of V1 runs and is tested. Until 1.0, a minor
+> version may break things, and the [changelog](CHANGELOG.md) says what. Drop `#v0.1.0` from
+> the install command to try `main` instead.
 
 ## The ten-minute journey
 
@@ -32,14 +33,14 @@ You need PHP 8.4+, Composer, Bun 1.3+ and Node 22+, a free
 [Stripe CLI](https://docs.stripe.com/stripe-cli) for webhooks on your machine.
 
 ```bash
-laravel new my-app --using=https://github.com/impruthvi/saas-foundation --bun
+laravel new my-app --using=https://github.com/impruthvi/saas-foundation#v0.1.0 --bun
 cd my-app
 php artisan saas:demo
 php artisan saas:stripe sk_test_YOUR_KEY
 composer dev
 ```
 
-- **`laravel new … --using=<GitHub URL>`** downloads the kit, creates a SQLite database,
+- **`laravel new … --using=<GitHub URL>#v0.1.0`** downloads the tagged release, creates a SQLite database,
   runs the migrations and builds the frontend. Use the URL form: the kit is deliberately
   not on Packagist, so `--using=impruthvi/saas-foundation` will not find it.
 - **`saas:demo`** seeds the journey up to the Free plan's limit: Ada owns an organization
