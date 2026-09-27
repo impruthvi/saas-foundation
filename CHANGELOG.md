@@ -106,6 +106,17 @@ be listed here under **Changed** or **Removed**.
 
 ### Fixed
 
+- **A reset database or a second install inherited another's Stripe customer.** Customer
+  and checkout idempotency keys were built from the organization id alone, and Stripe
+  replays a key for 24 hours across the whole account. They now name the organization in
+  this database.
+- **The installer path broke outside a terminal.** The Laravel installer appends
+  `--no-ansi` to every command it runs there, which made the post-create hook exit and
+  Vite refuse to build while the installer still reported success. Both now pass such
+  flags through harmlessly.
+- **A manual entitlement refresh hid the Stripe event behind the plan.** The admin
+  console now shows the event that set the plan separately from whatever asked for the
+  latest refresh.
 - **Route model binding on a tenant-owned model returned 500.** `SubstituteBindings` ran
   ahead of `ResolveTenantContext`, so binding queried the model before an organization
   was resolved and the global scope raised. It now runs after the tenant resolver, and a

@@ -23,10 +23,11 @@ Three things that will otherwise surprise you:
 - **The domain vocabulary is fixed.** Use the terms below and never the words they
   displace, in code, tests, copy and commit messages.
 
-Current state: **M0 through M6 complete.** Organizations, invitations, tenant-scoped
-RBAC, Cashier on the organization, entitlements with the `projects` limit, and the
-removable Filament admin console are all in. M7 (`saas:demo`, the journey as one browser
-test, the README, agent discoverability) is in progress.
+Current state: **M0 through M7 complete (V1).** Organizations, invitations, tenant-scoped
+RBAC, Cashier on the organization, entitlements with the `projects` limit, the removable
+Filament admin console, and the journey itself: `saas:demo`, `saas:stripe`, installation
+through the Laravel installer, and one browser test. Open work is tracked as GitHub
+issues.
 
 Four traps, all load-bearing:
 
