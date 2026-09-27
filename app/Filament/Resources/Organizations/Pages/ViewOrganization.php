@@ -43,6 +43,11 @@ final class ViewOrganization extends ViewRecord
      */
     private ?array $subscription = null;
 
+    /**
+     * @var array{stripe_event_id: string|null, type: string|null, applied_at: string|null}|false|null
+     */
+    private array|false|null $planSetBy = false;
+
     public function infolist(Schema $schema): Schema
     {
         return $schema->components([
@@ -79,8 +84,14 @@ final class ViewOrganization extends ViewRecord
                             TextEntry::make('source')->badge(),
                             TextEntry::make('usage')->placeholder('Not metered'),
                         ]),
+                    TextEntry::make('plan_set_by')
+                        ->label('Plan set by')
+                        ->placeholder('No Stripe event has changed the subscription')
+                        ->state(fn (): ?string => ($event = $this->planSetBy()) === null
+                            ? null
+                            : ($event['type'] ?? 'Unrecorded event').' · '.$event['stripe_event_id']),
                     TextEntry::make('trigger')
-                        ->label('Set by')
+                        ->label('Last refresh requested by')
                         ->state(fn (): string => match ($this->inspection()['trigger']['kind']) {
                             'never' => 'Never refreshed',
                             'pending' => 'A refresh is waiting to run',
@@ -169,6 +180,18 @@ final class ViewOrganization extends ViewRecord
     private function inspection(): array
     {
         return $this->inspection ??= resolve(InspectEntitlements::class)->for($this->record);
+    }
+
+    /**
+     * @return array{stripe_event_id: string|null, type: string|null, applied_at: string|null}|null
+     */
+    private function planSetBy(): ?array
+    {
+        if ($this->planSetBy === false) {
+            $this->planSetBy = resolve(SubscriptionTimeline::class)->currentStateEvent($this->record);
+        }
+
+        return $this->planSetBy;
     }
 
     /**

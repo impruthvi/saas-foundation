@@ -15,6 +15,8 @@ use App\Models\User;
 use App\Models\WebhookEvent;
 use App\Operations\OrganizationActivity;
 use App\Operations\SubscriptionTimeline;
+use Illuminate\Support\Facades\Date;
+use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
 use Tests\Support\StripeWebhook;
 
 it('lists members with the owner marked', function (): void {
@@ -73,6 +75,27 @@ it('shows the organization Stripe events newest first and marks the one behind t
         ->and(array_column($events['rows'], 'stripe_event_id'))->toBe(['evt_updated', 'evt_stale', 'evt_subscription_created'])
         ->and(array_column($events['rows'], 'wrote_current_state'))->toBe([true, false, false])
         ->and($events['rows'][1]['outcome'])->toBe(WebhookOutcome::Superseded->value);
+});
+
+it('names the event that wrote the current subscription, whatever asked for a refresh since', function (): void {
+    config(['cashier.webhook.secret' => StripeWebhook::SECRET]);
+    $organization = Organization::factory()->create(['stripe_id' => 'cus_acme']);
+    StripeWebhook::post(StripeWebhook::subscriptionPayload(created: 1_000))->assertOk();
+    StripeWebhook::post(StripeWebhook::subscriptionPayload(eventId: 'evt_updated', type: 'customer.subscription.updated', created: 2_000))->assertOk();
+    StripeWebhook::post(StripeWebhook::subscriptionPayload(eventId: 'evt_stale', type: 'customer.subscription.updated', created: 1_500))->assertOk();
+    resolve(NativeStateStore::class)->request(organizationEntitlementOwner($organization), Date::now()->toDateTimeImmutable());
+
+    expect(resolve(SubscriptionTimeline::class)->currentStateEvent($organization))
+        ->stripe_event_id->toBe('evt_updated')
+        ->type->toBe('customer.subscription.updated')
+        ->applied_at->not->toBeNull();
+});
+
+it('names no event when Stripe has never changed the subscription', function (): void {
+    $timeline = resolve(SubscriptionTimeline::class);
+
+    expect($timeline->currentStateEvent(Organization::factory()->create()))->toBeNull()
+        ->and($timeline->currentStateEvent(Organization::factory()->create(['stripe_id' => 'cus_quiet'])))->toBeNull();
 });
 
 it('shows no events for an organization Stripe has never seen', function (): void {
