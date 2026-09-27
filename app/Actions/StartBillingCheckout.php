@@ -111,7 +111,7 @@ final readonly class StartBillingCheckout
 
     private function customerIdempotencyKey(Organization $organization): string
     {
-        return "billing:customer:organization:{$organization->getKey()}";
+        return "billing:customer:organization:{$this->organizationReference($organization)}";
     }
 
     private function checkoutIdempotencyKey(Organization $organization, Price $price): string
@@ -119,6 +119,20 @@ final readonly class StartBillingCheckout
         $priceKey = mb_substr(hash('sha256', $price->id), 0, 24);
         $hour = now()->utc()->format('YmdH');
 
-        return "billing:checkout:organization:{$organization->getKey()}:price:{$priceKey}:hour:{$hour}";
+        return "billing:checkout:organization:{$this->organizationReference($organization)}:price:{$priceKey}:hour:{$hour}";
+    }
+
+    /**
+     * Stripe replays an idempotency key for 24 hours across the whole account, so the key
+     * names this organization in this database rather than its id alone. Otherwise a reset
+     * database, or another install on the same account, is handed this one's customer.
+     */
+    private function organizationReference(Organization $organization): string
+    {
+        return mb_substr(hash('sha256', implode('|', [
+            config()->string('app.key'),
+            $organization->getKey(),
+            $organization->created_at?->getTimestamp(),
+        ])), 0, 32);
     }
 }

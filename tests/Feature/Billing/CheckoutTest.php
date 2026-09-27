@@ -48,7 +48,7 @@ it('starts checkout for a catalog price and leaves the Inertia application', fun
             'email' => $owner->email,
         ])
         ->and($stripe->customerRequests[0]['options']['idempotency_key'])
-        ->toBe("billing:customer:organization:{$organization->id}")
+        ->toMatch('/^billing:customer:organization:[0-9a-f]{32}$/')
         ->and($stripe->checkoutRequests)->toHaveCount(1)
         ->and($stripe->checkoutRequests[0]['parameters'])->toMatchArray([
             'customer' => 'cus_test_1',
