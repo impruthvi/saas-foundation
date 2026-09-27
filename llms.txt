@@ -1,6 +1,6 @@
 # Laravel SaaS Foundation
 
-> An MIT Laravel starter kit that sits above the official Vue starter kit: organizations as the tenant and billing boundary, tenant-scoped roles, Stripe subscriptions through Cashier on the organization, entitlements with a server-enforced usage limit, and a removable Filament operations console. Install with `laravel new my-app --using=https://github.com/impruthvi/saas-foundation`, then `php artisan saas:demo`.
+> An MIT Laravel starter kit that sits above the official Vue starter kit: organizations as the tenant and billing boundary, tenant-scoped roles, Stripe subscriptions through Cashier on the organization, entitlements with a server-enforced usage limit, and a removable Filament operations console. Install with `laravel new my-app --using=https://github.com/impruthvi/saas-foundation#v0.1.0`, then `php artisan saas:demo`.
 
 ## Docs
 

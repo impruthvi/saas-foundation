@@ -2,7 +2,8 @@
 
 ## Supported versions
 
-There is no tagged release yet. Until there is, only the `main` branch is supported.
+Fixes land on `main` and in the next release. Only the latest release is supported, currently
+`v0.1.0`; older releases do not receive fixes.
 
 ## Reporting a vulnerability
 

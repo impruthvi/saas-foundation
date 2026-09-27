@@ -10,6 +10,8 @@ be listed here under **Changed** or **Removed**.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-27
+
 ### Added
 
 - **The journey, runnable (M7).** `laravel new my-app --using=https://github.com/impruthvi/saas-foundation`
@@ -129,4 +131,5 @@ be listed here under **Changed** or **Removed**.
 - The generated `_ide_helper.php` is no longer tracked. Regenerate it locally with
   `php artisan ide-helper:generate`.
 
-[Unreleased]: https://github.com/impruthvi/saas-foundation/commits/main
+[Unreleased]: https://github.com/impruthvi/saas-foundation/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/impruthvi/saas-foundation/releases/tag/v0.1.0
