@@ -49,10 +49,7 @@ final readonly class SubscriptionTimeline
             return ['rows' => [], 'total' => 0];
         }
 
-        $watermarks = $this->tenant->runFor(
-            $organization,
-            fn (): array => SubscriptionEventWatermark::query()->pluck('event_created_at', 'stripe_id')->all(),
-        );
+        $watermarks = $this->watermarks($organization);
 
         $events = WebhookEvent::query()
             ->where('stripe_customer_id', $organization->stripe_id)
@@ -64,6 +61,61 @@ final readonly class SubscriptionTimeline
             'rows' => array_values(array_map(fn (WebhookEvent $event): array => $this->present($event, $watermarks), $events->items())),
             'total' => $events->total(),
         ];
+    }
+
+    /**
+     * The Stripe event that wrote the subscription as it stands now, whatever has asked
+     * for an entitlement refresh since.
+     *
+     * @return array{stripe_event_id: string|null, type: string|null, applied_at: string|null}|null
+     */
+    public function currentStateEvent(Organization $organization): ?array
+    {
+        if ($organization->stripe_id === null) {
+            return null;
+        }
+
+        $watermarks = $this->watermarks($organization);
+
+        if ($watermarks === []) {
+            return null;
+        }
+
+        $event = WebhookEvent::query()
+            ->where('stripe_customer_id', $organization->stripe_id)
+            ->whereNotNull('applied_at')
+            ->whereIn('stripe_object_id', array_keys($watermarks))
+            ->latest('stripe_created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->first(fn (WebhookEvent $event): bool => $this->wroteCurrentState($event, $watermarks));
+
+        return $event instanceof WebhookEvent ? [
+            'stripe_event_id' => $event->stripe_event_id,
+            'type' => $event->type,
+            'applied_at' => $event->applied_at?->toIso8601String(),
+        ] : null;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function watermarks(Organization $organization): array
+    {
+        return $this->tenant->runFor(
+            $organization,
+            fn (): array => SubscriptionEventWatermark::query()->pluck('event_created_at', 'stripe_id')->all(),
+        );
+    }
+
+    /**
+     * @param  array<string, int>  $watermarks
+     */
+    private function wroteCurrentState(WebhookEvent $event, array $watermarks): bool
+    {
+        return $event->applied_at !== null
+            && $event->stripe_object_id !== null
+            && ($watermarks[$event->stripe_object_id] ?? null) === $event->stripe_created_at;
     }
 
     /**
@@ -81,9 +133,7 @@ final readonly class SubscriptionTimeline
             'applied_at' => $event->applied_at?->toIso8601String(),
             'deliveries' => $event->deliveries,
             'stripe_created_at' => $event->stripe_created_at,
-            'wrote_current_state' => $event->applied_at !== null
-                && $event->stripe_object_id !== null
-                && ($watermarks[$event->stripe_object_id] ?? null) === $event->stripe_created_at,
+            'wrote_current_state' => $this->wroteCurrentState($event, $watermarks),
         ];
     }
 }

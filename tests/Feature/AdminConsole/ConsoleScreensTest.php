@@ -23,9 +23,12 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
 use Impruthvi\CashierEntitlements\Jobs\RefreshOwner;
+use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
 use Livewire\Livewire;
+use Tests\Support\StripeWebhook;
 
 beforeEach(function (): void {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
@@ -124,6 +127,20 @@ it('requests an entitlement refresh from the organization page', function (): vo
         ->assertNotified('Refresh requested');
 
     Bus::assertDispatched(RefreshOwner::class);
+});
+
+it('names the Stripe event that set the plan after an operator refresh', function (): void {
+    operatorWithAnOrganizationOfTheirOwn();
+    config(['cashier.webhook.secret' => StripeWebhook::SECRET]);
+    [$customer] = organizationOwnedBySomeone('Customer');
+    $customer->forceFill(['stripe_id' => 'cus_acme'])->save();
+    StripeWebhook::post(StripeWebhook::subscriptionPayload(created: 1_000))->assertOk();
+    resolve(NativeStateStore::class)->request(organizationEntitlementOwner($customer), Date::now()->toDateTimeImmutable());
+
+    Livewire::test(ViewOrganization::class, ['record' => $customer->getRouteKey()])
+        ->assertSee('Plan set by')
+        ->assertSee('customer.subscription.created · evt_subscription_created')
+        ->assertSee('Last refresh requested by');
 });
 
 it('starts an impersonation from the user page and lands in the product as that user', function (): void {
