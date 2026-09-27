@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
-    BookOpen,
     CreditCard,
-    FolderGit2,
     FolderKanban,
     LayoutGrid,
     ShieldCheck,
@@ -67,16 +65,6 @@ const footerNavItems = computed<NavItem[]>(() => [
               },
           ]
         : []),
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
 ]);
 </script>
 
