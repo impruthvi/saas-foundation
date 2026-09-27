@@ -6,7 +6,7 @@ operations console.
 
 Built **above** Laravel's official starter kits, never duplicating them.
 
-> **Status: pre-alpha.** Every milestone below runs and is tested, but there is no tagged
+> **Status: pre-alpha.** Every milestone of V1 runs and is tested, but there is no tagged
 > release yet, and nothing here is ready to depend on in production.
 
 ## The ten-minute journey
@@ -21,7 +21,9 @@ specification, and an automated browser test (`tests/Committed/JourneyTest.php`)
 > the admin console and inspect the resolved entitlement, the usage counter, and the
 > Stripe event that set it.
 
-Timed on a clean machine: _not measured yet_.
+Timed on 27 September 2026: **about six minutes** from `laravel new` to the refused project
+existing, on a developer machine with the prerequisites already installed and Composer's
+and Bun's download caches warm. A cold machine will spend longer in `laravel new`.
 
 ## Try it
 
@@ -91,16 +93,16 @@ out, and CI runs the whole suite without it on every push.
 
 ## Progress
 
-| Milestone                                              | State     |
-| ------------------------------------------------------ | --------- |
-| M0 — Skeleton, inherited-tooling audit, governance, CI | **Done**  |
-| M1 — Organizations, memberships, tenant context        | **Done**  |
-| M2 — Invitations                                       | **Done**  |
-| M3 — Tenant-scoped RBAC                                | **Done**  |
-| M4 — Cashier on the organization, Stripe Checkout      | **Done**  |
-| M5 — Entitlements, usage, the plan limit               | **Done**  |
-| M6 — Filament admin and operations                     | **Done**  |
-| M7 — `saas:demo`, the journey as one test              | In review |
+| Milestone                                              | State    |
+| ------------------------------------------------------ | -------- |
+| M0 — Skeleton, inherited-tooling audit, governance, CI | **Done** |
+| M1 — Organizations, memberships, tenant context        | **Done** |
+| M2 — Invitations                                       | **Done** |
+| M3 — Tenant-scoped RBAC                                | **Done** |
+| M4 — Cashier on the organization, Stripe Checkout      | **Done** |
+| M5 — Entitlements, usage, the plan limit               | **Done** |
+| M6 — Filament admin and operations                     | **Done** |
+| M7 — `saas:demo`, the journey as one test              | **Done** |
 
 A milestone is done when its segment of the journey runs, not when its code exists.
 
