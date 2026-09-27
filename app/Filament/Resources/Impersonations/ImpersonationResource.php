@@ -14,9 +14,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-/**
- * Every time an operator acted as a user, and how it ended. Read-only.
- */
 final class ImpersonationResource extends Resource
 {
     protected static ?string $model = Impersonation::class;

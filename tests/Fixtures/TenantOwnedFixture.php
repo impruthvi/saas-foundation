@@ -11,11 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\WithoutTimestamps;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * A minimal tenant-owned model, so the boundary can be asserted on its own terms.
- *
- * It exists because the boundary is written before the models it protects, and
- * because a test that pins the rule to `Project` would be re-asserting `Project`
- * rather than the rule.
+ * Lets the boundary be asserted on its own terms rather than re-asserting Project.
  *
  * @property int $id
  * @property int $organization_id

@@ -7,22 +7,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * An offer of membership, made to an email address rather than to a user.
- *
- * The address is the subject because the invitee usually has no account yet;
- * that is the whole reason the flow exists. `user_id` appears only once the
- * offer is taken, as `accepted_by_user_id`.
- *
- * `token_hash` is unique and carries no companion index — the unique constraint
- * is the index. The column holds a sha-256 digest, never the token itself: a
- * readable token column is a password column nobody calls one, and read access
- * to this table would otherwise be membership of every organization with a live
- * invitation.
- *
- * `(organization_id, email)` is unique, so an address has at most one
- * invitation per organization and re-inviting rotates that row. The tempting
- * alternative, a partial unique index over pending rows only, is not portable
- * across the supported databases.
+ * token_hash holds a sha-256 digest, never the token: read access to a plaintext column
+ * would be membership of every organization with a live invitation. (organization_id,
+ * email) is unique, so re-inviting rotates the row; a partial unique index over pending
+ * rows is not portable.
  */
 return new class extends Migration
 {
@@ -37,8 +25,8 @@ return new class extends Migration
             $table->string('status');
             $table->timestamp('expires_at');
 
-            // The inviter is history, not a dependency: deleting their account
-            // must not delete an invitation somebody is about to accept.
+            // Deleting the inviter must not delete an invitation somebody is about to
+            // accept.
             $table->foreignId('invited_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('accepted_at')->nullable();
             $table->foreignId('accepted_by_user_id')->nullable()->constrained('users')->nullOnDelete();
@@ -48,8 +36,7 @@ return new class extends Migration
 
             $table->unique(['organization_id', 'email']);
 
-            // The members screen lists one organization's pending invitations,
-            // newest first. Every other read arrives by token.
+            // Serves the members screen; every other read arrives by token.
             $table->index(['organization_id', 'status']);
         });
     }

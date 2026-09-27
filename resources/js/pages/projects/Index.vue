@@ -23,6 +23,7 @@ defineOptions({
 const props = defineProps<{
     projects: Paginated<Project>;
     allowance: ProjectAllowance;
+    planChangePending: boolean;
     canCreate: boolean;
     accessEndsAt: string | null;
 }>();
@@ -66,8 +67,17 @@ function allowanceLabel(allowance: ProjectAllowance): string {
             </AlertDescription>
         </Alert>
 
+        <Alert v-if="planChangePending">
+            <Clock3 class="size-4" />
+            <AlertTitle>Your plan change is being applied.</AlertTitle>
+            <AlertDescription>
+                The new allowance shows here once it is confirmed. Refresh the
+                page in a moment.
+            </AlertDescription>
+        </Alert>
+
         <ProjectLimitPrompt
-            v-if="allowance.remaining === 0"
+            v-else-if="allowance.remaining === 0"
             :allowance="allowance"
         />
 

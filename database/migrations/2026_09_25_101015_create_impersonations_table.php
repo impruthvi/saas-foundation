@@ -7,11 +7,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Periods in which an operator acted as a user.
- *
- * A platform record, not a tenant one: a user belongs to several organizations
- * and an impersonation moves between them. Rows outlive both people so the
- * history stays readable after an account is closed.
+ * A platform record: an impersonation spans a user's organizations, and rows outlive
+ * both people.
  */
 return new class extends Migration
 {

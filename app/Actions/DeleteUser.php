@@ -16,13 +16,6 @@ use Closure;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 
-/**
- * Deletes a user account without orphaning anything that belongs to it.
- *
- * Shared organizations require ownership transfer first. The permission
- * package temporarily disables team scoping while revoking cross-team grants,
- * so this action restores the previous setting even when deletion fails.
- */
 final readonly class DeleteUser
 {
     public function __construct(
@@ -61,12 +54,8 @@ final readonly class DeleteUser
     }
 
     /**
-     * Run the deletion, and leave team scoping however it was found.
-     *
-     * The package's `deleting` hook disables it for the duration of its
-     * cross-team detach. This restores it even when that detach raises, so a
-     * failed account deletion cannot quietly widen authorization for every
-     * request the process serves afterwards.
+     * Restores team scoping even when the package's cross-team detach throws, so a
+     * failed deletion cannot widen authorization for later requests.
      */
     private function keepingTeamScopingOn(Closure $work): void
     {

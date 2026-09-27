@@ -6,5 +6,4 @@ namespace App\Exceptions\Invitations;
 
 use RuntimeException;
 
-/** Groups distinct invitation refusals behind one catchable domain exception. */
 abstract class InvitationRefused extends RuntimeException {}

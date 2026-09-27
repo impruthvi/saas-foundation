@@ -58,10 +58,8 @@ final class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        // Someone who arrived holding an invitation registers against the address
-        // it names, and nothing else: the token is spent on the way through, and
-        // a mismatch would drop it silently. So the address is supplied here and
-        // the field is locked rather than merely pre-filled.
+        // The address is locked, not pre-filled: the token is spent on registration and
+        // a different address would drop it silently.
         Fortify::registerView(fn (Request $request) => Inertia::render('auth/Register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
             'invitation' => fn (): ?array => $this->pendingInvitation($request),
@@ -88,12 +86,7 @@ final class FortifyServiceProvider extends ServiceProvider
     }
 
     /**
-     * The invitation whose token this visitor is carrying, if any.
-     *
-     * The visitor is unauthenticated, so there is no tenant to scope the lookup
-     * by. A token that no longer
-     * resolves, or an invitation that has lapsed, simply produces nothing — the
-     * register form then behaves normally rather than refusing to load.
+     * A token that no longer resolves produces nothing, so the form behaves normally.
      *
      * @return array{email: string, organization: string}|null
      */

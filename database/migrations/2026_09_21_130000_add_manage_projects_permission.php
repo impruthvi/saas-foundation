@@ -7,15 +7,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The permission to create and manage projects, granted to both built-in roles.
- *
- * A plain member holds it as well as an administrator: projects are the work
- * the product exists for, and how many an organization may have is a question
- * for its plan rather than for its roles.
- *
- * Values are literal here for the same reason the catalog migration's are: this
- * file records what the database was given on this date, and must keep saying so
- * after the enums move on.
+ * Granted to both roles: how many projects an organization may have is its plan's
+ * question, not its roles'. Values are literal so this migration keeps recording what
+ * it gave.
  */
 return new class extends Migration
 {

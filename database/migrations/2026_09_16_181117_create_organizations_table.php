@@ -7,8 +7,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * `owner_id` is the single ownership fact and restricts deletion so an
- * organization cannot be orphaned below the application layer.
+ * owner_id restricts deletion so an organization cannot be orphaned below the
+ * application.
  */
 return new class extends Migration
 {

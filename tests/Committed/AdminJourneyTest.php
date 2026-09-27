@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Actions\CreateProject;
-use App\Billing\PlanCatalog;
 use App\Models\Operator;
 use App\Models\User;
 use App\Providers\Filament\AdminConsoleServiceProvider;
@@ -14,12 +13,7 @@ use Tests\Support\FakeStripeClient;
 use Tests\Support\StripeWebhook;
 
 /**
- * Ab1: the last clause of the ten-minute journey.
- *
- * An organization subscribes to Pro, Stripe says so by webhook, and an operator
- * opens the organization in the console to find the entitlement that resulted,
- * the usage against it, and the Stripe event that set it. It lives in the
- * committed lane because the entitlement only moves after a refresh, and a
+ * In the committed lane because the entitlement only moves after a refresh, and a
  * refresh refuses to run inside a transaction.
  */
 beforeEach(function (): void {
@@ -41,18 +35,7 @@ it('shows an operator the entitlement, the usage and the Stripe event that set i
         resolve(CreateProject::class)->handle($organization, 'Pricing page revamp', 'admin-journey-two');
     });
 
-    $this->provider->withActiveSubscription(
-        'cus_journey',
-        (string) resolve(PlanCatalog::class)->findPlan('pro')?->prices[0]->id,
-        'sub_journey',
-    );
-
-    acrossEveryOwner(fn () => StripeWebhook::post(StripeWebhook::subscriptionPayload(
-        customerId: 'cus_journey',
-        created: 1_000,
-        subscriptionId: 'sub_journey',
-        itemId: 'si_journey',
-    ))->assertOk());
+    StripeWebhook::reportSubscription($this->provider, 'cus_journey', 'sub_journey', 'si_journey');
 
     $operator = User::factory()->create(['name' => 'Carol Operator']);
     Operator::factory()->create(['user_id' => $operator->id]);

@@ -16,8 +16,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A bounded, reasoned period in which an operator acts as a user.
- *
  * @property int $id
  * @property int|null $operator_id
  * @property int|null $user_id
@@ -51,10 +49,7 @@ final class Impersonation extends Model
     public const string IMPERSONATOR_SESSION_KEY = 'impersonator_id';
 
     /**
-     * The live impersonation this session claims, if the claim still holds.
-     *
-     * A session naming a row that has ended, or naming an operator the row does
-     * not, is treated as holding nothing.
+     * A session naming an ended row, or another operator's row, holds nothing.
      */
     public static function liveIn(Session $session): ?self
     {

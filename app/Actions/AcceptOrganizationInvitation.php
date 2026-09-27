@@ -22,11 +22,9 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Turns an offer into a membership, for the person it was addressed to.
- *
- * The invitation is resolved before its tenant is known, so every write runs
- * inside the invitation's organization. A row lock serializes concurrent
- * accepts; the unique-constraint catch remains a final safety net.
+ * Resolved before its tenant is known, so every write runs inside the invitation's
+ * organization. A row lock serializes concurrent accepts; the unique-constraint catch
+ * is the last safety net.
  */
 final readonly class AcceptOrganizationInvitation
 {
@@ -47,17 +45,8 @@ final readonly class AcceptOrganizationInvitation
     }
 
     /**
-     * Every reason this invitation cannot be taken by this person.
-     *
-     * Ordered by what the recipient most needs to hear: the invitation's own
-     * state first, then whether it is theirs, then whether the organization is
-     * still open. Each reason is a distinct class, because "too late", "not for
-     * you" and "not right now" are three different answers and collapsing them
-     * into one would lose information the recipient needs.
-     *
-     * Public because the accept screen asks the same question without acting on
-     * the answer: it renders the reason instead of throwing it. One ladder, so
-     * the screen and the endpoint cannot drift apart about why.
+     * Public so the accept screen can render the refusal instead of throwing it, from
+     * the same ladder the endpoint uses.
      *
      * @throws InvitationRefused
      */
@@ -86,11 +75,7 @@ final readonly class AcceptOrganizationInvitation
     }
 
     /**
-     * The organization, loaded by key rather than through the relation.
-     *
-     * `organizations` is not tenant-owned, so this needs no scope standing down;
-     * it is a query rather than `$invitation->organization` because lazy loading
-     * is prevented application-wide and this runs with no tenant resolved.
+     * Queried by key: lazy loading is prevented and no tenant is resolved here.
      */
     private function organizationOf(Invitation $invitation): Organization
     {

@@ -64,9 +64,8 @@ it('keeps a permission granted directly to one organization out of the other', f
 });
 
 it('refuses over HTTP in the organization the session switched to', function (): void {
-    // Delivery is faked: the mailable carries the invitation, and restoring a
-    // tenant-owned model from a payload is a separate boundary with its own
-    // tests. What is under test here is who the endpoint lets through.
+    // Delivery is faked: restoring a tenant-owned model from a payload has its own
+    // tests; this checks who the endpoint lets through.
     Mail::fake();
 
     [$person, $acme, $other] = someoneRankedDifferentlyInTwoOrganizations();

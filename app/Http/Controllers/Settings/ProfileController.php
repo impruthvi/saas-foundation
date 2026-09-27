@@ -42,11 +42,6 @@ final class ProfileController extends Controller
         return to_route('profile.edit');
     }
 
-    /**
-     * Delete the user's profile.
-     *
-     * Refused while deletion would orphan organization data or live billing.
-     */
     public function destroy(ProfileDeleteRequest $request, DeleteUser $deleteUser): RedirectResponse
     {
         $user = $request->user();
@@ -59,10 +54,8 @@ final class ProfileController extends Controller
             return to_route('profile.edit');
         }
 
-        // Not Auth::logout(): it cycles the remember token, which saves the user
-        // model. The row has just been deleted, so that save is an insert and the
-        // account comes back. logoutCurrentDevice() clears the session without
-        // touching the model.
+        // Not Auth::logout(): cycling the remember token saves the just-deleted user
+        // and re-inserts the row.
         Auth::guard('web')->logoutCurrentDevice();
 
         $request->session()->invalidate();

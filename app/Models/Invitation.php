@@ -19,8 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * The plaintext token is returned once and only its digest is stored. Expiry is
- * derived from `expires_at`, independently of the persisted status.
+ * Only the token's digest is stored.
  *
  * @property int $id
  * @property int $organization_id
@@ -70,19 +69,13 @@ final class Invitation extends Model implements TenantOwned
     use HasFactory;
 
     /**
-     * The number of bytes of entropy behind a token.
-     *
-     * The token is the only thing standing between a stranger and membership of
-     * an organization, so it is sized like a credential rather than like an id.
+     * Sized like a credential: the token alone admits a stranger to an organization.
      */
     private const int TOKEN_BYTES = 48;
 
     /**
-     * The digest a token is stored and looked up by.
-     *
-     * sha-256 rather than a password hash: the lookup has to be an indexed
-     * equality match, and the input already carries full entropy, so the slow
-     * hashing that protects a guessable password buys nothing here.
+     * sha-256, not a password hash: the lookup is an indexed equality match and the
+     * token already has full entropy.
      */
     public static function hashToken(string $token): string
     {
@@ -90,12 +83,8 @@ final class Invitation extends Model implements TenantOwned
     }
 
     /**
-     * Mint a token, returning the plaintext and keeping only its digest.
-     *
-     * The plaintext is returned rather than stored because this is the one
-     * moment it may exist: it goes into the email and nowhere else. Callers that
-     * drop the return value have silently made the invitation unusable, which is
-     * why this returns rather than assigning.
+     * Returns the plaintext because this is the only moment it exists; dropping the
+     * return value makes the invitation unusable.
      */
     public function issueToken(): string
     {
@@ -111,7 +100,7 @@ final class Invitation extends Model implements TenantOwned
         return $this->expires_at->isPast();
     }
 
-    /** Says nothing about the recipient, which has a distinct refusal. */
+    /** Says nothing about the recipient, which has its own refusal. */
     public function isAcceptable(): bool
     {
         return $this->status->isOpen() && ! $this->hasExpired();
@@ -123,12 +112,8 @@ final class Invitation extends Model implements TenantOwned
     }
 
     /**
-     * End this invitation without accepting it, stamping who ended it.
-     *
-     * Revoking and declining are the same transition reached from opposite
-     * sides, so the transition lives here once and the two actions supply the
-     * actor. Keeping it on the model also keeps `forceFill` off the callers:
-     * the stamped columns are not fillable by an inviter.
+     * Keeps forceFill off the callers: the stamped columns are not fillable by an
+     * inviter.
      *
      * @param  array<string, mixed>  $stamps
      */
@@ -164,8 +149,6 @@ final class Invitation extends Model implements TenantOwned
     }
 
     /**
-     * Invitations still open and still in date.
-     *
      * @param  Builder<static>  $query
      */
     #[Scope]

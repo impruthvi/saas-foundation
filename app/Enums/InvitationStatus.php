@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * An invitation's persisted state. Expiry is derived from `expires_at` so the
- * clock and a stored status cannot disagree.
+ * Expiry is derived from expires_at so a stored status cannot disagree with the clock.
  */
 enum InvitationStatus: string
 {

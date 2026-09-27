@@ -19,10 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
 
 /**
- * One intentional, attributed act inside an organization.
- *
- * Append-only: a row that could be edited or removed through the application
- * would not be evidence of anything.
+ * Append-only: an editable row would not be evidence.
  *
  * @property int $id
  * @property int $organization_id

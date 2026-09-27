@@ -23,19 +23,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        // SubstituteBindings is pulled out of its default position and put back
-        // after the tenant is resolved. Route model binding queries the model,
-        // and a tenant-owned model's global scope raises when no organization is
-        // resolved, so binding `{project}` or `{invitation}` in its stock
-        // position is a 500 rather than the 404 a cross-tenant request deserves.
+        // SubstituteBindings moves after the tenant is resolved: binding a tenant-owned
+        // model queries it, and its scope raises with no organization, turning a
+        // cross-tenant 404 into a 500.
         $middleware->web(
             append: [
                 HandleAppearance::class,
-                // Before bindings, so a bound tenant-owned model is scoped, and
-                // before Inertia, so shared props are built with the tenant
-                // already resolved rather than resolving one of their own.
-                // Before the tenant, because ending an impersonation changes who
-                // is signed in and so which organization applies.
+                // Before bindings so bound models are scoped, and before Inertia so
+                // shared props see the resolved tenant.
+                // Before the tenant, because ending an impersonation changes who is
+                // signed in.
                 EnsureImpersonationIsLive::class,
                 ResolveTenantContext::class,
                 IdentifyAuditActor::class,

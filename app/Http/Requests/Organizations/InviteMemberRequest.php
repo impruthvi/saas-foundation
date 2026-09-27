@@ -25,8 +25,8 @@ final class InviteMemberRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email', 'max:255'],
-            // Listing allowed ranks explicitly forces new enum cases to be
-            // considered before they become invitable.
+            // Listing ranks explicitly forces new enum cases to be considered before
+            // they become invitable.
             'role' => ['required', new Enum(MembershipRole::class), Rule::in([
                 MembershipRole::Member->value,
                 MembershipRole::Admin->value,

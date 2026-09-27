@@ -7,9 +7,6 @@ namespace App\Impersonation;
 use App\Contracts\Operators;
 use App\Models\User;
 
-/**
- * The answer when no admin console is installed: nobody is an operator.
- */
 final readonly class NoOperators implements Operators
 {
     public function isOperator(User $user): bool

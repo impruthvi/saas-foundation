@@ -13,11 +13,8 @@ jobs:
     ci:
         runs-on: ubuntu-latest
 
-        # PostgreSQL is the documented path (D3) and SQLite is what a contributor gets
-        # from `composer setup` with no database installed. Both are supported, so both
-        # are proven on every push. Running only SQLite would let a Postgres-only
-        # failure reach a deploy; running only Postgres would break the zero-config
-        # local setup the contributing guide promises.
+        # PostgreSQL is the documented path and SQLite is what `composer setup` gives a
+        # contributor with no database installed, so both run on every push.
         strategy:
             fail-fast: false
             matrix:
@@ -67,10 +64,9 @@ jobs:
             - name: Setup Application
               run: composer setup
 
-            # The committed suite holds one browser test, because the upgrade journey
-            # needs both a real browser and a refresh, and a refresh will not run
-            # inside a transaction. The browser job cannot host it: that job runs on
-            # `:memory:`, whose schema does not survive the reconnect truncation needs.
+            # The committed suite needs a real browser and a refresh, which will not run
+            # inside a transaction; the browser job's `:memory:` schema does not survive
+            # the reconnect truncation needs.
             - name: Install Chromium
               run: bunx playwright install --with-deps chromium
 
@@ -128,11 +124,63 @@ jobs:
             - name: Run Browser Tests
               run: composer test:browser
 
-    # The admin console must be removable without breaking anything or leaving a
-    # link behind (D4, D52). This job removes it the way an adopter would, then
-    # runs the whole gate against what is left: the suite, the type check, the
-    # frontend build (which fails if any Vue file still imports a console route)
-    # and the browser smoke test that clicks every navigation link.
+    # What a stranger runs: the Laravel installer's GitHub path downloads this commit
+    # and runs the post-create-project hook in composer.json. A pull request from a fork
+    # installs the fork's commit, which upstream does not have. The installer downloads
+    # GitHub's public archive, so the job waits until the repository is public.
+    install:
+        if: ${{ !github.event.repository.private }}
+        runs-on: ubuntu-latest
+
+        name: install with the Laravel installer
+
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              with:
+                  php-version: '8.4'
+                  tools: composer:v2
+                  coverage: none
+
+            # The installer downloads the repository with `npx tiged`, and builds the
+            # frontend with Bun when asked to.
+            - name: Setup Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: '22'
+
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+            - name: Install the Laravel Installer
+              run: |
+                  composer global require laravel/installer --no-interaction
+                  composer global config bin-dir --absolute >> "$GITHUB_PATH"
+
+            - name: Install the Application
+              run: laravel new demo-app --using="https://github.com/${REPOSITORY}#${REF}" --bun --no-interaction
+              env:
+                  REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+                  REF: ${{ github.event.pull_request.head.sha || github.sha }}
+
+            - name: Seed the Demo
+              working-directory: demo-app
+              run: php artisan saas:demo
+
+            - name: Install Chromium
+              working-directory: demo-app
+              run: bunx playwright install --with-deps chromium
+
+            - name: Walk the Journey
+              working-directory: demo-app
+              run: vendor/bin/pest tests/Committed/JourneyTest.php
+              env:
+                  DB_CONNECTION: sqlite
+                  DB_DATABASE: ${{ format('{0}/demo-app/database/database.sqlite', github.workspace) }}
+
+    # The admin console must be removable without a failing test or a dead link.
+    # Remove it the way an adopter would, then run the whole gate: the build fails
+    # on a leftover console route import, and the smoke test clicks every link.
     admin-removed:
         runs-on: ubuntu-latest
 

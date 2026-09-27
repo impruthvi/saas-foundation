@@ -11,14 +11,9 @@ use Impruthvi\CashierEntitlements\Jobs\RefreshOwner;
 use Impruthvi\CashierEntitlements\Reconciliation\SweepManager;
 
 /**
- * Pt8, D43: an hour bounds the wrong answer, and the sweep asks for a new one
- * before the hour is up.
- *
- * The two thresholds are a pair and only mean something together. Expiry at
- * 3600 seconds decides when a paid allowance stops being trusted; the sweep at
- * 1800 decides when a replacement is requested. Asserting the numbers from
- * config would prove only that somebody typed them — these assert what each
- * one does, and that the second happens first.
+ * Expiry at 3600 seconds decides when a paid allowance stops being trusted; the sweep
+ * at 1800 requests a replacement first. These assert what each threshold does, not the
+ * configured numbers.
  */
 function allowanceObservedSecondsAgo(int $age, ?int $allowance = 10): ?int
 {
@@ -38,8 +33,7 @@ it('trusts a paid allowance right up to the moment it expires', function (): voi
 });
 
 it('falls to the free floor the second the observation expires', function (): void {
-    // Not zero. The organization drops to what Free allows, so a provider
-    // outage costs a customer their paid ceiling and never their account.
+    // Not zero: an outage drops the organization to Free, never out of its account.
     expect(allowanceObservedSecondsAgo(3_600))->toBe(2);
 });
 
@@ -109,8 +103,8 @@ it('reports a stale observation to the doctor', function (): void {
 it('withholds a clean bill of health until a sweep has actually run', function (): void {
     Queue::fake();
 
-    // A scope nothing has ever swept cannot say whether it missed a
-    // notification, so the doctor warns rather than reporting healthy.
+    // A scope nothing has ever swept cannot say whether it missed a notification, so
+    // the doctor warns.
     expect(checkNamed(doctorReport(), 'account_sweep')['status'])->toBe('warn');
 
     acrossEveryOwner(fn (): array => resolve(SweepManager::class)->run(

@@ -13,16 +13,11 @@ use RuntimeException;
 use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 
-/**
- * Fails when SQL reads or writes a tenant-owned table without organization scope.
- *
- * Deliberate cross-tenant reads must use the explicit `allowUnscoped()` path.
- */
 final class TenantQueryGuard
 {
     /**
-     * Tables the guard watches, beyond those discovered from the models,
-     * each mapped to the columns that narrow a statement to one tenant.
+     * Tables beyond those discovered from the models, each mapped to the columns that
+     * narrow a statement to one tenant.
      *
      * @var array<string, list<string>>
      */
@@ -36,16 +31,10 @@ final class TenantQueryGuard
     private static bool $allowingUnscoped = false;
 
     /**
-     * Watch a table that no application model declares.
-     *
-     * `$scopedBy` names the columns a statement must narrow on. It exists for
-     * the entitlement package, whose tables carry `owner_id` rather than
-     * `organization_id`, and whose hot path reads them by a primary key hashed
-     * from the owner. Naming `id` as a scope column is therefore not a way of
-     * accepting everything: it still refuses a statement that filters on any
-     * other column, which is what a cross-owner sweep looks like. What it
-     * cannot do is prove a given hash belongs to the resolved organization,
-     * which is why `EntitlementBoundaryTest` asserts that part directly.
+     * $scopedBy exists for the entitlement package, whose tables carry owner_id and are
+     * read by a primary key hashed from the owner. Naming id still refuses a statement
+     * filtering on any other column; proving a hash belongs to the resolved
+     * organization is EntitlementBoundaryTest's job.
      *
      * @param  list<string>  $scopedBy
      */
@@ -54,9 +43,6 @@ final class TenantQueryGuard
         self::$registered[$table] = $scopedBy;
     }
 
-    /**
-     * Install the listener for the current test.
-     */
     public static function install(): void
     {
         self::$allowingUnscoped = false;
@@ -66,9 +52,6 @@ final class TenantQueryGuard
         });
     }
 
-    /**
-     * Reset per-test state. Registered fixtures do not survive a test.
-     */
     public static function flush(): void
     {
         self::$registered = [];
@@ -76,8 +59,6 @@ final class TenantQueryGuard
     }
 
     /**
-     * Read across tenants deliberately, the way the application's audited paths do.
-     *
      * @template TReturn
      *
      * @param  Closure(): TReturn  $callback
@@ -97,8 +78,6 @@ final class TenantQueryGuard
     }
 
     /**
-     * The tables the guard watches: every `TenantOwned` model, plus registrations.
-     *
      * @return array<string, list<string>>
      */
     public static function tables(): array
@@ -123,9 +102,9 @@ final class TenantQueryGuard
             return;
         }
 
-        // An organization named anywhere in the statement scopes the whole of
-        // it, including through a subquery. The narrower per-column check below
-        // is reserved for tables that carry a different tenant key.
+        // An organization named anywhere in the statement scopes all of it, including
+        // through a subquery; the per-column check below is for tables with a different
+        // tenant key.
         if (str_contains($normalized, 'organization_id')) {
             return;
         }
@@ -147,10 +126,8 @@ final class TenantQueryGuard
     }
 
     /**
-     * Whether the statement compares one of the tenant keys against something.
-     *
-     * Matching the comparison rather than the bare word keeps `id` from being
-     * satisfied by a select list, and keeps `\bid\b` from matching `owner_id`.
+     * Matching the comparison rather than the bare word keeps id from being satisfied
+     * by a select list, and keeps \bid\b from matching owner_id.
      *
      * @param  list<string>  $scopedBy
      */

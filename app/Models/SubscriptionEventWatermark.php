@@ -14,8 +14,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * How recent the newest applied event for one Stripe subscription was.
- *
  * @property int $id
  * @property int $organization_id
  * @property string $stripe_id

@@ -13,10 +13,8 @@ use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Records the team every role assignment would be read against, once run.
- *
- * Kept separate from `RecordResolvedTenant` because the resolved tenant and
- * permission team can disagree.
+ * Separate from RecordResolvedTenant because the resolved tenant and the permission
+ * team can disagree.
  */
 final class RecordAuthorizationTeam implements ShouldQueue
 {
@@ -28,12 +26,8 @@ final class RecordAuthorizationTeam implements ShouldQueue
     public function __construct(private readonly string $key) {}
 
     /**
-     * The team the job saw, or null.
-     *
-     * Wrapped in an array rather than stored bare, because null is the answer
-     * this fixture exists to prove and `Cache::has()` reports a stored null as
-     * absent — which would make "the job ran and saw nothing" indistinguishable
-     * from "the job never ran".
+     * Wrapped in an array because Cache::has() reports a stored null as absent, and
+     * null is the answer this fixture exists to prove.
      */
     public static function recorded(string $key): int|string|null
     {

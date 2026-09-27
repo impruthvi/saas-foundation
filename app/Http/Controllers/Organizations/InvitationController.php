@@ -18,16 +18,6 @@ use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
-/**
- * Issuing and withdrawing invitations.
- *
- * Resending is `InvitationDeliveryController`: sending again creates a new
- * token and a new message, so it is a create on its own resource rather than a
- * custom verb here.
- *
- * Every refusal arrives as an `InvitationRefused`, so there is one catch arm for
- * eight reasons and adding a ninth costs nothing.
- */
 final class InvitationController extends Controller
 {
     public function store(

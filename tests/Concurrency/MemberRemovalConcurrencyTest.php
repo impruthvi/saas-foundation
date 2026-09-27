@@ -15,10 +15,7 @@ use Tests\Support\Contenders;
 use Tests\Support\Outcome;
 
 /**
- * Attempt one removal, from inside a forked process.
- *
- * The membership is loaded here rather than handed in, because a model carried
- * across the fork would arrive holding the parent's connection.
+ * Loaded inside the fork: a model carried across it would hold the parent's connection.
  */
 function attemptRemoval(int $organizationId, int $membershipId): Outcome
 {
@@ -36,9 +33,6 @@ function attemptRemoval(int $organizationId, int $membershipId): Outcome
     }
 }
 
-/**
- * How many active administrators the organization still has.
- */
 function activeAdministratorCount(Organization $organization): int
 {
     return resolve(TenantContext::class)->runFor(
@@ -51,7 +45,7 @@ it('never lets two simultaneous removals strand an organization', function (): v
     [$organization, $owner] = organizationOwnedBySomeone();
 
     // Only an active administrator can strand an organization, so the owner's
-    // own administrator membership is stood down to leave exactly two.
+    // administrator membership is stood down to leave exactly two.
     resolve(TenantContext::class)->runFor($organization, function () use ($organization, $owner): void {
         Membership::query()
             ->where('user_id', $owner->id)

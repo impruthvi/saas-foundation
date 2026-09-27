@@ -13,16 +13,9 @@ use Impruthvi\CashierDunning\Runner\ReplayReport;
 use Impruthvi\CashierDunning\Runner\ReplayRunner;
 
 /**
- * Pt12: the same events in orders Stripe is entitled to use leave the same
- * subscription facts behind.
- *
- * Only the facts. The replay wraps everything in a transaction it rolls back,
- * so an entitlement refresh requested after commit is discarded and the harness
- * rightly refuses to call a run successful over work it could not observe.
- * Entitlements are therefore off inside the replay, exactly as they are for
- * `composer test:billing`, and whether the resolved entitlement converges is
- * asserted separately once the transaction is gone — see
- * `tests/Feature/Entitlements/PostReplayResolutionTest.php`.
+ * Only the facts: the replay rolls back its transaction, which discards any refresh
+ * requested after commit, so entitlements are off here. PostReplayResolutionTest
+ * asserts the entitlement converges.
  */
 beforeEach(function (): void {
     Config::set('cashier-entitlements.enabled', false);

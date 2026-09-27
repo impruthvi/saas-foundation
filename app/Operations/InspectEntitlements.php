@@ -20,23 +20,8 @@ use Impruthvi\CashierEntitlements\Reconciliation\ReadFailure;
 use Impruthvi\CashierEntitlements\Resolution\LocalResolver;
 
 /**
- * Everything an operator needs to answer "why can this organization do that".
- *
- * For each feature: the allowance, whether the package or the Free floor gave
- * it, and the usage against it. For the refresh behind it: whether one is
- * pending or failing, how stale the answer is, and which Stripe events asked for
- * it.
- *
- *   state completed its latest request
- *     ├─ receipts in that second ──▶ every one, joined to webhook_events,
- *     │                              the applied subscription event primary
- *     └─ no receipts ─────────────▶ "no event": a sweep, recovery or operator
- *   state still has a request open ─▶ "pending"
- *   no state at all ────────────────▶ "never refreshed"
- *
- * Receipts and the request share one whole-second timestamp and carry no
- * sequence, so events in the same second are listed together rather than one
- * of them being guessed as the cause.
+ * Receipts and the request share a whole-second timestamp and no sequence, so events in
+ * the same second are listed together rather than guessing a cause.
  */
 final readonly class InspectEntitlements
 {
@@ -96,9 +81,6 @@ final readonly class InspectEntitlements
         return $features;
     }
 
-    /**
-     * Usage exists only for a numeric feature with a meter.
-     */
     private function usage(OwnerReference $owner, string $feature, DateTimeImmutable $at): ?int
     {
         if ($this->resolver->booleanFeature($feature)) {

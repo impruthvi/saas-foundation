@@ -16,19 +16,6 @@ use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
-/**
- * Sending an invitation again.
- *
- * A delivery is its own resource rather than a `resend` action bolted onto
- * InvitationController: "send this invitation again" creates something — a new
- * token, a new clock, a new message — and modelling it as a create keeps the
- * controller vocabulary standard. The architecture preset enforces that, which
- * is how this class came to exist.
- *
- * Resending rotates the token, so the previously emailed link stops working. The
- * newest email is the one that counts; the old link then resolves to nothing and
- * the accept screen says "no longer valid" rather than claiming it expired.
- */
 final class InvitationDeliveryController extends Controller
 {
     public function store(

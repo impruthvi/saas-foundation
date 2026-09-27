@@ -13,17 +13,8 @@ use App\Models\Invitation;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Sends the same offer again, on a new token and a new clock.
- *
- * Resending rotates the token deliberately. The newest email is the one that
- * counts, and leaving the old link alive would mean two live credentials for one
- * offer with no way to tell which was which. The previous link then resolves to
- * nothing, which the accepting controller renders as "no longer valid" — never
- * as "expired", because it was not.
- *
- * An expired-but-pending invitation may be resent; that is the ordinary case. A
- * revoked, declined or accepted one may not — those are decisions, and undoing
- * one is a fresh invitation rather than a resend.
+ * Rotates the token so only the newest email works. Only a pending invitation, expired
+ * or not, can be resent.
  */
 final readonly class ResendOrganizationInvitation
 {

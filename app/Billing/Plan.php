@@ -6,7 +6,6 @@ namespace App\Billing;
 
 use InvalidArgumentException;
 
-/** An application-owned commercial offering. */
 final readonly class Plan
 {
     /** @param list<Price> $prices */

@@ -13,9 +13,6 @@ use Filament\Widgets\TableWidget;
 use Illuminate\Pagination\LengthAwarePaginator;
 use LogicException;
 
-/**
- * What has been done in the organization, and by whom, newest first.
- */
 final class OrganizationAuditLog extends TableWidget
 {
     public ?Organization $record = null;

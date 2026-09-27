@@ -8,17 +8,9 @@ use Stripe\ApiRequestor;
 use Stripe\HttpClient\ClientInterface;
 
 /**
- * Answers Stripe reads without a network, one layer below the client.
- *
- * `FakeStripeClient` cannot serve the entitlement refresh: the package's
- * `StripeSubscriptionSource` deliberately builds its own `StripeClient` from
- * the credentials and base URL of the one it is given, so that it never
- * inherits another caller's account context. Whatever client is injected, the
- * source reads through a fresh one.
- *
- * The seam that survives that is the SDK's own global HTTP client, which every
- * client routes through. Installed for the duration of a test and removed
- * after, so nothing here leaks into a suite that expects the real transport.
+ * StripeSubscriptionSource builds its own StripeClient from the injected one's
+ * credentials, so FakeStripeClient cannot serve the refresh. The SDK's global HTTP
+ * client is the seam every client routes through; installed per test and removed after.
  */
 final class FakeStripeApi implements ClientInterface
 {
@@ -43,10 +35,8 @@ final class FakeStripeApi implements ClientInterface
     }
 
     /**
-     * Report one active subscription on a price, with the single item that
-     * carries it. Both records are shaped the way the source validates them:
-     * a missing `cancel_at` or a `livemode` of the wrong kind is rejected
-     * there as malformed provider data rather than ignored.
+     * Shaped the way the source validates them: a missing cancel_at or a wrong-kind
+     * livemode is rejected as malformed.
      */
     public function withActiveSubscription(
         string $customerId,
@@ -119,9 +109,8 @@ final class FakeStripeApi implements ClientInterface
             fn (array $record): bool => $this->matches($resource, $record, $params),
         ));
 
-        // `starting_after` is honoured rather than ignored: the source pages
-        // until a page reports no more, and a fake that repeats its first page
-        // would loop until the page limit instead of returning.
+        // starting_after is honoured: the source pages until a page reports no more, so
+        // a fake repeating its first page would loop.
         $after = $params['starting_after'] ?? null;
 
         if (is_string($after)) {

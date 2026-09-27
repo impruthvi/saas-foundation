@@ -10,13 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The RBAC store: `spatie/laravel-permission`, team-scoped on the organization.
- *
- * Role definitions are global while assignments require an organization. Team
- * foreign keys cascade to prevent deleted organizations leaving grants behind.
- * The catalog is seeded here so `migrate` alone produces a working system, and
- * its literal values keep this historical migration independent of later enum
- * changes.
+ * Role definitions are global and assignments need an organization; team keys cascade
+ * so a deleted organization leaves no grants. The catalog is seeded here with literal
+ * values, so migrate alone works and later enum changes cannot rewrite history.
  */
 return new class extends Migration
 {
@@ -151,12 +147,8 @@ return new class extends Migration
     }
 
     /**
-     * Write the global catalog.
-     *
-     * `organization_id` is passed explicitly on every row. The package's `Role`
-     * model fills that column from the *currently resolved* team when the key
-     * is absent, so omitting it would scope the catalog to whichever
-     * organization happened to be resolved when the migration ran.
+     * organization_id is passed explicitly: the package's Role fills it from the
+     * resolved team when absent.
      *
      * @param  array<string, string>  $tables
      */
@@ -211,21 +203,9 @@ return new class extends Migration
     }
 
     /**
-     * Give every membership that already exists the role its rank implies.
-     *
-     * Without this, an application upgraded in place keeps its memberships and
-     * loses every ability attached to them: each administrator and each owner
-     * silently drops to zero permissions on deploy. On a fresh database the
-     * loop simply finds nothing.
-     *
-     * Ranks that name no role are skipped rather than guessed at. A membership
-     * carrying an unknown rank is a data problem, and inventing a role for it
-     * here would grant access on the strength of a typo.
-     *
-     * `model_type` is asked of the model rather than written as a string, so
-     * these rows say exactly what `HasRoles` will say when it writes its own.
-     * A morph map introduced later changes both, and the rows written before it
-     * need a data migration — which is true however this line is spelled.
+     * Without this, an in-place upgrade leaves every existing member with zero
+     * permissions. Unknown ranks are skipped rather than guessed, and model_type comes
+     * from the model so rows match what HasRoles writes.
      *
      * @param  array<string, string>  $tables
      */

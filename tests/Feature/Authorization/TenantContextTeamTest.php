@@ -7,9 +7,6 @@ use App\Tenancy\TenantContext;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Fixtures\RecordAuthorizationTeam;
 
-/**
- * The organization every role assignment would currently be read against.
- */
 function teamInForce(): int|string|null
 {
     return resolve(PermissionRegistrar::class)->getPermissionsTeamId();
@@ -70,19 +67,17 @@ it('leaves no team in force for the next job on the same worker', function (): v
     $organization = Organization::factory()->create();
     $tenant = resolve(TenantContext::class);
 
-    // A statement rather than a returned expression: dispatch() hands back a
-    // PendingDispatch that pushes on destruction, so returning it out of
-    // runFor() would push after the tenant had been restored.
+    // A statement, not a returned expression: dispatch() returns a PendingDispatch that
+    // pushes on destruction, which would be after runFor() restored the tenant.
     $tenant->runFor($organization, function (): void {
         dispatch(new RecordAuthorizationTeam('during'));
     });
 
-    // Pushed with no tenant resolved, so its payload carries no context — and
-    // pushed now rather than after the first job is worked, which would capture
-    // the tenant that job resolved and pass for the wrong reason.
+    // Pushed now with no tenant resolved; pushing after the first job runs would
+    // capture that job's tenant and pass for the wrong reason.
     dispatch(new RecordAuthorizationTeam('after'));
 
-    // A worker booting fresh has no ambient tenant, only what a payload carries.
+    // A fresh worker has no ambient tenant, only what a payload carries.
     $tenant->forget();
 
     $this->artisan('queue:work --once')->assertSuccessful();

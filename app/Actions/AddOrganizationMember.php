@@ -14,10 +14,7 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Adds a user to an organization, with the rank they will hold and the role it implies.
- *
- * This is the only membership writer, keeping rank and its projected RBAC role
- * in one transaction under the correct tenant context.
+ * The only membership writer, so rank and its RBAC role change in one transaction.
  */
 final readonly class AddOrganizationMember
 {

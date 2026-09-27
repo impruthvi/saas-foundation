@@ -18,11 +18,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-/**
- * Organization lookup: by name, slug, Stripe customer, or a member's address.
- *
- * Read-only. Everything the console changes goes through an application action.
- */
 final class OrganizationResource extends Resource
 {
     protected static ?string $model = Organization::class;

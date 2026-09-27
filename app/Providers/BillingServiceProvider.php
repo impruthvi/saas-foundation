@@ -12,21 +12,14 @@ use Illuminate\Support\ServiceProvider;
 use Laravel\Cashier\Cashier;
 
 /**
- * Owns the application's billing catalog and points Cashier at the organization
- * and at this application's tenant-scoped subscription models.
- *
- * Cashier's own webhook route is turned off. It writes subscription rows with no
- * organization resolved, which the tenant scope refuses; this application
- * registers a route that resolves the organization from the Stripe customer
- * first.
+ * Cashier's webhook route is off: it writes subscription rows before any organization
+ * is resolved, which the tenant scope refuses.
  */
 final class BillingServiceProvider extends ServiceProvider
 {
     /**
-     * Cashier decides whether to register its routes while booting, and package
-     * providers boot before application ones, so declining has to happen here.
-     * Doing it in boot() leaves Cashier's payment page routed and lets this
-     * application's webhook win only by shadowing the same URI.
+     * Must run in register(): Cashier decides on routes while booting, and package
+     * providers boot first.
      */
     public function register(): void
     {
@@ -40,7 +33,7 @@ final class BillingServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Fail during boot rather than when the first customer opens billing.
+        // Fail at boot rather than when the first customer opens billing.
         $this->app->make(PlanCatalog::class);
 
         Cashier::useCustomerModel(Organization::class);

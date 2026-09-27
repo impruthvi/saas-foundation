@@ -12,11 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Take a person's admin console access away, including anything they are
- * doing as another user right now.
- *
- * Their live impersonations are closed here so the history says why, and the
- * impersonation guard signs the browser out on its next request.
+ * Live impersonations are closed here; the impersonation guard signs the browser out on
+ * its next request.
  */
 final readonly class RevokeOperator
 {

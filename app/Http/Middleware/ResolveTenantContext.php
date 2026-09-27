@@ -12,10 +12,6 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Resolves the session's organization when membership still allows it, or
- * falls back to the user's first active organization.
- */
 final readonly class ResolveTenantContext
 {
     public const string SESSION_KEY = 'current_organization_id';

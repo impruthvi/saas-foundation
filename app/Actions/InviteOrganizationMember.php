@@ -19,25 +19,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Offers membership of an organization to an email address.
- *
- *   already an active member? ──yes──► AlreadyMember    (nothing to do)
- *            │ no
- *   live invitation already?  ──yes──► AlreadyInvited   (resend is the verb)
- *            │ no
- *            ▼
- *   create the row, or reuse the spent one for this address
- *            │
- *            ▼
- *   mint a token, return the plaintext exactly once
- *
- * Reuse rather than insert, because `(organization_id, email)` is unique: an
- * address that was revoked, declined or left to expire can be invited again, and
- * that rotates the existing row back to Pending with a fresh token. The old
- * token stops working the moment this returns, which is the point.
- *
- * The plaintext token is returned rather than stored anywhere. Only the caller
- * that is about to send the email ever sees it.
+ * Reuses the row rather than inserting, because (organization_id, email) is unique;
+ * re-inviting rotates the token and invalidates the old one. The plaintext token is
+ * returned once and never stored.
  */
 final readonly class InviteOrganizationMember
 {
@@ -90,11 +74,8 @@ final readonly class InviteOrganizationMember
     }
 
     /**
-     * Refuse an address that is already inside the organization.
-     *
-     * Reads memberships under the resolved tenant, so the join to users stays
-     * scoped: this asks "is one of *our* members this address", never "does this
-     * address exist".
+     * Reads memberships under the resolved tenant, so it only asks whether one of this
+     * organization's members has the address.
      */
     private function refuseExistingMember(string $email): void
     {

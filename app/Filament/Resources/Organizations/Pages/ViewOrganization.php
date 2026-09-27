@@ -24,11 +24,8 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * One organization, as support needs to see it.
- *
- * Every tenant-owned value here comes from a read service that resolves this
- * organization itself. Nothing on this page queries a tenant-owned model, so
- * the operator's own organization can never leak into it.
+ * Nothing here queries a tenant-owned model directly; every value comes from a read
+ * service that resolves this organization.
  *
  * @property Organization $record
  */

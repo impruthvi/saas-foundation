@@ -39,8 +39,8 @@ it('takes a stranger from an invitation link to membership of two organizations'
     $token = null;
 
     Mail::assertQueued(OrganizationInvitation::class, function (OrganizationInvitation $mail) use (&$token): bool {
-        // The link is the only place the plaintext token survives, so the test
-        // reads it the way the recipient does rather than from the database.
+        // The link is the only place the plaintext token survives, so it is read the
+        // way the recipient reads it.
         preg_match('#/invitations/([^/?\s]+)#', $mail->acceptUrl, $matches);
         $token = $matches[1] ?? null;
 
@@ -72,7 +72,6 @@ it('takes a stranger from an invitation link to membership of two organizations'
     $organizations = resolve(MembershipRepository::class)->organizationsFor($grace);
 
     expect($organizations)->toHaveCount(2)
-        // An invitation never replaces the user's personal organization.
         ->and($organizations->firstWhere('personal', true))->not->toBeNull()
         ->and($organizations->pluck('id'))->toContain($acme->id)
         ->and($organizations->count())->toBeGreaterThan(1);
@@ -96,9 +95,7 @@ it('still registers the account when the parked invitation has lapsed', function
 
     $this->travel(8)->days();
 
-    // An invitation that expired while somebody filled in a form must not cost
-    // them their account. They can ask for a new invitation; they cannot ask
-    // for their registration back.
+    // An invitation that expired mid-form must not cost somebody their account.
     throughTheAuditedDoor(fn () => $this->post(route('register.store'), [
         'name' => 'Slow',
         'email' => 'slow@example.com',
@@ -119,7 +116,7 @@ it('does not let a parked token admit whoever signs up next', function (): void 
 
     throughTheAuditedDoor(fn () => $this->get(route('invitations.show', ['token' => $token])));
 
-    // Same browser, same session, different person entirely.
+    // Same browser, same session, different person.
     throughTheAuditedDoor(fn () => $this->post(route('register.store'), [
         'name' => 'Interloper',
         'email' => 'interloper@example.com',
@@ -166,8 +163,6 @@ it('says so when a parked invitation could not be taken', function (): void {
 
     $this->travel(8)->days();
 
-    // The account is still created — an expiry must not cost somebody their
-    // registration — but they are told, rather than left believing they joined.
     throughTheAuditedDoor(fn () => $this->post(route('register.store'), [
         'name' => 'Lapsed',
         'email' => 'lapsed@example.com',

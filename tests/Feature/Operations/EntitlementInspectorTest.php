@@ -13,8 +13,6 @@ use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
 use Impruthvi\CashierEntitlements\Resolution\LocalResolver;
 
 /**
- * The projects row of an inspection.
- *
  * @param  array<string, mixed>  $inspection
  * @return array<string, mixed>
  */
@@ -24,8 +22,6 @@ function projectsRow(array $inspection): array
 }
 
 /**
- * Land a refresh that several webhook events asked for in the same second.
- *
  * @param  list<string>  $eventIds
  */
 function refreshRequestedBy(Organization $organization, array $eventIds, DateTimeImmutable $at): void

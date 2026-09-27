@@ -14,10 +14,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Records which organization the job resolved, and what it could see.
- *
- * Carries no organization of its own on purpose: whatever it resolves, it
- * resolved from the queue payload.
+ * Carries no organization of its own: whatever it resolves came from the queue payload.
  */
 final class RecordResolvedTenant implements ShouldQueue
 {
@@ -29,8 +26,6 @@ final class RecordResolvedTenant implements ShouldQueue
     public function __construct(private readonly string $key) {}
 
     /**
-     * What the job saw, once it has run. Null while it has not.
-     *
      * @return array{organization_id: int|null, visible_projects: int|null}|null
      */
     public static function recorded(string $key): ?array

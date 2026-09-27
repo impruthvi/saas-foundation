@@ -12,8 +12,6 @@ use Illuminate\Validation\Rules\Unique;
 trait ProfileValidationRules
 {
     /**
-     * Get the validation rules used to validate user profiles.
-     *
      * @return array<string, array<int, ValidationRule|Unique|array<mixed>|string>>
      */
     protected function profileRules(?int $userId = null): array
@@ -25,8 +23,6 @@ trait ProfileValidationRules
     }
 
     /**
-     * Get the validation rules used to validate user names.
-     *
      * @return array<int, ValidationRule|Unique|array<mixed>|string>
      */
     protected function nameRules(): array
@@ -35,8 +31,6 @@ trait ProfileValidationRules
     }
 
     /**
-     * Get the validation rules used to validate user emails.
-     *
      * @return array<int, ValidationRule|Unique|array<mixed>|string>
      */
     protected function emailRules(?int $userId = null): array

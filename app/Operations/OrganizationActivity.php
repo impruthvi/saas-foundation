@@ -11,11 +11,6 @@ use App\Models\Membership;
 use App\Models\Organization;
 use App\Tenancy\TenantContext;
 
-/**
- * Who is in an organization, who has been asked, and what has been done.
- *
- * Three reads that share one organization and one page in the console.
- */
 final readonly class OrganizationActivity
 {
     public function __construct(private TenantContext $tenant) {}
@@ -34,8 +29,6 @@ final readonly class OrganizationActivity
     }
 
     /**
-     * Invitations still waiting for an answer, expired or not.
-     *
      * @return list<array{id: int, email: string, rank: string, expires_at: string, expired: bool}>
      */
     public function pendingInvitations(Organization $organization): array
@@ -49,8 +42,6 @@ final readonly class OrganizationActivity
     }
 
     /**
-     * Newest first.
-     *
      * @return array{rows: list<array{id: int, action: string, source: string, actor: string|null, impersonated_by: string|null, subject_type: string|null, subject_id: int|null, context: array<string, mixed>, occurred_at: string}>, total: int}
      */
     public function auditLog(Organization $organization, int $page = 1, int $perPage = 25): array

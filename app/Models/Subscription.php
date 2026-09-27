@@ -12,13 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 use Laravel\Cashier\Subscription as CashierSubscription;
 
 /**
- * An organization's ongoing commercial relationship to a plan, as last reported
- * by Stripe.
- *
- * Cashier's own model is unscoped. This one carries the tenant scope, so reading
- * a subscription without a resolved organization raises rather than answering for
- * whichever row matched. Webhook processing satisfies that by resolving the
- * organization from the Stripe customer before any write.
+ * Carries the tenant scope Cashier's model lacks; webhooks resolve the organization
+ * from the Stripe customer before any write.
  *
  * @property int $id
  * @property int $organization_id

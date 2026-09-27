@@ -7,11 +7,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Billing columns land on organizations rather than users: the organization is
- * the customer, and a user who belongs to several is billed through none of them.
- *
- * `stripe_id` is indexed because every inbound webhook resolves its owner through
- * this column before anything else can happen.
+ * The organization is the customer. stripe_id is indexed because every webhook resolves
+ * its owner through it.
  */
 return new class extends Migration
 {

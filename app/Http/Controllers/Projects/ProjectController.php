@@ -18,6 +18,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
+use Impruthvi\CashierEntitlements\Billing\OwnerReference;
+use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
 use Impruthvi\CashierEntitlements\Reconciliation\OwnerLocator;
 use Impruthvi\CashierEntitlements\Reconciliation\ReadFailure;
 use Impruthvi\CashierEntitlements\Resolution\FeatureTypeMismatch;
@@ -40,6 +42,7 @@ final class ProjectController extends Controller
         LocalResolver $resolver,
         PlanCatalog $catalog,
         BillingFacts $facts,
+        NativeStateStore $states,
     ): Response {
         Gate::authorize('viewAny', Project::class);
 
@@ -64,6 +67,7 @@ final class ProjectController extends Controller
                     'createdAt' => $project->created_at?->toFormattedDateString(),
                 ]),
             'allowance' => $allowance,
+            'planChangePending' => $this->planChangePending($owners->reference($organization), $states),
             'canCreate' => $request->user()?->can('create', Project::class) ?? false,
             'accessEndsAt' => $facts->state($organization) === BillingFacts::STATE_GRACE_PERIOD
                 ? $facts->currentSubscription($organization)?->ends_at?->toFormattedDateString()
@@ -118,13 +122,8 @@ final class ProjectController extends Controller
     }
 
     /**
-     * The scalars the screen and the refusal message are both projections of.
-     *
-     * `remaining` is computed here rather than in the renderer so the screen
-     * never carries a threshold of its own: a hidden button is not a limit, and
-     * the endpoint refuses whatever the screen decided to show. It is clamped
-     * because usage above the limit is a real state after a downgrade, not an
-     * error — `null` means unlimited, and `0` means no allowance at all.
+     * `remaining` is computed here so the screen has no threshold of its own. Clamped
+     * because usage above the limit is real after a downgrade; null means unlimited.
      *
      * @return array{limit: int|null, usage: int, remaining: int|null, upgradePlan: string|null}
      */
@@ -146,6 +145,17 @@ final class ProjectController extends Controller
             'remaining' => $limit === null ? null : max(0, $limit - $usage),
             'upgradePlan' => $this->cheapestPlanAbove($catalog, $usage),
         ];
+    }
+
+    /**
+     * A webhook has asked for a refresh that has not landed, typically because no queue
+     * worker is running. Display only: the limit is still enforced from what resolved.
+     */
+    private function planChangePending(OwnerReference $owner, NativeStateStore $states): bool
+    {
+        $state = $states->state($owner);
+
+        return $state !== null && $state['requested_sequence'] > $state['completed_sequence'];
     }
 
     private function cheapestPlanAbove(PlanCatalog $catalog, int $usage): ?string

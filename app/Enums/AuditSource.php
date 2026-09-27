@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * Where an audited act came from.
- *
- * `System` is what an act records when nothing said who was acting, which is
- * itself worth seeing in the log.
+ * `System` marks an act with no known actor.
  */
 enum AuditSource: string
 {

@@ -21,15 +21,8 @@ final readonly class ResolveAllowance implements AdmissionResolver
     ) {}
 
     /**
-     * Resolve the package answer with the application's Free-plan floor beneath it.
-     *
-     * Package state                 Package answer     Effective answer
-     * new / none / ended            missing            Free floor
-     * stale / catalog mismatch      missing            Free floor
-     * active / grace period         explicit value     value raised to the floor
-     *
-     * Reading `all()` is deliberate: `limit()` collapses both a missing value and an
-     * explicit zero to zero before the application can apply its floor.
+     * Reads all() because limit() turns both a missing value and an explicit zero into
+     * zero before the Free floor can apply.
      */
     public function handle(OwnerReference $owner, string $feature, ?DateTimeImmutable $at = null): bool|int|null
     {
@@ -37,11 +30,8 @@ final readonly class ResolveAllowance implements AdmissionResolver
     }
 
     /**
-     * The answer, and whether the package or the Free-plan floor supplied it.
-     *
-     * The floor supplies it when the package has no value for the feature, or a
-     * lower one. Equal values are credited to the package, because that is the
-     * answer an operator would see change after a refresh.
+     * Equal values are credited to the package: that is the answer an operator sees
+     * change after a refresh.
      *
      * @return array{value: bool|int|null, source: AllowanceSource}
      */

@@ -35,13 +35,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::delete('organizations/members/{membership}', [MemberController::class, 'destroy'])
         ->name('organizations.members.destroy');
 
-    // Throttled because an unthrottled invite endpoint is an email cannon
-    // pointed at arbitrary addresses, and the sender is us.
+    // Throttled: an unthrottled invite endpoint is an email cannon with us as the
+    // sender.
     Route::post('organizations/invitations', [InvitationController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('organizations.invitations.store');
 
-    // Sending again creates a delivery: its own resource, standard verb.
     Route::post('organizations/invitations/{invitation}/deliveries', [InvitationDeliveryController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('organizations.invitations.deliveries.store');
@@ -50,14 +49,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('organizations.invitations.destroy');
 });
 
-/*
- * Reachable by a stranger, and keyed by token rather than by key.
- *
- * No `auth` middleware: the recipient usually has no account yet, and the point
- * of the landing page is to tell them what they have been offered before asking
- * them to make one. No route model binding either — binding would query
- * `invitations` outside the audited repository, with no tenant to scope it by.
- */
+// No auth: the recipient usually has no account yet. No route model binding: it would
+// query invitations outside the audited repository, with no tenant.
 Route::middleware(ProtectInvitationToken::class)->group(function (): void {
     Route::get('invitations/{token}', [AcceptInvitationController::class, 'show'])
         ->name('invitations.show');

@@ -21,9 +21,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia;
 
-/**
- * An operator list the test controls, standing in for the admin console.
- */
 final class OperatorsForTest implements Operators
 {
     /** @var list<int> */
@@ -46,8 +43,6 @@ beforeEach(function (): void {
 });
 
 /**
- * An operator, signed in, with their own organization selected.
- *
  * @return array{0: User, 1: Organization}
  */
 function signedInOperator(OperatorsForTest $operators): array

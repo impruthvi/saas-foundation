@@ -17,7 +17,6 @@ use LogicException;
 use Stripe\Checkout\Session;
 use Stripe\Customer;
 
-/** Starts a hosted subscription checkout for an organization. */
 final readonly class StartBillingCheckout
 {
     public function __construct(
@@ -70,9 +69,8 @@ final readonly class StartBillingCheckout
     }
 
     /**
-     * The provider call must stay outside the transaction. If it succeeds and
-     * the local write rolls back, the stable key makes the retry return the
-     * same customer. The row lock only reconciles that result with local state.
+     * The Stripe call stays outside the transaction; its stable idempotency key makes a
+     * retry return the same customer.
      */
     private function stripeCustomerId(Organization $organization): string
     {

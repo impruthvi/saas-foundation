@@ -7,10 +7,7 @@ namespace App\Filament\Support;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
- * Turns a read service's page of rows into what a custom-data table expects.
- *
- * Rows are keyed by their `id`, which Filament uses as the record key across
- * Livewire requests.
+ * Rows are keyed by id, which Filament uses as the record key across Livewire requests.
  */
 final class PagedRows
 {

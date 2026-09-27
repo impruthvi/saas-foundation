@@ -20,3 +20,8 @@ export type CurrentSubscription = {
     trialEndsAt: string | null;
     endsAt: string | null;
 };
+
+export type StripeSetup = {
+    configured: boolean;
+    setupHint: string | null;
+};

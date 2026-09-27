@@ -8,11 +8,8 @@ use Laravel\Cashier\Events\WebhookHandled;
 use Laravel\Cashier\Events\WebhookReceived;
 use Tests\Support\StripeWebhook;
 
-/*
- * Pins which deliveries reach Cashier and which of them announce themselves as
- * handled. The entitlement refresh listens for the handled event, so moving the
- * event-applying code must leave every row of this file unchanged.
- */
+// The entitlement refresh listens for the handled event, so moving the event-applying
+// code must leave every row here unchanged.
 
 beforeEach(function (): void {
     config(['cashier.webhook.secret' => StripeWebhook::SECRET]);

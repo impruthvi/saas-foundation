@@ -7,13 +7,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Items carry no organization of their own and are reached only through a scoped
- * subscription, which Cashier eager-loads on every query. A direct query against
- * this table would cross tenants unchecked; give it an organization column before
- * writing one.
- *
- * The meter columns arrive here rather than in the two follow-up migrations
- * Cashier publishes, because this schema has no deployed history to preserve.
+ * No organization column: items are reached only through a scoped subscription, and a
+ * direct query would cross tenants. Meter columns are here rather than in Cashier's
+ * follow-up migrations because this schema has no deployed history.
  */
 return new class extends Migration
 {

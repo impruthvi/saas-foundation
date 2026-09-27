@@ -10,11 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Laravel\Cashier\SubscriptionItem as CashierSubscriptionItem;
 
 /**
- * One priced line of a subscription.
- *
- * Deliberately not tenant-owned: the table carries no organization column, and
- * every read reaches it through a subscription that is already scoped. Querying
- * this model directly would cross tenants unchecked.
+ * Not tenant-owned: the table has no organization column and reads go through a scoped
+ * subscription. Querying it directly crosses tenants.
  *
  * @property int $id
  * @property int $subscription_id
@@ -34,7 +31,4 @@ use Laravel\Cashier\SubscriptionItem as CashierSubscriptionItem;
  *
  * @mixin Model
  */
-final class SubscriptionItem extends CashierSubscriptionItem
-{
-    //
-}
+final class SubscriptionItem extends CashierSubscriptionItem {}

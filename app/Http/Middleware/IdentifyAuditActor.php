@@ -13,12 +13,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Names the person behind this request for anything it audits.
- *
- * A guest is still a web request, and says so, rather than leaving the act to
- * look like background work. While an operator is acting as the user, the
- * impersonation rides along, so the log never credits the user with the act.
- * The impersonation guard has already run, so an id in the session is live.
+ * A guest is still recorded as web. During an impersonation it rides along, so the log
+ * never credits the user with the operator's act.
  */
 final class IdentifyAuditActor
 {

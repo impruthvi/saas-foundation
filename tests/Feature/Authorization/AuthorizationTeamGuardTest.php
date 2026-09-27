@@ -20,7 +20,6 @@ it('fails a test that forgets the tenant without the team following', function (
     $tenant = resolve(TenantContext::class);
     $tenant->set($organization);
 
-    // Simulate a tenant being cleared while the permission team remains stale.
     $tenant->forget();
 
     resolve(PermissionRegistrar::class)->setPermissionsTeamId($organization->id);

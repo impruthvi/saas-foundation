@@ -9,10 +9,6 @@ use App\Models\Organization;
 use App\Tenancy\TenantContext;
 use Impruthvi\CashierEntitlements\Reconciliation\RefreshManager;
 
-/**
- * Ask for an organization's entitlements to be worked out again from its
- * billing facts, on an operator's say-so.
- */
 final readonly class RequestEntitlementRefresh
 {
     public function __construct(

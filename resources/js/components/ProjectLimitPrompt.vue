@@ -6,9 +6,8 @@ import { buttonVariants } from '@/components/ui/button';
 import { index as billing } from '@/routes/organizations/billing';
 import type { ProjectAllowance } from '@/types';
 
-// Every word here is a projection of scalars the server resolved. The prompt
-// holds no threshold of its own, so it can never claim an allowance the
-// endpoint would not also refuse.
+// No threshold of its own: every value comes from the server, so the prompt
+// cannot disagree with what the endpoint refuses.
 defineProps<{
     allowance: ProjectAllowance;
 }>();

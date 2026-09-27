@@ -42,8 +42,7 @@ it('gives a newly registered user exactly one personal organization', function (
 });
 
 it('leaves no user behind when the organization cannot be created', function (): void {
-    // A name that slugs to nothing still has to produce an organization, because
-    // a user without one is a state this application does not have.
+    // A name that slugs to nothing must still produce an organization.
     $this->post(route('register.store'), [
         'name' => '???',
         'email' => 'symbols@example.com',

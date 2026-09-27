@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Audit\AuditActor;
 use App\Billing\Plan;
 use App\Billing\PlanCatalog;
+use App\Billing\StripeWebhookForwarding;
 use App\Console\Commands\ReconcileEntitlementsCommand;
 use App\Contracts\Operators;
 use App\Entitlements\ResolveAllowance;
@@ -56,18 +57,17 @@ final class AppServiceProvider extends ServiceProvider
     {
         Relation::morphMap(['organization' => Organization::class]);
 
-        // Entitlement work carries an owner reference and then reads that
-        // owner's subscriptions through a tenant-scoped relation, on the queue
-        // and on the console alike. Both entry points get the organization
-        // resolved from the reference the work already carries.
+        // Entitlement refreshes read a tenant-scoped relation on the queue and the
+        // console, so the organization is resolved from the owner reference they carry.
         Bus::pipeThrough([ResolveTenantForRefresh::class]);
 
         if ($this->app->runningInConsole()) {
             $this->commands([ReconcileEntitlementsCommand::class]);
+            StripeWebhookForwarding::registerDevCommand();
         }
 
-        // An act started from the command line has no person behind it. A queued
-        // job replaces this with whatever its payload carried.
+        // Console acts have no person behind them; a queued job replaces this with its
+        // payload's actor.
         Event::listen(CommandStarting::class, static function (): void {
             AuditActor::source(AuditSource::Console)->bind();
         });

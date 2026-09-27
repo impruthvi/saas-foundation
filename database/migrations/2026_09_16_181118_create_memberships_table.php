@@ -7,10 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The link between a user and an organization, carrying role and status.
- *
- * The `user_id` index supports resolving a user's organizations before a tenant
- * is known. A membership is a person relationship, never a billed seat.
+ * The user_id index serves resolving a user's organizations before a tenant is known.
  */
 return new class extends Migration
 {

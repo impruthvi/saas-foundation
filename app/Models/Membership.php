@@ -60,11 +60,8 @@ final class Membership extends Model implements TenantOwned
     }
 
     /**
-     * Whether this membership may be ended at all.
-     *
-     * The row-local half of the removal rules, in one place so the policy, the
-     * members screen and the action cannot disagree about it. The count is
-     * passed in because "is anyone else still running this" spans every page.
+     * The row-local half of the removal rules, shared by the policy, the members screen
+     * and the action. The count is passed in because it spans every page.
      */
     public function mayBeRemovedFrom(Organization $organization, int $otherActiveAdministrators): bool
     {
@@ -76,18 +73,9 @@ final class Membership extends Model implements TenantOwned
     }
 
     /**
-     * Revoke the organization's grants when the membership goes.
-     *
-     * `model_has_roles` is keyed to organizations and users, never to this
-     * table, so deleting a membership leaves the assignment behind and the
-     * removed person keeps everything it granted. The revocation is here rather
-     * than only in the action so that a later caller cannot forget it, and it
-     * names the organization explicitly rather than trusting whichever tenant
-     * happens to be resolved.
-     *
-     * Direct permissions go too. Nothing grants them today, but
-     * `model_has_permissions` carries the same team key and would outlive the
-     * membership in exactly the same way.
+     * model_has_roles is keyed to organization and user, not to this row, so deleting a
+     * membership would leave its grants behind. Revoked here so no caller can forget,
+     * naming the organization explicitly. Direct permissions go too.
      */
     protected static function booted(): void
     {
@@ -104,11 +92,8 @@ final class Membership extends Model implements TenantOwned
     }
 
     /**
-     * Members who can still actually run the organization.
-     *
-     * Rank alone is not enough: a suspended administrator holds the rank and
-     * grants nothing, so counting them would let the last usable administrator
-     * be removed.
+     * A suspended administrator holds the rank and grants nothing, so it does not
+     * count.
      *
      * @param  Builder<static>  $query
      */

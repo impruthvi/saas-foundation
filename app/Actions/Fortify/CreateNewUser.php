@@ -26,15 +26,8 @@ final readonly class CreateNewUser implements CreatesNewUsers
     ) {}
 
     /**
-     * Validate and create a newly registered user.
-     *
-     * The personal organization is created in the same transaction so a
-     * partially completed registration cannot leave an account owning nothing.
-     *
-     * Invitation acceptance runs outside the transaction and may fail. An
-     * invitation that lapsed while the form was being filled in must not cost
-     * somebody their account — they can ask for a new one; they cannot ask for
-     * their registration back.
+     * Invitation acceptance runs outside the transaction: an invitation that lapsed
+     * mid-form must not cost somebody their account.
      *
      * @param  array<string, string>  $input
      */
@@ -57,8 +50,8 @@ final readonly class CreateNewUser implements CreatesNewUsers
             return $user;
         });
 
-        // The invitation is accepted before Fortify signs the new user in, so the
-        // request still looks like a guest's. The actor is known here, though.
+        // The invitation is accepted before Fortify signs the user in, so the actor is
+        // set explicitly.
         AuditActor::runAs(
             AuditActor::user($user),
             fn (): ?Invitation => $this->pendingInvitations->handle(session()->driver(), $user),

@@ -12,10 +12,6 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-/**
- * Carries an invitation's only usable token copy. The accept URL is injected so
- * the mailable remains independent of routing and can render in isolation.
- */
 final class OrganizationInvitation extends Mailable implements ShouldQueue
 {
     use Queueable;
@@ -26,8 +22,8 @@ final class OrganizationInvitation extends Mailable implements ShouldQueue
         public string $organizationName,
         public string $acceptUrl,
     ) {
-        // The invitation row is written inside a transaction, so without this a
-        // worker can pick the job up before the row it needs is committed.
+        // The invitation is written in a transaction; without afterCommit a worker can
+        // run before the row exists.
         $this->afterCommit();
     }
 

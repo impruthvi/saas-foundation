@@ -42,9 +42,8 @@ it('raises when a row arrives from another organization with the scope bypassed'
 
     $theirs = Project::factory()->for($first)->create(['name' => 'theirs']);
 
-    // The shape of a queued job restoring a serialized model: Laravel's
-    // newQueryForRestoration() calls newQueryWithoutScopes(), so the scope is
-    // off and only the retrieved guard is left to notice.
+    // A queued job restoring a serialized model uses newQueryWithoutScopes(), so only
+    // the retrieved guard is left to notice.
     resolve(TenantContext::class)->runForId($second->id, function () use ($theirs): void {
         TenantQueryGuard::allowUnscoped(
             fn () => Project::query()->withoutTenantScope()->whereKey($theirs->id)->first()
@@ -57,8 +56,8 @@ it('refuses to write through an instance that belongs to another organization', 
 
     $theirs = Project::factory()->for($first)->create(['name' => 'theirs']);
 
-    // Loaded with no tenant resolved, the way a console command or a stale
-    // payload would hand one over.
+    // Loaded with no tenant resolved, the way a console command or a stale payload
+    // hands one over.
     $stale = TenantQueryGuard::allowUnscoped(
         fn (): ?Project => Project::query()->withoutTenantScope()->find($theirs->id)
     );

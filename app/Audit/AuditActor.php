@@ -10,14 +10,9 @@ use Closure;
 use Illuminate\Support\Facades\Context;
 
 /**
- * Who is acting, for the audit log, carried the way the tenant is.
- *
- * Most audited actions are never handed an actor, and they run over HTTP, on
- * the queue and on the console alike, so the actor travels in hidden context:
- * set once where it is known, dehydrated into every queued job, and gone from a
- * job that carried none, because hydrating a job replaces the whole context.
- * Reading the session or the authenticated user inside an action would record
- * nobody for everything that runs off the request.
+ * The actor travels in hidden context, like the tenant, so queued and console work
+ * record who acted. Reading the session inside an action would record nobody
+ * off-request.
  */
 final readonly class AuditActor
 {
@@ -39,9 +34,6 @@ final readonly class AuditActor
         return new self(null, null, $source);
     }
 
-    /**
-     * The actor for the current unit of work, or nobody in particular.
-     */
     public static function current(): self
     {
         $stored = Context::getHidden(self::KEY);
@@ -58,8 +50,6 @@ final readonly class AuditActor
     }
 
     /**
-     * Run the callback as this actor, then restore whoever was acting before.
-     *
      * @template TReturn
      *
      * @param  Closure(): TReturn  $callback
@@ -80,9 +70,6 @@ final readonly class AuditActor
         }
     }
 
-    /**
-     * Make this the actor for the rest of the current unit of work.
-     */
     public function bind(): void
     {
         Context::addHidden(self::KEY, [

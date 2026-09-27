@@ -15,8 +15,6 @@ use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * One Stripe event as this application received it, with what became of it.
- *
  * @property int $id
  * @property string|null $stripe_event_id
  * @property string|null $type
@@ -53,9 +51,7 @@ final class WebhookEvent extends Model
     use MassPrunable;
 
     /**
-     * Rows past the retention window of their latest outcome.
-     *
-     * The payloads are unredacted Stripe objects, so nothing is kept forever.
+     * Payloads are unredacted Stripe objects, so nothing is kept forever.
      *
      * @return Builder<static>
      */

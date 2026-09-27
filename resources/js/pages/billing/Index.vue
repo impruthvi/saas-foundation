@@ -32,6 +32,7 @@ import type {
     BillingPrice,
     BillingState,
     CurrentSubscription,
+    StripeSetup,
 } from '@/types';
 
 defineOptions({
@@ -44,6 +45,7 @@ defineProps<{
     plans: BillingPlan[];
     subscription: CurrentSubscription | null;
     canManageBilling: boolean;
+    stripe: StripeSetup;
 }>();
 
 const organization = usePage().props.organization;
@@ -176,6 +178,17 @@ function formatAmount(price: BillingPrice): string {
             </Card>
         </section>
 
+        <Alert v-if="!stripe.configured">
+            <CircleAlert />
+            <AlertTitle>Stripe is not configured</AlertTitle>
+            <AlertDescription>
+                {{
+                    stripe.setupHint ??
+                    'Subscriptions open once an administrator connects a Stripe account.'
+                }}
+            </AlertDescription>
+        </Alert>
+
         <section class="flex flex-col gap-4">
             <div>
                 <h2 class="text-sm font-medium">Available plans</h2>
@@ -216,6 +229,7 @@ function formatAmount(price: BillingPrice): string {
                             <Form
                                 v-if="
                                     canManageBilling &&
+                                    stripe.configured &&
                                     !subscription &&
                                     price.amount > 0
                                 "

@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Restores the tenant from queue context and clears it when a payload carries
- * none, preventing long-lived workers from retaining the previous job's tenant.
+ * Clears the tenant when a payload carries none, so a long-lived worker never keeps the
+ * previous job's organization.
  */
 final class TenancyServiceProvider extends ServiceProvider
 {

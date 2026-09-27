@@ -10,11 +10,9 @@ use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 /**
- * Let a person into the admin console.
- *
- * Granted from the command line only, so a stolen browser session cannot create
- * a second operator. The grant is logged rather than audited: an audit event
- * belongs to one organization, and this belongs to none.
+ * Command line only, so a stolen browser session cannot create an operator. Logged
+ * rather than audited: an audit event belongs to one organization, and this belongs to
+ * none.
  */
 final readonly class GrantOperator
 {

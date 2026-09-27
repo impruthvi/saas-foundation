@@ -50,6 +50,8 @@ $chisel->files(
 )->delete();
 
 $chisel->file('app/Models/User.php')->removeSection('admin-console');
+$chisel->file('app/Actions/SeedDemoJourney.php')->removeSection('admin-console');
+$chisel->file('app/Console/Commands/SaasDemoCommand.php')->removeSection('admin-console');
 
 try {
     $chisel->php('app/Models/User.php')

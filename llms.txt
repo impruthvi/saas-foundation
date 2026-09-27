@@ -1,0 +1,15 @@
+# Laravel SaaS Foundation
+
+> An MIT Laravel starter kit that sits above the official Vue starter kit: organizations as the tenant and billing boundary, tenant-scoped roles, Stripe subscriptions through Cashier on the organization, entitlements with a server-enforced usage limit, and a removable Filament operations console. Install with `laravel new my-app --using=https://github.com/impruthvi/saas-foundation`, then `php artisan saas:demo`.
+
+## Docs
+
+- [README](https://raw.githubusercontent.com/impruthvi/saas-foundation/main/README.md): what it is, the ten-minute journey, install, demo and Stripe setup
+- [Agent guide](https://raw.githubusercontent.com/impruthvi/saas-foundation/main/AGENTS.md): enforced rules, test traps and the fixed domain vocabulary
+- [Agent skill](https://raw.githubusercontent.com/impruthvi/saas-foundation/main/.ai/skills/saas-foundation/SKILL.md): install commands and the rules that fail tests, published by Laravel Boost
+- [Full text](https://raw.githubusercontent.com/impruthvi/saas-foundation/main/llms-full.txt): all of the above in one file
+
+## Optional
+
+- [impruthvi/cashier-entitlements](https://github.com/impruthvi/cashier-entitlements): the entitlement, usage and reconciliation package this kit consumes
+- [impruthvi/cashier-dunning](https://github.com/impruthvi/cashier-dunning): offline replay of recorded Stripe billing lifecycles, used in the test suite

@@ -15,16 +15,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Applies tenant scoping on reads, fills the tenant on inserts, and rejects
- * cross-tenant models restored through paths that bypass global scopes.
+ * Also rejects cross-tenant models restored through paths that bypass global scopes.
  *
  * @phpstan-require-extends Model
  */
 trait BelongsToOrganization
 {
-    /**
-     * Boot the tenant behaviour for the model.
-     */
     public static function bootBelongsToOrganization(): void
     {
         static::addGlobalScope(new TenantScope());
@@ -66,9 +62,8 @@ trait BelongsToOrganization
             }
         };
 
-        // Writing is guarded on the way in as reading is on the way out: an
-        // instance loaded for one organization cannot be saved or deleted while
-        // another is resolved, and it fails loudly rather than updating nothing.
+        // Writes are guarded like reads: an instance loaded for one organization cannot
+        // be saved or deleted while another is resolved.
         static::saving($guardAgainstOtherTenants);
         static::deleting($guardAgainstOtherTenants);
 
@@ -94,9 +89,6 @@ trait BelongsToOrganization
         });
     }
 
-    /**
-     * The column carrying the owning organization's key.
-     */
     public function tenantColumn(): string
     {
         return 'organization_id';
@@ -111,12 +103,8 @@ trait BelongsToOrganization
     }
 
     /**
-     * Constrain writes against an existing row by tenant as well as by key.
-     *
-     * Eloquent addresses a loaded model by primary key alone, so `$model->save()`
-     * and `$model->delete()` never reach the global scope. Adding the tenant
-     * predicate here means an instance carrying one organization's key cannot
-     * write to another's row.
+     * Eloquent saves and deletes by primary key alone, bypassing global scopes; the
+     * tenant predicate stops a model writing another organization's row.
      *
      * @param  Builder<static>  $query
      * @return Builder<static>
@@ -140,8 +128,6 @@ trait BelongsToOrganization
     }
 
     /**
-     * Read or write across organizations, deliberately and visibly.
-     *
      * Call sites are restricted by an architecture test.
      *
      * @param  Builder<static>  $query

@@ -7,10 +7,6 @@ namespace App\Actions;
 use App\Models\Organization;
 use App\Models\User;
 
-/**
- * Gives every newly registered user a personal organization, avoiding a second
- * billing and entitlement path for solo users.
- */
 final readonly class CreatePersonalOrganization
 {
     public function __construct(private CreateOrganization $organizations) {}

@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Billing\PlanCatalog;
 use Illuminate\Testing\TestResponse;
 
-/**
- * Builds and signs Stripe deliveries for the public webhook endpoint.
- */
 final class StripeWebhook
 {
     public const string SECRET = 'whsec_testing';
@@ -36,8 +34,34 @@ final class StripeWebhook
     }
 
     /**
-     * A subscription event, with `created` omitted entirely when it is null so
-     * the no-timestamp path can be exercised.
+     * Stripe reports an active subscription on the plan's first price, then says so by
+     * a signed webhook. Posted across every owner because the refresh it triggers reads
+     * the entitlement ledgers by owner.
+     */
+    public static function reportSubscription(
+        FakeStripeApi $provider,
+        string $customerId,
+        string $subscriptionId,
+        string $itemId,
+        int $created = 1_000,
+        string $plan = 'pro',
+    ): void {
+        $provider->withActiveSubscription(
+            $customerId,
+            (string) resolve(PlanCatalog::class)->findPlan($plan)?->prices[0]->id,
+            $subscriptionId,
+        );
+
+        TenantQueryGuard::allowUnscoped(fn () => self::post(self::subscriptionPayload(
+            customerId: $customerId,
+            created: $created,
+            subscriptionId: $subscriptionId,
+            itemId: $itemId,
+        ))->assertOk());
+    }
+
+    /**
+     * created is omitted entirely when null so the no-timestamp path can be exercised.
      *
      * @return array<string, mixed>
      */

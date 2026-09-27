@@ -9,13 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Moves the events that were kept rather than applied into `webhook_events`.
- *
- * The old table wrote one row per delivery behind a non-unique index, so a
- * redelivered event already has several rows. They collapse into one: the
- * delivery count is the number of rows, the received-at bounds are the oldest
- * and newest, and the newest row supplies the payload and reason. A row with no
- * event id cannot be matched with anything and is copied on its own.
+ * The old table wrote one row per delivery, so redelivered events collapse: the count
+ * is the number of rows, the bounds are oldest and newest, and the newest supplies
+ * payload and reason. Rows without an event id are copied alone.
  */
 return new class extends Migration
 {

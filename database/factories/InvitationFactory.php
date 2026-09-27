@@ -34,10 +34,8 @@ final class InvitationFactory extends Factory
     }
 
     /**
-     * An invitation whose token the test needs to hold.
-     *
-     * The plaintext exists only at the moment it is minted, so a test that means
-     * to click the link has to say so when the row is built.
+     * The plaintext exists only when minted, so a test that clicks the link has to ask
+     * for it here.
      */
     public function withToken(string $token): static
     {
@@ -47,9 +45,7 @@ final class InvitationFactory extends Factory
     }
 
     /**
-     * Addressed to a specific person, which most tests care about.
-     *
-     * Not named `for()`: that is `Factory::for()`, which declares a relationship.
+     * Not named for(): that is Factory::for(), which declares a relationship.
      */
     public function addressedTo(string $email): static
     {
@@ -66,8 +62,7 @@ final class InvitationFactory extends Factory
     }
 
     /**
-     * Still open, but the clock ran out. Status stays Pending on purpose:
-     * expiry is derived from the timestamp and is never written down.
+     * Status stays Pending: expiry is derived from the timestamp.
      */
     public function expired(): static
     {

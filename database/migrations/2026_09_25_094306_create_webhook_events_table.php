@@ -7,18 +7,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Every Stripe delivery this application received, one row per event.
- *
- * Cashier overwrites subscription rows in place and keeps no event history, so
- * without this table nothing can say which event set an organization's plan.
- *
- * There is no organization column. An event arrives before any organization is
- * known and some never find one, so rows are keyed by the Stripe customer and
- * read per organization through `organizations.stripe_id`.
- *
- * `outcome` describes the latest delivery. `applied_at` is written the first time
- * the event changes state and never cleared, because a redelivery that arrives
- * after a newer event is superseded without undoing what the first one did.
+ * Cashier keeps no event history, so this is what names the event behind an
+ * organization's plan. No organization column: events arrive before one is known, so
+ * rows are keyed by Stripe customer. applied_at is set once so a superseded redelivery
+ * does not undo the first application.
  */
 return new class extends Migration
 {

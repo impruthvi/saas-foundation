@@ -10,12 +10,9 @@ use App\Tenancy\TenantContext;
 use Tests\Support\TenantQueryGuard;
 
 /**
- * The tenant boundary on the subscription table, asserted directly.
- *
- * The suite-wide query guard cannot speak for this table: it returns early on
- * any statement containing the string `organization_id`, which every Cashier
- * query carries. So the scope, the retrieved guard and the write guard are each
- * exercised here rather than assumed.
+ * The suite-wide query guard returns early on any SQL containing organization_id, which
+ * every Cashier query carries, so the scope and both guards are exercised here
+ * directly.
  */
 function subscribe(Organization $organization, string $status = 'active'): Subscription
 {

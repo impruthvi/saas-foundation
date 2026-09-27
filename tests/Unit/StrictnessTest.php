@@ -17,8 +17,7 @@ it('refuses to read attributes that were never retrieved', function (): void {
 });
 
 it('does not autoload relationships under test', function (): void {
-    // Autoloading resolves relations before preventLazyLoading is consulted
-    // (Model::getRelationValue), which would leave the N+1 guard unable to
-    // fire for models drawn from a collection. See tests/Pest.php.
+    // Autoloading resolves relations before preventLazyLoading is consulted, which
+    // would stop the lazy-loading guard firing for models from a collection.
     expect(Model::isAutomaticallyEagerLoadingRelationships())->toBeFalse();
 });

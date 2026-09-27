@@ -10,14 +10,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The console reads across organizations, so it holds none of its own.
- *
- * A page load runs the panel's middleware, which resolves no organization. A
- * Livewire update runs the `web` group instead, and that resolves the
- * operator's own organization from their session. A console read that forgot
- * to name its organization would then quietly show the operator's own rows as
- * the customer's. Forgetting here, on both paths, makes that mistake raise
- * instead. This is registered as persistent so Livewire replays it on updates.
+ * Livewire updates run the web group, which resolves the operator's own organization.
+ * Forgetting it here makes a console read that forgot to name its organization raise
+ * instead of showing the operator's rows. Persistent so Livewire replays it.
  */
 final readonly class ForgetTenantContext
 {

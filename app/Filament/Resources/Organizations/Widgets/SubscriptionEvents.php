@@ -21,9 +21,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use LogicException;
 
 /**
- * The organization's Stripe events, newest first by Stripe's own clock.
- *
- * Cashier keeps only the current subscription row, so this is its history.
+ * Cashier keeps only the current subscription row, so the webhook log is its history.
  */
 final class SubscriptionEvents extends TableWidget
 {

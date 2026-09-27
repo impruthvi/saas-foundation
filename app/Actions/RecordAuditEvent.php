@@ -11,12 +11,9 @@ use App\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * The only writer of the audit log.
- *
- * Written under the organization the act concerns rather than whichever one is
- * resolved: accepting an invitation, for one, runs while the person accepting
- * has their own organization resolved. Called inside the acting transaction, so
- * an act that rolls back leaves no record claiming it happened.
+ * Written under the organization the act concerns, not the resolved one: accepting runs
+ * with the acceptor's own organization resolved. Called inside the acting transaction
+ * so a rolled-back act leaves no record.
  */
 final readonly class RecordAuditEvent
 {

@@ -31,32 +31,23 @@ use Tests\Support\AuthorizationTeamGuard;
 use Tests\Support\TenantQueryGuard;
 use Tests\TestCase;
 
-/**
- * The strictness every single-process test runs under, whichever lane it is in.
- */
 $strictBoot = function (): void {
-    // Automatic relationship autoloading runs *before* the lazy-loading check in
-    // Model::getRelationValue(), and returns early when it succeeds. Left enabled
-    // under test, it silently satisfies every relation accessed on a model that came
-    // from a collection, so ShouldBeStrict's preventLazyLoading never fires for the
-    // one case it exists to catch. Disabled here, and only here: the convenience is
-    // real in development and production, but a guard that cannot fail is not a guard.
-    // The framework makes the same call itself in Factory::createChildren().
+    // Automatic relationship autoloading runs before the lazy-loading check in
+    // Model::getRelationValue(), so under test it would stop preventLazyLoading ever
+    // firing for models from a collection. Disabled only here, as
+    // Factory::createChildren() also does.
     Model::automaticallyEagerLoadRelationships(false);
 
-    // Assert the tenant boundary at the query layer for every test.
     TenantQueryGuard::flush();
 
     // These tenant-owned pivot tables have no application models to discover.
     TenantQueryGuard::register('model_has_roles');
     TenantQueryGuard::register('model_has_permissions');
 
-    // The entitlement package keys on the owner, not on the organization,
-    // and reads its ledgers by a primary key hashed from that owner, so
-    // both columns count as narrowing. Work that genuinely spans owners --
-    // the reconciler sweeping for stale state -- has to say so through
-    // acrossEveryOwner(). `cashier_entitlement_audit_runs` is absent
-    // because it records runs rather than anything an owner holds.
+    // The entitlement package keys on the owner and reads its ledgers by a primary key
+    // hashed from it, so both columns count as narrowing. Work that spans owners says
+    // so through acrossEveryOwner(). cashier_entitlement_audit_runs records runs, not
+    // anything an owner holds.
     foreach ([
         'cashier_entitlement_states',
         'cashier_entitlement_usage_counters',
@@ -90,14 +81,9 @@ pest()->extend(TestCase::class)
     })
     ->in('Browser', 'Feature', 'Unit');
 
-/*
- * Committed tests need work that outlives a transaction, because the
- * entitlement refresh refuses to run inside one: it reads a provider and then
- * applies the result in a transaction of its own. That rules out
- * RefreshDatabase, and truncating instead rules out `:memory:`, whose schema
- * does not survive the reconnect. Truncation also empties the tables the RBAC
- * catalog migration filled, so the catalog is rebuilt for each test.
- */
+// The entitlement refresh refuses to run inside a transaction, which rules out
+// RefreshDatabase; truncating rules out :memory:, whose schema does not survive the
+// reconnect. Truncation empties the RBAC catalog, so it is rebuilt per test.
 pest()->extend(TestCase::class)
     ->use(DatabaseTruncation::class)
     ->beforeEach(function () use ($strictBoot): void {
@@ -113,12 +99,8 @@ pest()->extend(TestCase::class)
     })
     ->in('Committed');
 
-/*
- * Concurrency tests need committed rows, because the processes they fork read
- * through their own connections and cannot see an open transaction. That rules
- * out RefreshDatabase, and with it the transaction the rest of the suite relies
- * on to undo itself, so the tables are truncated between tests instead.
- */
+// Forked processes read through their own connections and cannot see an open
+// transaction, so rows are committed and tables truncated between tests.
 pest()->extend(TestCase::class)
     ->use(DatabaseTruncation::class)
     ->beforeEach(function (): void {
@@ -132,9 +114,6 @@ pest()->extend(TestCase::class)
     })
     ->in('Concurrency');
 
-/**
- * Rebuild the roles and permissions a truncating lane just emptied.
- */
 function seedAuthorizationCatalog(): void
 {
     $permissions = resolve(PermissionRegistrar::class);
@@ -159,10 +138,8 @@ function seedAuthorizationCatalog(): void
 expect()->extend('toBeOne', fn () => $this->toBe(1));
 
 /**
- * Make a request or a read that resolves an invitation by its token.
- *
- * Token lookup intentionally has no organization scope. Keeping the guard
- * exemption in one named helper makes every cross-tenant read explicit.
+ * Token lookup has no organization scope by design; one named helper keeps every such
+ * read explicit.
  *
  * @template TReturn
  *
@@ -175,10 +152,8 @@ function throughTheAuditedDoor(Closure $work): mixed
 }
 
 /**
- * What the user may do inside one organization, asked as a policy asks it.
- *
- * Laravel's gate does not know package permission names, so this uses
- * `hasPermissionTo()`. Relations are cleared because they cache per instance.
+ * hasPermissionTo() because the gate does not know package permission names; relations
+ * are cleared because they cache per instance.
  */
 function mayWithin(User $user, int $organizationId, Permission $permission): bool
 {
@@ -190,13 +165,9 @@ function mayWithin(User $user, int $organizationId, Permission $permission): boo
 }
 
 /**
- * Close an account, which revokes its roles in every organization at once.
- *
- * `HasRoles` detaches across all teams on delete, so the deletes it emits
- * carry no organization_id and the query guard flags them. That crossing is
- * intended — an account being closed should keep grants nowhere — so it gets a
- * door with a name rather than a blanket exemption, and the name says which
- * crossing is being allowed.
+ * HasRoles detaches across all teams on delete, so its deletes carry no
+ * organization_id. That crossing is intended, so it gets a named door rather than a
+ * blanket exemption.
  *
  * @template TReturn
  *
@@ -209,11 +180,8 @@ function whileClosingAnAccount(Closure $work): mixed
 }
 
 /**
- * Read the entitlement ledgers across every owner.
- *
- * The package keys on the owner rather than the organization, so a test that
- * wants to say "nobody anywhere was charged" has to look past the tenant
- * boundary to say it. That crossing is a test's, never the application's.
+ * The package keys on the owner, so asserting that nobody anywhere was charged has to
+ * look past the tenant boundary. That crossing is a test's, never the application's.
  *
  * @template TReturn
  *
@@ -225,9 +193,6 @@ function acrossEveryOwner(Closure $work): mixed
     return TenantQueryGuard::allowUnscoped($work);
 }
 
-/**
- * Resolve an invitation the way a stranger's request does.
- */
 function findInvitation(string $token): ?Invitation
 {
     return throughTheAuditedDoor(
@@ -235,9 +200,6 @@ function findInvitation(string $token): ?Invitation
     );
 }
 
-/**
- * Invite an address, and hand back the token the email would have carried.
- */
 function issueInvitation(Organization $organization, string $email, ?User $by = null): string
 {
     return resolve(TenantContext::class)->runFor(
@@ -247,20 +209,14 @@ function issueInvitation(Organization $organization, string $email, ?User $by = 
     );
 }
 
-/**
- * The entitlement owner an organization is known by inside the package.
- */
 function organizationEntitlementOwner(Organization $organization): OwnerReference
 {
     return resolve(OwnerLocator::class)->reference($organization);
 }
 
 /**
- * Land a billing decision the way a completed refresh would.
- *
- * Tests reach for this rather than writing the projection directly, because
- * the request/claim/complete handshake is what decides whether the resolver
- * will later trust the row at all.
+ * Goes through the request, claim and complete handshake, which decides whether the
+ * resolver will trust the row.
  */
 function applyAllowanceDecision(
     OwnerReference $owner,
@@ -285,8 +241,6 @@ function applyAllowanceDecision(
 }
 
 /**
- * An organization and the user who owns it.
- *
  * @return array{0: Organization, 1: User}
  */
 function organizationOwnedBySomeone(string $name = 'Acme'): array

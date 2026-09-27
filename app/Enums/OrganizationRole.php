@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * A named bundle of permissions, granted inside one organization.
- *
- * `forRank()` is the only translation from a membership's writable rank to its
- * RBAC role. Ownership remains a separate fact on the organization.
+ * forRank() is the only translation from rank to role.
  */
 enum OrganizationRole: string
 {
