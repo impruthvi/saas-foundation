@@ -124,6 +124,58 @@ jobs:
             - name: Run Browser Tests
               run: composer test:browser
 
+    # What a stranger runs: the Laravel installer's GitHub path downloads this commit
+    # and runs the post-create-project hook in composer.json. A pull request from a fork
+    # installs the fork's commit, which upstream does not have.
+    install:
+        runs-on: ubuntu-latest
+
+        name: install with the Laravel installer
+
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              with:
+                  php-version: '8.4'
+                  tools: composer:v2
+                  coverage: none
+
+            # The installer downloads the repository with `npx tiged`, and builds the
+            # frontend with Bun when asked to.
+            - name: Setup Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: '22'
+
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+            - name: Install the Laravel Installer
+              run: |
+                  composer global require laravel/installer --no-interaction
+                  composer global config bin-dir --absolute >> "$GITHUB_PATH"
+
+            - name: Install the Application
+              run: laravel new demo-app --using="https://github.com/${REPOSITORY}#${REF}" --bun --no-interaction
+              env:
+                  REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+                  REF: ${{ github.event.pull_request.head.sha || github.sha }}
+
+            - name: Seed the Demo
+              working-directory: demo-app
+              run: php artisan saas:demo
+
+            - name: Install Chromium
+              working-directory: demo-app
+              run: bunx playwright install --with-deps chromium
+
+            - name: Walk the Journey
+              working-directory: demo-app
+              run: vendor/bin/pest tests/Committed/JourneyTest.php
+              env:
+                  DB_CONNECTION: sqlite
+                  DB_DATABASE: ${{ format('{0}/demo-app/database/database.sqlite', github.workspace) }}
+
     # The admin console must be removable without a failing test or a dead link.
     # Remove it the way an adopter would, then run the whole gate: the build fails
     # on a leftover console route import, and the smoke test clicks every link.
