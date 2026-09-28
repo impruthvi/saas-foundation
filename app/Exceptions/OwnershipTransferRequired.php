@@ -15,10 +15,11 @@ final class OwnershipTransferRequired extends RuntimeException
      */
     public static function before(Collection $organizations): self
     {
-        $names = $organizations->pluck('name')->implode(', ');
+        $names = $organizations->pluck('name')->join(', ', ' and ');
+        $verb = $organizations->count() === 1 ? 'has' : 'have';
 
         return new self(
-            "Ownership of [{$names}] has to be transferred before this account can be deleted."
+            "{$names} {$verb} other members. Remove them from the organization before deleting this account."
         );
     }
 }

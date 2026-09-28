@@ -56,7 +56,6 @@ final readonly class MembershipRepository
     {
         return $this->tenant->runWithoutTenant(fn (): Collection => Organization::query()
             ->where('owner_id', $user->id)
-            ->where('personal', false)
             ->whereIn('id', Membership::query()
                 ->withoutTenantScope()
                 ->where('user_id', '!=', $user->id)
