@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 
+use App\Billing\StripeSecret;
+
 return [
     // Opt in to native application and background refresh. Dry-run remains read-only.
     // Off only for the dunning replay, which rolls back and so could never observe a
     // refresh requested after commit.
     'enabled' => env('CASHIER_ENTITLEMENTS_ENABLED', true),
     'provider_context' => 'platform',
-    'live_mode' => false,
+    // Follows the key: the package refuses webhooks and reads from the other mode, so a
+    // live key with live_mode off would charge customers and never grant their plan.
+    'live_mode' => StripeSecret::isLiveKey(env('STRIPE_SECRET')),
     'subscription_type' => 'default',
     'connection' => null,
     // Choose exactly one: ['max_stale_age' => 3600] or ['retain_last_known' => true].

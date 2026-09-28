@@ -29,4 +29,9 @@ final class StripeSecret
     {
         return preg_match('/^(sk|rk)_test_/', $secret) === 1;
     }
+
+    public static function isLiveKey(mixed $secret): bool
+    {
+        return is_string($secret) && preg_match('/^(sk|rk)_live_/', $secret) === 1;
+    }
 }
