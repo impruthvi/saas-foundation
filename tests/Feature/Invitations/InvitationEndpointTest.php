@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
 use App\Actions\ConsumePendingInvitation;
+use App\Actions\CreatePersonalOrganization;
 use App\Enums\InvitationStatus;
 use App\Enums\MembershipRole;
 use App\Http\Middleware\ResolveTenantContext;
@@ -283,6 +284,44 @@ describe('declining', function (): void {
         );
 
         expect($invitation->status)->toBe(InvitationStatus::Declined);
+    });
+
+    it('lets an addressee who already has an organization decline', function (): void {
+        [$organization, $owner] = organizationOwnedBySomeone();
+        $token = issueInvitation($organization, 'registered@example.com', $owner);
+        $invitee = User::factory()->create(['email' => 'registered@example.com']);
+        resolve(CreatePersonalOrganization::class)->handle($invitee);
+
+        throughTheAuditedDoor(fn () => $this->actingAs($invitee)
+            ->delete(route('invitations.decline', ['token' => $token]))
+            ->assertRedirect(route('home')));
+
+        $invitation = resolve(TenantContext::class)->runFor(
+            $organization,
+            fn (): Invitation => Invitation::query()->sole(),
+        );
+
+        expect($invitation->status)->toBe(InvitationStatus::Declined);
+    });
+
+    it('returns a form error rather than a 500 when the invitation was already accepted', function (): void {
+        [$organization, $owner] = organizationOwnedBySomeone();
+        $token = issueInvitation($organization, 'twice@example.com', $owner);
+        $invitee = User::factory()->create(['email' => 'twice@example.com']);
+
+        throughTheAuditedDoor(fn () => $this->actingAs($invitee)
+            ->post(route('invitations.accept', ['token' => $token])));
+
+        throughTheAuditedDoor(fn () => $this->actingAs($invitee)
+            ->delete(route('invitations.decline', ['token' => $token]))
+            ->assertSessionHasErrors(['invitation' => 'This invitation has already been accepted.']));
+
+        $invitation = resolve(TenantContext::class)->runFor(
+            $organization,
+            fn (): Invitation => Invitation::query()->sole(),
+        );
+
+        expect($invitation->status)->toBe(InvitationStatus::Accepted);
     });
 
     it('refuses somebody who merely has the link', function (): void {

@@ -101,7 +101,11 @@ final class AcceptInvitationController extends Controller
             HttpResponse::HTTP_FORBIDDEN,
         );
 
-        $decline->handle($invitation);
+        try {
+            $decline->handle($invitation);
+        } catch (InvitationRefused $invitationRefused) {
+            return back()->withErrors(['invitation' => $invitationRefused->getMessage()]);
+        }
 
         $request->session()->forget(ConsumePendingInvitation::SESSION_KEY);
 
