@@ -57,7 +57,9 @@ final class InvitationController extends Controller
         try {
             $revoke->handle($invitation, request()->user());
         } catch (InvitationRefused $invitationRefused) {
-            return back()->withErrors(['invitation' => $invitationRefused->getMessage()]);
+            Inertia::flash('toast', ['type' => 'error', 'message' => $invitationRefused->getMessage()]);
+
+            return back();
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation withdrawn.')]);

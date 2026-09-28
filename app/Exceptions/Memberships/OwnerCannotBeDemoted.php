@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Exceptions\Memberships;
 
 use App\Models\Organization;
-use RuntimeException;
 
-final class OwnerCannotBeDemoted extends RuntimeException
+final class OwnerCannotBeDemoted extends MembershipRefused
 {
     public static function of(Organization $organization): self
     {
