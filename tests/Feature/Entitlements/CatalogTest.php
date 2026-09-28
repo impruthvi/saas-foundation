@@ -106,3 +106,21 @@ it('configures bounded freshness, lifetime project usage, and scheduled reconcil
             'recover' => '*/5 * * * *',
         ]);
 });
+
+it('runs the entitlements package in the mode of the Stripe secret key', function (?string $secret, bool $liveMode): void {
+    $original = $_SERVER;
+    $_SERVER['STRIPE_SECRET'] = $secret;
+
+    try {
+        $configuration = require config_path('cashier-entitlements.php');
+    } finally {
+        $_SERVER = $original;
+    }
+
+    expect($configuration['live_mode'])->toBe($liveMode);
+})->with([
+    'live secret key' => ['sk_live_abc', true],
+    'live restricted key' => ['rk_live_abc', true],
+    'test secret key' => ['sk_test_abc', false],
+    'no key' => [null, false],
+]);
