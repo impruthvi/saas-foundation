@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\SeedDemoJourney;
+use App\Billing\PlanCatalog;
 use App\Enums\AuditAction;
 use App\Enums\AuditSource;
 use App\Enums\MembershipRole;
@@ -15,6 +16,8 @@ use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
+use Impruthvi\CashierEntitlements\Billing\PriceCatalog;
+use Impruthvi\CashierEntitlements\Resolution\LocalResolver;
 
 function demoOrganization(): Organization
 {
@@ -56,6 +59,22 @@ it('seeds the journey up to the Free plan limit', function (): void {
         ->and($membership->role)->toBe(MembershipRole::Member)
         ->and($projects)->toBe(['Launch checklist', 'Pricing page'])
         ->and(User::query()->whereNull('email_verified_at')->count())->toBe(0);
+});
+
+it('seeds as many projects as the Free plan allows, whatever that is', function (): void {
+    $freePrice = resolve(PlanCatalog::class)->findPlan('free')?->prices[0]->id;
+    config(["billing.plans.free.prices.{$freePrice}.allowances.projects" => 3]);
+    app()->forgetInstance(PlanCatalog::class);
+    app()->forgetInstance(PriceCatalog::class);
+    app()->forgetInstance(LocalResolver::class);
+
+    $exitCode = Artisan::call('saas:demo');
+
+    $projects = resolve(TenantContext::class)->runFor(demoOrganization(), fn (): int => Project::query()->count());
+
+    expect($exitCode)->toBe(0)
+        ->and($projects)->toBe(3)
+        ->and(Artisan::output())->toContain('has used 3 of its 3 projects');
 });
 
 it('returns passwords that match the seeded accounts', function (): void {
