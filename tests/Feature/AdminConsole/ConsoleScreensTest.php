@@ -6,6 +6,7 @@ use App\Actions\AddOrganizationMember;
 use App\Actions\RecordAuditEvent;
 use App\Enums\AuditAction;
 use App\Enums\WebhookOutcome;
+use App\Filament\Resources\Impersonations\Pages\ListImpersonations;
 use App\Filament\Resources\Organizations\Pages\ListOrganizations;
 use App\Filament\Resources\Organizations\Pages\ViewOrganization;
 use App\Filament\Resources\Organizations\Widgets\OrganizationAuditLog;
@@ -77,6 +78,15 @@ it('serves every console page to an operator', function (): void {
 
 it('renders entitlement health once rather than rescanning every organization on a poll', function (): void {
     acrossEveryOwner(fn () => Livewire::withoutLazyLoading()->test(EntitlementHealth::class)->assertDontSeeHtml('wire:poll'));
+});
+
+it('tells a live impersonation from one whose time ran out', function (): void {
+    operatorWithAnOrganizationOfTheirOwn();
+    Impersonation::factory()->create(['reason' => 'Still helping']);
+    Impersonation::factory()->create(['reason' => 'Tab closed', 'started_at' => now()->subHours(2), 'expires_at' => now()->subHour()]);
+
+    Livewire::test(ListImpersonations::class)
+        ->assertSeeInOrder(['Still helping', 'Live', 'Tab closed', 'Expired']);
 });
 
 it('offers nothing to create, edit or delete', function (): void {

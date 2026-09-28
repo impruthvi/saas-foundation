@@ -25,6 +25,7 @@ final readonly class RevokeOperator
             Impersonation::query()
                 ->where('operator_id', $user->id)
                 ->whereNull('ended_at')
+                ->where('expires_at', '>', now())
                 ->update(['ended_at' => now(), 'ended_by' => ImpersonationEnd::Revoked]);
 
             return $deleted > 0;
