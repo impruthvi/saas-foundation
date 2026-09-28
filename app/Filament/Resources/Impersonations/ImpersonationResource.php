@@ -45,7 +45,9 @@ final class ImpersonationResource extends Resource
                 TextColumn::make('reason')->limit(60)->wrap(),
                 TextColumn::make('started_at')->dateTime()->sortable(),
                 TextColumn::make('expires_at')->dateTime(),
-                TextColumn::make('ended_at')->dateTime()->placeholder('Live'),
+                // Only a request on the impersonated session ends an expired one, so a
+                // closed tab leaves ended_at empty.
+                TextColumn::make('ended_at')->dateTime()->placeholder(fn (Impersonation $record): string => $record->hasExpired() ? 'Expired' : 'Live'),
                 TextColumn::make('ended_by')
                     ->badge()
                     ->formatStateUsing(fn (?ImpersonationEnd $state): string => ! $state instanceof ImpersonationEnd ? '' : ucfirst($state->value)),

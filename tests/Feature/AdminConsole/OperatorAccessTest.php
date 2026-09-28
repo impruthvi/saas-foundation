@@ -112,6 +112,15 @@ it('revokes console access and closes what the operator is doing as another user
         ->and($finished->fresh()?->ended_by)->toBe(ImpersonationEnd::Operator);
 });
 
+it('leaves an impersonation that had already run out to expiry, not revocation', function (): void {
+    $operator = operator(['email' => 'carol@example.com']);
+    $expired = Impersonation::factory()->create(['operator_id' => $operator->id, 'started_at' => now()->subHours(2), 'expires_at' => now()->subHour()]);
+
+    $this->artisan('operators:revoke', ['email' => 'carol@example.com'])->assertSuccessful();
+
+    expect($expired->fresh()?->ended_by)->toBeNull();
+});
+
 it('refuses to revoke someone who is not an operator', function (): void {
     User::factory()->create(['email' => 'carol@example.com']);
 
