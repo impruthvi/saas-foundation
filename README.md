@@ -49,8 +49,10 @@ composer dev
   database and seeds again.
 - **`saas:stripe`** takes a test secret key, finds or creates the Pro price in your Stripe
   account, and writes the key, the price and the webhook signing secret to `.env`.
-- **`composer dev`** starts the server, the queue worker, Vite and `stripe listen`, which
-  forwards Stripe's webhooks to the app.
+- **`composer dev`** starts the server, the queue worker, the scheduler, Vite and
+  `stripe listen`, which forwards Stripe's webhooks to the app. Run the scheduler in
+  production too: it renews a paid plan between webhooks, and without it the plan falls
+  back to the Free plan's limit an hour after the last one.
 
 Then sign in as Ada, open `/projects`, and follow the upgrade prompt. Pay with Stripe's
 test card `4242 4242 4242 4242`, any future date and any CVC.
