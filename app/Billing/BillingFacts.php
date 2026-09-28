@@ -17,6 +17,9 @@ final readonly class BillingFacts
 
     public const string STATE_GRACE_PERIOD = 'grace_period';
 
+    /** Open but not paid for, such as unpaid or incomplete: it blocks checkout until cancelled. */
+    public const string STATE_INACTIVE = 'inactive';
+
     public const string STATE_NONE = 'none';
 
     public const string STATE_PAST_DUE = 'past_due';
@@ -65,7 +68,7 @@ final readonly class BillingFacts
             return self::STATE_PAST_DUE;
         }
 
-        return $subscription->active() ? self::STATE_ACTIVE : self::STATE_NONE;
+        return $subscription->active() ? self::STATE_ACTIVE : self::STATE_INACTIVE;
     }
 
     public function currentPrice(Organization $organization): ?Price

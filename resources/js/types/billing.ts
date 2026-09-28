@@ -1,4 +1,4 @@
-export type BillingState = 'active' | 'grace_period' | 'past_due';
+export type BillingState = 'active' | 'grace_period' | 'past_due' | 'inactive';
 
 export type BillingPrice = {
     id: string;

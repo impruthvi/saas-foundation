@@ -55,6 +55,7 @@ const stateLabels: Record<BillingState, string> = {
     active: 'Active',
     grace_period: 'Ending',
     past_due: 'Past due',
+    inactive: 'Inactive',
 };
 
 function formatAmount(price: BillingPrice): string {
@@ -95,7 +96,9 @@ function formatAmount(price: BillingPrice): string {
                         </CardTitle>
                         <Badge
                             :variant="
-                                subscription.state === 'past_due'
+                                ['past_due', 'inactive'].includes(
+                                    subscription.state,
+                                )
                                     ? 'destructive'
                                     : 'secondary'
                             "
@@ -122,6 +125,19 @@ function formatAmount(price: BillingPrice): string {
                         </AlertDescription>
                     </Alert>
 
+                    <Alert
+                        v-else-if="subscription.state === 'inactive'"
+                        variant="destructive"
+                    >
+                        <CircleAlert />
+                        <AlertTitle>Subscription is not active</AlertTitle>
+                        <AlertDescription>
+                            Its payment was never completed or has lapsed, so
+                            the plan does not apply. An administrator should
+                            resolve the payment with the billing provider.
+                        </AlertDescription>
+                    </Alert>
+
                     <Alert v-else-if="subscription.state === 'grace_period'">
                         <Clock3 />
                         <AlertTitle>Subscription ending</AlertTitle>
@@ -139,15 +155,9 @@ function formatAmount(price: BillingPrice): string {
                     </p>
                 </CardContent>
 
-                <CardFooter
-                    v-if="
-                        canManageBilling &&
-                        ['active', 'grace_period'].includes(subscription.state)
-                    "
-                    class="border-t"
-                >
+                <CardFooter v-if="canManageBilling" class="border-t">
                     <Button
-                        v-if="subscription.state === 'active'"
+                        v-if="subscription.state !== 'grace_period'"
                         type="button"
                         variant="outline"
                         class="text-destructive hover:text-destructive"
