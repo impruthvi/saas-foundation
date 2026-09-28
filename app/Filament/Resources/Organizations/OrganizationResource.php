@@ -48,12 +48,9 @@ final class OrganizationResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->description(fn (Organization $record): string => $record->slug)
-                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(
-                        fn (Builder $query): Builder => $query
-                            ->where('name', 'like', "%{$search}%")
-                            ->orWhere('slug', 'like', "%{$search}%")
-                            ->orWhere('stripe_id', $search)
-                            ->orWhereIn('id', resolve(LookupOrganizations::class)->byMemberEmail($search)),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereIn(
+                        'id',
+                        resolve(LookupOrganizations::class)->matching($search),
                     )),
                 TextColumn::make('owner.email')
                     ->label('Owner'),
