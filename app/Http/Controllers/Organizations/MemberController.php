@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Organizations;
 
 use App\Actions\ChangeOrganizationMemberRole;
 use App\Actions\RemoveOrganizationMember;
+use App\Enums\MembershipRole;
 use App\Exceptions\Memberships\MembershipRefused;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organizations\ChangeMemberRoleRequest;
@@ -48,7 +49,6 @@ final class MemberController extends Controller
                 ->paginate(self::PER_PAGE, pageName: 'members')
                 ->through(fn (Membership $membership): array => [
                     'id' => $membership->id,
-                    'userId' => $membership->user_id,
                     'name' => $membership->user->name,
                     'email' => $membership->user->email,
                     'role' => $membership->role->value,
@@ -71,11 +71,15 @@ final class MemberController extends Controller
                 ->through(fn (Invitation $invitation): array => [
                     'id' => $invitation->id,
                     'email' => $invitation->email,
-                    'role' => $invitation->role->label(),
+                    'roleLabel' => $invitation->role->label(),
                     'expiresAt' => $invitation->expires_at->toFormattedDateString(),
                     'invitedBy' => $invitation->invitedBy?->name,
                 ]),
             'canInvite' => $user?->can('create', Invitation::class) ?? false,
+            'ranks' => array_map(
+                fn (MembershipRole $rank): array => ['value' => $rank->value, 'label' => $rank->label()],
+                MembershipRole::cases(),
+            ),
         ]);
     }
 

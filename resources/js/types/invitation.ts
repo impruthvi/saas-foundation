@@ -1,6 +1,5 @@
 export type OrganizationMember = {
     id: number;
-    userId: number;
     name: string;
     email: string;
     role: string;
@@ -14,7 +13,12 @@ export type OrganizationMember = {
 export type PendingInvitation = {
     id: number;
     email: string;
-    role: string;
+    roleLabel: string;
     expiresAt: string;
     invitedBy: string | null;
+};
+
+export type RankOption = {
+    value: string;
+    label: string;
 };

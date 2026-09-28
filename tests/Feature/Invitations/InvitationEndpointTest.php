@@ -404,14 +404,17 @@ it('sends a role label to display, and the stored value only where a control nee
     issueInvitation($organization, 'labelled@example.com', $owner);
 
     // A member row carries a label and the value the role select binds to; an
-    // invitation has no select, so only the label.
+    // invitation has no select, so only the label. The selects take their options,
+    // labels included, from the server.
     $this->actingAs($owner)
         ->get(route('organizations.members.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('members.data.0.roleLabel', 'Admin')
             ->where('members.data.0.role', 'admin')
-            ->where('invitations.data.0.role', 'Member'));
+            ->where('invitations.data.0.roleLabel', 'Member')
+            ->missing('invitations.data.0.role')
+            ->where('ranks', [['value' => 'admin', 'label' => 'Admin'], ['value' => 'member', 'label' => 'Member']]));
 });
 
 it('sends dates to the client already formatted', function (): void {
