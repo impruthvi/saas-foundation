@@ -18,6 +18,7 @@ use App\Tenancy\ResolveTenantForRefresh;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
@@ -64,6 +65,9 @@ final class AppServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([ReconcileEntitlementsCommand::class]);
             StripeWebhookForwarding::registerDevCommand();
+            // The scheduled sweep renews paid allowances; without it a paid plan drops to
+            // the Free floor an hour after its last webhook.
+            DevCommands::artisan('schedule:work', 'scheduler');
         }
 
         // Console acts have no person behind them; a queued job replaces this with its

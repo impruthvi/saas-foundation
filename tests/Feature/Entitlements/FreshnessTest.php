@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Entitlements\ResolveAllowance;
 use App\Models\Organization;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
 use Impruthvi\CashierEntitlements\Billing\BillingDecision;
@@ -147,3 +148,7 @@ function doctorReport(): array
 
     return json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
 }
+
+it('runs the scheduler under composer dev, so the sweep renews a paid allowance before it expires', function (): void {
+    expect(array_column(DevCommands::commands(), 'command'))->toContain('php artisan schedule:work');
+});

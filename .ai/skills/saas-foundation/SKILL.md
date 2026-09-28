@@ -15,7 +15,7 @@ laravel new my-app --using=https://github.com/impruthvi/saas-foundation#v0.1.0
 cd my-app
 php artisan saas:demo                       # local only; prints two one-time passwords
 php artisan saas:stripe sk_test_YOUR_KEY    # Pro price, keys and webhook secret into .env
-composer dev                                # server, queue worker, Vite, stripe listen
+composer dev                                # server, queue worker, scheduler, Vite, stripe listen
 ```
 
 Do not pass `--pest` to the installer: it rewrites `tests/Pest.php`. The GitHub URL form is
