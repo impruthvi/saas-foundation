@@ -8,6 +8,7 @@ use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
 use App\Exceptions\Invitations\InvitationAlreadyAccepted;
 use App\Models\Invitation;
+use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -15,7 +16,10 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class DeclineOrganizationInvitation
 {
-    public function __construct(private RecordAuditEvent $audit) {}
+    public function __construct(
+        private TenantContext $tenant,
+        private RecordAuditEvent $audit,
+    ) {}
 
     public function handle(Invitation $invitation): Invitation
     {
@@ -23,14 +27,17 @@ final readonly class DeclineOrganizationInvitation
             throw InvitationAlreadyAccepted::make();
         }
 
-        return DB::transaction(function () use ($invitation): Invitation {
-            $invitation->close(InvitationStatus::Declined);
+        return $this->tenant->runForId(
+            $invitation->organization_id,
+            fn (): Invitation => DB::transaction(function () use ($invitation): Invitation {
+                $invitation->close(InvitationStatus::Declined);
 
-            $this->audit->handle($invitation->organization_id, AuditAction::InvitationDeclined, $invitation, [
-                'email' => $invitation->email,
-            ]);
+                $this->audit->handle($invitation->organization_id, AuditAction::InvitationDeclined, $invitation, [
+                    'email' => $invitation->email,
+                ]);
 
-            return $invitation;
-        });
+                return $invitation;
+            }),
+        );
     }
 }
