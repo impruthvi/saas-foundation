@@ -75,6 +75,10 @@ it('serves every console page to an operator', function (): void {
     });
 });
 
+it('renders entitlement health once rather than rescanning every organization on a poll', function (): void {
+    acrossEveryOwner(fn () => Livewire::withoutLazyLoading()->test(EntitlementHealth::class)->assertDontSeeHtml('wire:poll'));
+});
+
 it('offers nothing to create, edit or delete', function (): void {
     foreach (['organizations', 'users', 'webhook-events', 'impersonations'] as $resource) {
         expect(Route::has("filament.admin.resources.{$resource}.create"))->toBeFalse()
