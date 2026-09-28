@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Audit\AuditActor;
+use App\Entitlements\ResolveAllowance;
 use App\Enums\AuditSource;
 use App\Enums\MembershipRole;
 use App\Exceptions\DemoRefused;
@@ -13,8 +14,11 @@ use App\Models\Invitation;
 use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\TenantContext;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Impruthvi\CashierEntitlements\Reconciliation\OwnerLocator;
+use LogicException;
 
 /**
  * Seeds the journey up to the Free plan's limit through the product's own actions, so
@@ -26,12 +30,16 @@ final readonly class SeedDemoJourney
 
     public const string TEAMMATE_EMAIL = 'grace@example.com';
 
+    private const array PROJECT_NAMES = ['Launch checklist', 'Pricing page'];
+
     public function __construct(
         private CreateNewUser $users,
         private InviteOrganizationMember $invitations,
         private AcceptOrganizationInvitation $acceptances,
         private CreateProject $projects,
         private TenantContext $tenant,
+        private OwnerLocator $owners,
+        private ResolveAllowance $allowances,
     ) {}
 
     /**
@@ -45,7 +53,7 @@ final readonly class SeedDemoJourney
     }
 
     /**
-     * @return array{organization: Organization, owner: User, teammate: User, passwords: array{owner: string, teammate: string}}
+     * @return array{organization: Organization, owner: User, teammate: User, passwords: array{owner: string, teammate: string}, projects: int}
      */
     public function handle(): array
     {
@@ -66,7 +74,7 @@ final readonly class SeedDemoJourney
 
     /**
      * @param  array{owner: string, teammate: string}  $passwords
-     * @return array{organization: Organization, owner: User, teammate: User, passwords: array{owner: string, teammate: string}}
+     * @return array{organization: Organization, owner: User, teammate: User, passwords: array{owner: string, teammate: string}, projects: int}
      */
     private function seed(array $passwords): array
     {
@@ -86,9 +94,15 @@ final readonly class SeedDemoJourney
 
         $this->acceptances->handle($invitation, $teammate);
 
-        $this->tenant->runFor($organization, function () use ($organization): void {
-            $this->projects->handle($organization, 'Launch checklist', 'saas-demo-1');
-            $this->projects->handle($organization, 'Pricing page', 'saas-demo-2');
+        $projects = $this->tenant->runFor($organization, function () use ($organization): int {
+            $limit = $this->allowances->limit($this->owners->reference($organization), 'projects', Date::now()->toDateTimeImmutable())
+                ?? throw new LogicException('The demo seeds up to the Free plan limit, so the Free plan must limit projects.');
+
+            for ($number = 1; $number <= $limit; $number++) {
+                $this->projects->handle($organization, self::PROJECT_NAMES[$number - 1] ?? "Project {$number}", "saas-demo-{$number}");
+            }
+
+            return $limit;
         });
         /* @chisel-admin-console */
         resolve(GrantOperator::class)->handle($owner, 'saas:demo');
@@ -99,6 +113,7 @@ final readonly class SeedDemoJourney
             'owner' => $owner,
             'teammate' => $teammate,
             'passwords' => $passwords,
+            'projects' => $projects,
         ];
     }
 

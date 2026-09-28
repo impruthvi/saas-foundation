@@ -40,7 +40,7 @@ final class SaasDemoCommand extends Command
         $this->components->bulletList([
             'Run composer dev. It starts the server and the queue worker that applies a new plan.',
             'Run php artisan saas:stripe sk_test_YOUR_KEY to connect Stripe test mode.',
-            "Sign in as Ada and open /projects: {$seeded['organization']->name} has used 2 of its 2 projects.",
+            "Sign in as Ada and open /projects: {$seeded['organization']->name} has used {$seeded['projects']} of its {$seeded['projects']} projects.",
             /* @chisel-admin-console */
             'Ada is an operator: open /admin to inspect the entitlement, the usage and the Stripe event that set it.',
             /* @end-chisel-admin-console */
