@@ -8,10 +8,8 @@ use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
 use App\Exceptions\Invitations\InvitationAddressedToAnother;
 use App\Exceptions\Invitations\InvitationAlreadyAccepted;
-use App\Exceptions\Invitations\InvitationDeclined;
 use App\Exceptions\Invitations\InvitationExpired;
 use App\Exceptions\Invitations\InvitationRefused;
-use App\Exceptions\Invitations\InvitationRevoked;
 use App\Exceptions\Invitations\OrganizationNotAcceptingMembers;
 use App\Models\Invitation;
 use App\Models\Membership;
@@ -52,12 +50,7 @@ final readonly class AcceptOrganizationInvitation
      */
     public function assertAcceptableBy(Invitation $invitation, User $user): void
     {
-        match ($invitation->status) {
-            InvitationStatus::Accepted => throw InvitationAlreadyAccepted::make(),
-            InvitationStatus::Revoked => throw InvitationRevoked::make(),
-            InvitationStatus::Declined => throw InvitationDeclined::make(),
-            InvitationStatus::Pending => null,
-        };
+        $invitation->assertOpen();
 
         if ($invitation->hasExpired()) {
             throw InvitationExpired::on($invitation);
@@ -85,13 +78,9 @@ final readonly class AcceptOrganizationInvitation
     private function accept(Invitation $invitation, User $user): Membership
     {
         return DB::transaction(function () use ($invitation, $user): Membership {
-            $locked = Invitation::query()
-                ->lockForUpdate()
-                ->findOrFail($invitation->id);
+            $locked = $invitation->freshLocked();
 
-            if ($locked->status === InvitationStatus::Accepted) {
-                throw InvitationAlreadyAccepted::make();
-            }
+            $locked->assertOpen();
 
             try {
                 $membership = $this->members->handle(

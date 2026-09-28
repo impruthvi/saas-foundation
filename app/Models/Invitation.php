@@ -8,6 +8,11 @@ use App\Concerns\BelongsToOrganization;
 use App\Contracts\TenantOwned;
 use App\Enums\InvitationStatus;
 use App\Enums\MembershipRole;
+use App\Exceptions\Invitations\InvitationAlreadyAccepted;
+use App\Exceptions\Invitations\InvitationDeclined;
+use App\Exceptions\Invitations\InvitationRefused;
+use App\Exceptions\Invitations\InvitationRevoked;
+use App\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Database\Factories\InvitationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -98,6 +103,34 @@ final class Invitation extends Model implements TenantOwned
     public function hasExpired(): bool
     {
         return $this->expires_at->isPast();
+    }
+
+    /**
+     * Refuses anything but a pending invitation. Callers that change the row check
+     * freshLocked(), so a concurrent close cannot slip between the check and the write.
+     *
+     * @throws InvitationRefused
+     */
+    public function assertOpen(): void
+    {
+        match ($this->status) {
+            InvitationStatus::Accepted => throw InvitationAlreadyAccepted::make(),
+            InvitationStatus::Revoked => throw InvitationRevoked::make(),
+            InvitationStatus::Declined => throw InvitationDeclined::make(),
+            InvitationStatus::Pending => null,
+        };
+    }
+
+    /**
+     * Read under the invitation's own organization, so it works with no tenant resolved;
+     * the write that follows still runs under the caller's tenant and its guard.
+     */
+    public function freshLocked(): self
+    {
+        return resolve(TenantContext::class)->runForId(
+            $this->organization_id,
+            fn (): self => self::query()->lockForUpdate()->findOrFail($this->id),
+        );
     }
 
     /** Says nothing about the recipient, which has its own refusal. */

@@ -7,6 +7,7 @@ use App\Actions\AddOrganizationMember;
 use App\Actions\DeclineOrganizationInvitation;
 use App\Actions\ResendOrganizationInvitation;
 use App\Actions\RevokeOrganizationInvitation;
+use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
 use App\Enums\MembershipRole;
 use App\Enums\OrganizationStatus;
@@ -19,6 +20,7 @@ use App\Exceptions\Invitations\InvitationDeclined;
 use App\Exceptions\Invitations\InvitationExpired;
 use App\Exceptions\Invitations\InvitationRevoked;
 use App\Exceptions\Invitations\OrganizationNotAcceptingMembers;
+use App\Models\AuditEvent;
 use App\Models\Invitation;
 use App\Models\Membership;
 use App\Models\Organization;
@@ -261,4 +263,66 @@ it('keeps one organization from seeing or revoking another organization invitati
         $ours,
         fn (): Invitation => resolve(RevokeOrganizationInvitation::class)->handle($theirInvitation),
     ))->toThrow(CrossTenantAccess::class);
+});
+
+describe('closing an invitation that is already closed', function (): void {
+    it('refuses to decline an invitation that was revoked', function (): void {
+        $organization = Organization::factory()->create();
+        $invitation = findInvitation(issueInvitation($organization, 'late@example.com'));
+        resolve(TenantContext::class)->runFor($organization, fn (): Invitation => resolve(RevokeOrganizationInvitation::class)->handle($invitation));
+
+        expect(fn () => resolve(DeclineOrganizationInvitation::class)->handle($invitation))
+            ->toThrow(InvitationRevoked::class)
+            ->and($invitation->fresh()?->status)->toBe(InvitationStatus::Revoked);
+    });
+
+    it('refuses to revoke an invitation that was declined', function (): void {
+        $organization = Organization::factory()->create();
+        $invitation = findInvitation(issueInvitation($organization, 'nothanks@example.com'));
+        resolve(DeclineOrganizationInvitation::class)->handle($invitation);
+
+        expect(fn () => resolve(TenantContext::class)->runFor($organization, fn (): Invitation => resolve(RevokeOrganizationInvitation::class)->handle($invitation)))
+            ->toThrow(InvitationDeclined::class);
+
+        $invitation = resolve(TenantContext::class)->runFor($organization, fn (): ?Invitation => $invitation->fresh());
+
+        expect($invitation?->status)->toBe(InvitationStatus::Declined)
+            ->and($invitation?->revoked_at)->toBeNull();
+    });
+
+    it('revokes an invitation once, and audits it once', function (): void {
+        $organization = Organization::factory()->create();
+        $invitation = findInvitation(issueInvitation($organization, 'twice@example.com'));
+        $revoke = fn (): Invitation => resolve(TenantContext::class)->runFor($organization, fn (): Invitation => resolve(RevokeOrganizationInvitation::class)->handle($invitation));
+        $revoke();
+
+        expect($revoke)->toThrow(InvitationRevoked::class);
+
+        $revocations = resolve(TenantContext::class)->runFor(
+            $organization,
+            fn (): int => AuditEvent::query()->where('action', AuditAction::InvitationRevoked)->count(),
+        );
+
+        expect($revocations)->toBe(1);
+    });
+
+    it('refuses an acceptance that a revocation overtook', function (): void {
+        $organization = Organization::factory()->create();
+        $invitee = User::factory()->create(['email' => 'overtaken@example.com']);
+        $token = issueInvitation($organization, 'overtaken@example.com');
+
+        // Loaded while pending, as the accept screen does, then revoked before accepting.
+        $stale = findInvitation($token);
+        resolve(TenantContext::class)->runFor($organization, fn (): Invitation => resolve(RevokeOrganizationInvitation::class)->handle(findInvitation($token)));
+
+        expect(fn () => resolve(AcceptOrganizationInvitation::class)->handle($stale, $invitee))
+            ->toThrow(InvitationRevoked::class);
+
+        $members = resolve(TenantContext::class)->runFor(
+            $organization,
+            fn (): int => Membership::query()->where('user_id', $invitee->id)->count(),
+        );
+
+        expect($members)->toBe(0);
+    });
 });
