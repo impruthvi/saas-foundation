@@ -5,10 +5,6 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\AuditAction;
-use App\Enums\InvitationStatus;
-use App\Exceptions\Invitations\InvitationAlreadyAccepted;
-use App\Exceptions\Invitations\InvitationDeclined;
-use App\Exceptions\Invitations\InvitationRevoked;
 use App\Models\Invitation;
 use Illuminate\Support\Facades\DB;
 
@@ -26,12 +22,7 @@ final readonly class ResendOrganizationInvitation
     public function handle(Invitation $invitation): array
     {
         return DB::transaction(function () use ($invitation): array {
-            match ($invitation->status) {
-                InvitationStatus::Accepted => throw InvitationAlreadyAccepted::make(),
-                InvitationStatus::Revoked => throw InvitationRevoked::make(),
-                InvitationStatus::Declined => throw InvitationDeclined::make(),
-                InvitationStatus::Pending => null,
-            };
+            $invitation->freshLocked()->assertOpen();
 
             $token = $invitation->issueToken();
 

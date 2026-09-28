@@ -6,7 +6,6 @@ namespace App\Actions;
 
 use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
-use App\Exceptions\Invitations\InvitationAlreadyAccepted;
 use App\Models\Invitation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -21,11 +20,9 @@ final readonly class RevokeOrganizationInvitation
 
     public function handle(Invitation $invitation, ?User $revokedBy = null): Invitation
     {
-        if ($invitation->status === InvitationStatus::Accepted) {
-            throw InvitationAlreadyAccepted::make();
-        }
-
         return DB::transaction(function () use ($invitation, $revokedBy): Invitation {
+            $invitation->freshLocked()->assertOpen();
+
             $invitation->close(InvitationStatus::Revoked, [
                 'revoked_at' => now(),
                 'revoked_by_user_id' => $revokedBy?->id,
