@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\ConsumePendingInvitation;
+use App\Actions\CreatePersonalOrganization;
 use App\Enums\MembershipRole;
 use App\Mail\OrganizationInvitation;
 use App\Models\Invitation;
@@ -82,6 +83,39 @@ it('takes a stranger from an invitation link to membership of two organizations'
     );
 
     expect($invitation->accepted_by_user_id)->toBe($grace->id)
+        ->and(session(ConsumePendingInvitation::SESSION_KEY))->toBeNull();
+});
+
+it('accepts a parked invitation when its addressee signs in instead of registering', function (): void {
+    $organization = Organization::factory()->create();
+    $token = issueInvitation($organization, 'returning@example.com');
+    $returning = User::factory()->create(['email' => 'returning@example.com']);
+    resolve(CreatePersonalOrganization::class)->handle($returning);
+
+    throughTheAuditedDoor(fn () => $this->get(route('invitations.show', ['token' => $token])));
+
+    throughTheAuditedDoor(fn () => $this->post(route('login.store'), [
+        'email' => 'returning@example.com',
+        'password' => 'password',
+    ])->assertRedirect());
+
+    expect(resolve(MembershipRepository::class)->organizationsFor($returning)->pluck('id'))->toContain($organization->id)
+        ->and(session(ConsumePendingInvitation::SESSION_KEY))->toBeNull();
+});
+
+it('does not let a parked token admit whoever signs in next', function (): void {
+    $organization = Organization::factory()->create();
+    $token = issueInvitation($organization, 'intended@example.com');
+    $other = User::factory()->create(['email' => 'other@example.com']);
+
+    throughTheAuditedDoor(fn () => $this->get(route('invitations.show', ['token' => $token])));
+
+    throughTheAuditedDoor(fn () => $this->post(route('login.store'), [
+        'email' => 'other@example.com',
+        'password' => 'password',
+    ])->assertRedirect());
+
+    expect(resolve(MembershipRepository::class)->organizationsFor($other)->pluck('id'))->not->toContain($organization->id)
         ->and(session(ConsumePendingInvitation::SESSION_KEY))->toBeNull();
 });
 

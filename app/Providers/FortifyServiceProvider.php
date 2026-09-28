@@ -7,11 +7,15 @@ namespace App\Providers;
 use App\Actions\ConsumePendingInvitation;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Audit\AuditActor;
 use App\Models\Invitation;
 use App\Models\Organization;
+use App\Models\User;
 use App\Tenancy\InvitationRepository;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -29,6 +33,7 @@ final class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->consumeParkedInvitationOnLogin();
     }
 
     private function configureActions(): void
@@ -112,5 +117,27 @@ final class FortifyServiceProvider extends ServiceProvider
             'email' => $invitation->email,
             'organization' => Organization::query()->findOrFail($invitation->organization_id)->name,
         ];
+    }
+
+    /**
+     * Registration consumes a parked invitation in CreateNewUser, before Fortify signs
+     * the user in, so by the time this runs for a new account the token is gone.
+     */
+    private function consumeParkedInvitationOnLogin(): void
+    {
+        Event::listen(Login::class, static function (Login $login): void {
+            $request = request();
+
+            if (! $login->user instanceof User || ! $request->hasSession()) {
+                return;
+            }
+
+            $user = $login->user;
+
+            AuditActor::runAs(
+                AuditActor::user($user),
+                fn (): ?Invitation => resolve(ConsumePendingInvitation::class)->handle($request->session(), $user),
+            );
+        });
     }
 }
