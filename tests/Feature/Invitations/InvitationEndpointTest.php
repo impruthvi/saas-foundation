@@ -14,6 +14,7 @@ use App\Models\Membership;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 use Tests\Support\TenantQueryGuard;
 
 describe('the members screen', function (): void {
@@ -186,6 +187,43 @@ describe('withdrawing an invitation', function (): void {
         $this->actingAs($owner)
             ->delete(route('organizations.invitations.destroy', $theirInvitation))
             ->assertNotFound();
+    });
+});
+
+describe('refusing a closed invitation', function (): void {
+    it('reports that an accepted invitation can no longer be withdrawn', function (): void {
+        [$organization, $owner] = organizationOwnedBySomeone();
+        $token = issueInvitation($organization, 'joined@example.com', $owner);
+        $invitee = User::factory()->create(['email' => 'joined@example.com']);
+        throughTheAuditedDoor(fn () => $this->actingAs($invitee)->post(route('invitations.accept', ['token' => $token])));
+
+        $invitation = resolve(TenantContext::class)->runFor($organization, fn (): Invitation => Invitation::query()->sole());
+
+        $this->actingAs($owner)
+            ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+            ->delete(route('organizations.invitations.destroy', $invitation))
+            ->assertRedirect();
+
+        expect(Inertia::getFlashed()['toast'] ?? null)->toBe(['type' => 'error', 'message' => 'This invitation has already been accepted.'])
+            ->and($invitation->fresh()->status)->toBe(InvitationStatus::Accepted);
+    });
+
+    it('reports that an accepted invitation can no longer be sent again', function (): void {
+        Mail::fake();
+        [$organization, $owner] = organizationOwnedBySomeone();
+        $token = issueInvitation($organization, 'joined@example.com', $owner);
+        $invitee = User::factory()->create(['email' => 'joined@example.com']);
+        throughTheAuditedDoor(fn () => $this->actingAs($invitee)->post(route('invitations.accept', ['token' => $token])));
+
+        $invitation = resolve(TenantContext::class)->runFor($organization, fn (): Invitation => Invitation::query()->sole());
+
+        $this->actingAs($owner)
+            ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
+            ->post(route('organizations.invitations.deliveries.store', $invitation))
+            ->assertRedirect();
+
+        expect(Inertia::getFlashed()['toast'] ?? null)->toBe(['type' => 'error', 'message' => 'This invitation has already been accepted.']);
+        Mail::assertNothingQueued();
     });
 });
 

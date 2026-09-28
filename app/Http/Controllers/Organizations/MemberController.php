@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Organizations;
 
 use App\Actions\ChangeOrganizationMemberRole;
 use App\Actions\RemoveOrganizationMember;
+use App\Exceptions\Memberships\MembershipRefused;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organizations\ChangeMemberRoleRequest;
 use App\Models\Invitation;
@@ -17,7 +18,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
-use RuntimeException;
 
 /**
  * Eager-loaded because ShouldBeStrict raises on lazy loading in every environment. Row
@@ -86,8 +86,10 @@ final class MemberController extends Controller
     ): RedirectResponse {
         try {
             $change->handle($membership, $request->role());
-        } catch (RuntimeException $runtimeException) {
-            return back()->withErrors(['role' => $runtimeException->getMessage()]);
+        } catch (MembershipRefused $membershipRefused) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $membershipRefused->getMessage()]);
+
+            return back();
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role updated.')]);
@@ -107,8 +109,10 @@ final class MemberController extends Controller
 
         try {
             $remove->handle($membership);
-        } catch (RuntimeException $runtimeException) {
-            return back()->withErrors(['member' => $runtimeException->getMessage()]);
+        } catch (MembershipRefused $membershipRefused) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $membershipRefused->getMessage()]);
+
+            return back();
         }
 
         Inertia::flash('toast', [

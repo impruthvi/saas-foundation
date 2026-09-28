@@ -33,7 +33,9 @@ final class InvitationDeliveryController extends Controller
         try {
             $issued = $resend->handle($invitation);
         } catch (InvitationRefused $invitationRefused) {
-            return back()->withErrors(['invitation' => $invitationRefused->getMessage()]);
+            Inertia::flash('toast', ['type' => 'error', 'message' => $invitationRefused->getMessage()]);
+
+            return back();
         }
 
         $deliver->handle($issued['invitation'], $organization, $issued['token']);
