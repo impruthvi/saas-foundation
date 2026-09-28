@@ -7,6 +7,7 @@ use App\Actions\CreateOrganization;
 use App\Actions\CreatePersonalOrganization;
 use App\Models\Organization;
 use App\Models\User;
+use Inertia\Inertia;
 
 test('profile page is displayed', function (): void {
     $user = User::factory()->create();
@@ -108,6 +109,27 @@ test('account deletion is refused while the user solely owns a shared organizati
         ->and(Organization::query()->find($organization->id))->not->toBeNull();
 
     $this->assertAuthenticatedAs($owner);
+});
+
+test('account deletion is refused while the user owns a personal organization with teammates', function (): void {
+    $owner = User::factory()->create();
+    $organization = resolve(CreatePersonalOrganization::class)->handle($owner);
+    resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create());
+
+    $this
+        ->actingAs($owner)
+        ->from(route('profile.edit'))
+        ->delete(route('profile.destroy'), [
+            'password' => 'password',
+        ])
+        ->assertRedirect(route('profile.edit'));
+
+    expect($owner->fresh())->not->toBeNull()
+        ->and(Organization::query()->find($organization->id))->not->toBeNull()
+        ->and(Inertia::getFlashed()['toast'] ?? null)->toBe([
+            'type' => 'error',
+            'message' => "{$organization->name} has other members. Remove them from the organization before deleting this account.",
+        ]);
 });
 
 test('deleting an account takes its personal organization with it', function (): void {
