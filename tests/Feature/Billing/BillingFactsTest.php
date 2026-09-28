@@ -55,7 +55,7 @@ it('loads every relation before asking Cashier for the current subscription', fu
     });
 });
 
-it('renders the four billing states and treats an ended subscription as none', function (
+it('renders each billing state and treats an ended subscription as none', function (
     ?string $status,
     ?int $endsAtOffset,
     string $expectedState,
@@ -85,6 +85,8 @@ it('renders the four billing states and treats an ended subscription as none', f
     'active' => ['active', null, BillingFacts::STATE_ACTIVE, true],
     'grace period' => ['active', 7, BillingFacts::STATE_GRACE_PERIOD, true],
     'past due' => ['past_due', null, BillingFacts::STATE_PAST_DUE, true],
+    'unpaid' => ['unpaid', null, BillingFacts::STATE_INACTIVE, true],
+    'incomplete' => ['incomplete', null, BillingFacts::STATE_INACTIVE, true],
     'ended' => ['canceled', -7, BillingFacts::STATE_NONE, false],
 ]);
 

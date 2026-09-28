@@ -78,6 +78,7 @@ it('renders each open subscription state from billing facts', function (
     'active' => ['active', null, BillingFacts::STATE_ACTIVE],
     'grace period' => ['active', 7, BillingFacts::STATE_GRACE_PERIOD],
     'past due' => ['past_due', null, BillingFacts::STATE_PAST_DUE],
+    'unpaid' => ['unpaid', null, BillingFacts::STATE_INACTIVE],
 ]);
 
 it('renders an ended subscription as none', function (): void {
