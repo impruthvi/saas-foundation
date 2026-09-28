@@ -28,7 +28,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { index } from '@/routes/organizations/members';
-import type { OrganizationMember, PendingInvitation } from '@/types/invitation';
+import type {
+    OrganizationMember,
+    PendingInvitation,
+    RankOption,
+} from '@/types/invitation';
 import type { Paginated } from '@/types/pagination';
 
 defineOptions({
@@ -41,6 +45,7 @@ defineProps<{
     members: Paginated<OrganizationMember>;
     invitations: Paginated<PendingInvitation>;
     canInvite: boolean;
+    ranks: RankOption[];
 }>();
 
 const withdrawing = ref<PendingInvitation | null>(null);
@@ -86,8 +91,13 @@ const removing = ref<OrganizationMember | null>(null);
                             <SelectValue placeholder="Role" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem
+                                v-for="rank in ranks"
+                                :key="rank.value"
+                                :value="rank.value"
+                            >
+                                {{ rank.label }}
+                            </SelectItem>
                         </SelectContent>
                     </Select>
                     <InputError :message="errors.role" />
@@ -150,9 +160,12 @@ const removing = ref<OrganizationMember | null>(null);
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                    <SelectItem value="member">
-                                        Member
+                                    <SelectItem
+                                        v-for="rank in ranks"
+                                        :key="rank.value"
+                                        :value="rank.value"
+                                    >
+                                        {{ rank.label }}
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
@@ -216,7 +229,9 @@ const removing = ref<OrganizationMember | null>(null);
                     </div>
 
                     <div v-if="canInvite" class="flex items-center gap-2">
-                        <Badge variant="secondary">{{ invitation.role }}</Badge>
+                        <Badge variant="secondary">{{
+                            invitation.roleLabel
+                        }}</Badge>
 
                         <Form
                             v-bind="
