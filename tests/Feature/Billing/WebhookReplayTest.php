@@ -103,6 +103,18 @@ it('applies a customer deletion without asking for a refresh that could not run'
     Bus::assertNotDispatched(RefreshOwner::class);
 });
 
+it('audits a customer deletion under the organization it unlinked', function (): void {
+    StripeWebhook::post(['id' => 'evt_customer_gone', 'type' => 'customer.deleted', 'livemode' => false, 'data' => ['object' => ['id' => 'cus_gone']]])->assertOk();
+    $event = WebhookEvent::query()->where('stripe_event_id', 'evt_customer_gone')->sole();
+    $organization = Organization::factory()->create(['stripe_id' => 'cus_gone']);
+    $operator = User::factory()->create();
+
+    AuditActor::runAs(AuditActor::user($operator), fn (): WebhookOutcome => resolve(ReplayWebhookEvent::class)->handle($event));
+
+    expect(replayAudit($organization))->toHaveCount(1)
+        ->and(replayAudit($organization)[0]->actor_id)->toBe($operator->id);
+});
+
 it('asks for no refresh after an event type that does not affect entitlements', function (): void {
     StripeWebhook::post(['id' => 'evt_invoice_created', 'type' => 'invoice.created', 'livemode' => false, 'data' => ['object' => ['id' => 'in_1', 'customer' => 'cus_late']]])->assertOk();
     $event = WebhookEvent::query()->where('stripe_event_id', 'evt_invoice_created')->sole();
