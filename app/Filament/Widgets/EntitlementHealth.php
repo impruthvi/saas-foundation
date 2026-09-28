@@ -13,6 +13,9 @@ final class EntitlementHealth extends StatsOverviewWidget
 {
     protected ?string $heading = 'Entitlement refreshes';
 
+    /** Each render walks every organization's refresh state, so it is not polled. */
+    protected ?string $pollingInterval = null;
+
     protected function getStats(): array
     {
         $state = resolve(Doctor::class)->report(Date::now()->toDateTimeImmutable())['state'];
