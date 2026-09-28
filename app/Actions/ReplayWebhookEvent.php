@@ -55,8 +55,11 @@ final readonly class ReplayWebhookEvent
 
         $payload = $event->payload;
 
+        // Found before applying: a customer deletion unlinks the organization it names.
+        $organization = $this->organizationOf($event);
+
         if (! $this->servesThisApplication($payload)) {
-            return $this->finish($event, WebhookOutcome::Refused, 'ContextMismatch', 'The event is from another Stripe mode or account.');
+            return $this->finish($event, $organization, WebhookOutcome::Refused, 'ContextMismatch', 'The event is from another Stripe mode or account.');
         }
 
         try {
@@ -65,24 +68,22 @@ final readonly class ReplayWebhookEvent
                 fn (): Response => resolve(CashierEventHandlers::class)->apply($payload),
             );
         } catch (Throwable) {
-            return $this->finish($event, WebhookOutcome::Errored);
+            return $this->finish($event, $organization, WebhookOutcome::Errored);
         }
 
         if ($result instanceof WebhookOutcome) {
-            return $this->finish($event, $result);
+            return $this->finish($event, $organization, $result);
         }
-
-        $organization = $this->organizationOf($event);
 
         if ($organization instanceof Organization && in_array($event->type, self::REFRESHING_EVENTS, true)) {
             try {
                 $this->tenant->runFor($organization, fn (): OwnerReference => $this->refreshes->request($organization, $event->stripe_event_id));
             } catch (ReadFailure $readFailure) {
-                return $this->finish($event, WebhookOutcome::Refused, 'RefreshRefused', $readFailure->getMessage());
+                return $this->finish($event, $organization, WebhookOutcome::Refused, 'RefreshRefused', $readFailure->getMessage());
             }
         }
 
-        return $this->finish($event, WebhookOutcome::Replayed);
+        return $this->finish($event, $organization, WebhookOutcome::Replayed);
     }
 
     /**
@@ -94,15 +95,13 @@ final readonly class ReplayWebhookEvent
             && ($payload['account'] ?? 'platform') === config('cashier-entitlements.provider_context');
     }
 
-    private function finish(WebhookEvent $event, WebhookOutcome $outcome, ?string $reason = null, ?string $message = null): WebhookOutcome
+    private function finish(WebhookEvent $event, ?Organization $organization, WebhookOutcome $outcome, ?string $reason = null, ?string $message = null): WebhookOutcome
     {
         $event->refresh();
 
         if ($outcome === WebhookOutcome::Replayed || $outcome === WebhookOutcome::Refused) {
             $event->forceFill(['outcome' => $outcome, 'outcome_reason' => $reason, 'outcome_message' => $message])->save();
         }
-
-        $organization = $this->organizationOf($event);
 
         if ($organization instanceof Organization) {
             $this->audit->handle($organization->id, AuditAction::WebhookReplayed, $event, [

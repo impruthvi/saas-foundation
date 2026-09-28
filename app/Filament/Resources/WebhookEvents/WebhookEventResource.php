@@ -43,7 +43,7 @@ final class WebhookEventResource extends Resource
         return Action::make('replay')
             ->icon(Heroicon::OutlinedArrowPath)
             ->requiresConfirmation()
-            ->modalDescription('Applies this event as if Stripe had just delivered it. The replay is audited.')
+            ->modalDescription('Applies this event as if Stripe had just delivered it. The replay is audited under the organization it names; an event naming none leaves no audit event.')
             ->visible(fn (WebhookEvent $record): bool => in_array($record->outcome, [WebhookOutcome::Unplaceable, WebhookOutcome::Errored], true))
             ->action(function (WebhookEvent $record): void {
                 $outcome = resolve(ReplayWebhookEvent::class)->handle($record);
