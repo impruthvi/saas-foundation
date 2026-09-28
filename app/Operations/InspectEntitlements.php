@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Operations;
 
-use App\Billing\BillingFacts;
+use App\Billing\PlanCatalog;
 use App\Entitlements\RefreshReceipts;
 use App\Entitlements\ResolveAllowance;
 use App\Models\Organization;
@@ -33,7 +33,7 @@ final readonly class InspectEntitlements
         private NativeStateStore $states,
         private RefreshReceipts $receipts,
         private PriceCatalog $catalog,
-        private BillingFacts $billing,
+        private PlanCatalog $plans,
     ) {}
 
     /**
@@ -52,12 +52,28 @@ final readonly class InspectEntitlements
             $state = $this->states->state($owner);
 
             return [
-                'plan' => $this->billing->currentPlan($organization)?->name,
+                'plan' => $this->resolvedPlan($owner, $state, $at),
                 'features' => $this->features($owner, $at),
                 'refresh' => $this->refresh($state, $at),
                 'trigger' => $this->trigger($owner, $state),
             ];
         });
+    }
+
+    /**
+     * The plan whose allowances resolution is answering with: the refreshed plan while
+     * its answer is trusted, otherwise the Free floor. Billing's plan is on the
+     * subscription; while a refresh is pending or stale the two differ.
+     *
+     * @param  array<string, mixed>|null  $state
+     */
+    private function resolvedPlan(OwnerReference $owner, ?array $state, DateTimeImmutable $at): ?string
+    {
+        $planKey = $this->resolver->for($owner, $at)->all() === []
+            ? 'free'
+            : data_get($state, 'projection.plan_key');
+
+        return is_string($planKey) ? $this->plans->findPlan($planKey)->name ?? $planKey : null;
     }
 
     /**

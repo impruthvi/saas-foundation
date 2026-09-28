@@ -65,7 +65,7 @@ final class ViewOrganization extends ViewRecord
                 ->description('What this organization may do, where each answer came from, and what asked for it.')
                 ->schema([
                     Grid::make(4)->schema([
-                        TextEntry::make('plan')->state(fn (): string => $this->inspection()['plan'] ?? 'Free'),
+                        TextEntry::make('plan')->label('Resolved plan')->placeholder('Unknown')->state(fn (): ?string => $this->inspection()['plan']),
                         TextEntry::make('refresh_status')->label('Refresh')->badge()->state(fn (): string => $this->inspection()['refresh']['status']),
                         TextEntry::make('observed_at')->label('Observed')->dateTime()->placeholder('Never')->state(fn (): ?string => $this->inspection()['refresh']['observed_at']),
                         IconEntry::make('stale')->boolean()->state(fn (): bool => $this->inspection()['refresh']['stale']),
