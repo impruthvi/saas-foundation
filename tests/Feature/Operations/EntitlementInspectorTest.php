@@ -79,6 +79,24 @@ it('says the answer is stale and falls to the floor when the observation is too 
         ->and($inspection['refresh']['stale'])->toBeTrue();
 });
 
+it('names the plan resolution answered with, not the one billing reports', function (?int $observedSecondsAgo, string $plan): void {
+    $organization = Organization::factory()->create();
+
+    if ($observedSecondsAgo !== null) {
+        applyAllowanceDecision(
+            organizationEntitlementOwner($organization),
+            BillingDecision::allowed('mapped', allowances: ['projects' => 10], planKey: 'pro'),
+            Date::now()->subSeconds($observedSecondsAgo)->toDateTimeImmutable(),
+        );
+    }
+
+    expect(resolve(InspectEntitlements::class)->for($organization)['plan'])->toBe($plan);
+})->with([
+    'never refreshed' => [null, 'Free'],
+    'a fresh paid answer' => [0, 'Pro'],
+    'a paid answer too old to trust' => [7_200, 'Free'],
+]);
+
 it('reports a refresh still waiting to run', function (): void {
     $organization = Organization::factory()->create();
     resolve(NativeStateStore::class)->request(organizationEntitlementOwner($organization), Date::now()->toDateTimeImmutable());
