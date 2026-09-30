@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\CreateOrganization;
 use App\Actions\InviteOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\OrganizationRole;
 use App\Enums\Permission;
 use App\Models\Invitation;
@@ -205,7 +205,7 @@ function issueInvitation(Organization $organization, string $email, ?User $by = 
     return resolve(TenantContext::class)->runFor(
         $organization,
         fn (): string => resolve(InviteOrganizationMember::class)
-            ->handle($organization, $email, MembershipRole::Member, $by)['token'],
+            ->handle($organization, $email, MembershipRank::Member, $by)['token'],
     );
 }
 

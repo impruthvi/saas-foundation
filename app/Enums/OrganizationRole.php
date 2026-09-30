@@ -12,11 +12,11 @@ enum OrganizationRole: string
     case Admin = 'admin';
     case Member = 'member';
 
-    public static function forRank(MembershipRole $rank): self
+    public static function forRank(MembershipRank $rank): self
     {
         return match ($rank) {
-            MembershipRole::Admin => self::Admin,
-            MembershipRole::Member => self::Member,
+            MembershipRank::Admin => self::Admin,
+            MembershipRank::Member => self::Member,
         };
     }
 

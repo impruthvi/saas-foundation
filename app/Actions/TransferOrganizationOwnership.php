@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\AuditAction;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\OrganizationRole;
 use App\Models\Membership;
 use App\Models\Organization;
@@ -36,12 +36,12 @@ final readonly class TransferOrganizationOwnership
 
             $organization->memberships()
                 ->where('user_id', $newOwner->id)
-                ->update(['role' => MembershipRole::Admin]);
+                ->update(['role' => MembershipRank::Admin]);
 
             // The bulk update fires no model events, so the role is synced explicitly.
             // syncRoles, not assignRole, so the promoted member does not keep both
             // roles.
-            $newOwner->syncRoles([OrganizationRole::forRank(MembershipRole::Admin)->value]);
+            $newOwner->syncRoles([OrganizationRole::forRank(MembershipRank::Admin)->value]);
 
             $this->audit->handle($organization->id, AuditAction::OwnershipTransferred, $organization, [
                 'from_user_id' => $previousOwnerId,

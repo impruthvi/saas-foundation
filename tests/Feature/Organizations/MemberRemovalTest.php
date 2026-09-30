@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
 use App\Actions\RemoveOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Enums\Permission;
 use App\Exceptions\Memberships\LastAdministrator;
@@ -35,7 +35,7 @@ function removalOf(User $user, Organization $organization): Membership
 it('removes a member and takes their grants with them', function (): void {
     [$organization] = organizationOwnedBySomeone();
     $member = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $member, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $member, MembershipRank::Admin);
 
     expect(mayWithin($member, $organization->id, Permission::InviteMembers))->toBeTrue();
 
@@ -71,8 +71,8 @@ it('leaves the same person their grants in another organization', function (): v
     [$acme] = organizationOwnedBySomeone('Acme');
     [$other] = organizationOwnedBySomeone('Other');
 
-    $membership = resolve(AddOrganizationMember::class)->handle($acme, $person, MembershipRole::Admin);
-    resolve(AddOrganizationMember::class)->handle($other, $person, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($acme, $person, MembershipRank::Admin);
+    resolve(AddOrganizationMember::class)->handle($other, $person, MembershipRank::Admin);
 
     resolve(RemoveOrganizationMember::class)->handle($membership);
 
@@ -82,7 +82,7 @@ it('leaves the same person their grants in another organization', function (): v
 
 it('refuses to remove the owner', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
-    resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create(), MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create(), MembershipRank::Admin);
 
     try {
         resolve(RemoveOrganizationMember::class)->handle(removalOf($owner, $organization));
@@ -96,7 +96,7 @@ it('refuses to remove the owner', function (): void {
 it('refuses to remove the last active administrator', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
 
     removalOf($owner, $organization)->forceFill(['status' => MembershipStatus::Suspended])->save();
 
@@ -112,7 +112,7 @@ it('refuses to remove the last active administrator', function (): void {
 it('removes a suspended administrator, who was granting nothing anyway', function (): void {
     [$organization] = organizationOwnedBySomeone();
     $suspended = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $suspended, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $suspended, MembershipRank::Admin);
     $membership->forceFill(['status' => MembershipStatus::Suspended])->save();
 
     resolve(RemoveOrganizationMember::class)->handle($membership);
@@ -123,7 +123,7 @@ it('removes a suspended administrator, who was granting nothing anyway', functio
 it('lets an administrator remove themselves while another remains', function (): void {
     [$organization] = organizationOwnedBySomeone();
     $leaving = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $leaving, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $leaving, MembershipRank::Admin);
 
     resolve(RemoveOrganizationMember::class)->handle($membership);
 
@@ -134,7 +134,7 @@ it('agrees with the policy about every membership it refuses', function (): void
     [$organization, $owner] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
     $member = User::factory()->create();
-    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
     resolve(AddOrganizationMember::class)->handle($organization, $member);
 
     $verdicts = resolve(TenantContext::class)->runFor($organization, function () use ($owner, $admin, $member): array {
@@ -203,7 +203,7 @@ it('refuses over HTTP when a plain member tries to remove somebody', function ()
 it('refuses over HTTP to remove the owner', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
-    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
 
     $this->actingAs($admin)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
@@ -231,7 +231,7 @@ it('changes a rank over HTTP', function (): void {
 
     $this->actingAs($owner)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
-        ->patch(route('organizations.members.update', $membership), ['role' => MembershipRole::Admin->value])
+        ->patch(route('organizations.members.update', $membership), ['role' => MembershipRank::Admin->value])
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 
@@ -241,12 +241,12 @@ it('changes a rank over HTTP', function (): void {
 it('refuses over HTTP to change the owner rank', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
-    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
 
     $this->actingAs($admin)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
         ->patch(route('organizations.members.update', removalOf($owner, $organization)), [
-            'role' => MembershipRole::Member->value,
+            'role' => MembershipRank::Member->value,
         ])
         ->assertForbidden();
 });

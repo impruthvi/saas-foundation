@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\AuditAction;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\OrganizationRole;
 use App\Exceptions\Memberships\LastAdministrator;
 use App\Exceptions\Memberships\OwnerCannotBeDemoted;
@@ -19,37 +19,37 @@ use Illuminate\Support\Facades\DB;
  * The administrator count is taken under lockForUpdate, so two administrators demoting
  * each other cannot both proceed.
  */
-final readonly class ChangeOrganizationMemberRole
+final readonly class ChangeOrganizationMemberRank
 {
     public function __construct(
         private TenantContext $tenant,
         private RecordAuditEvent $audit,
     ) {}
 
-    public function handle(Membership $membership, MembershipRole $role): Membership
+    public function handle(Membership $membership, MembershipRank $rank): Membership
     {
-        if ($membership->role === $role) {
+        if ($membership->role === $rank) {
             return $membership;
         }
 
         return DB::transaction(fn (): Membership => $this->tenant->runForId(
             $membership->organization_id,
-            function () use ($membership, $role): Membership {
-                $this->assertTheDemotionIsSafe($membership, $role);
+            function () use ($membership, $rank): Membership {
+                $this->assertTheDemotionIsSafe($membership, $rank);
 
                 $previous = $membership->role;
 
-                $membership->forceFill(['role' => $role])->save();
+                $membership->forceFill(['role' => $rank])->save();
 
                 // Loaded by key: lazy loading is prevented and the membership may
                 // arrive without its user.
                 User::query()->findOrFail($membership->user_id)
-                    ->syncRoles([OrganizationRole::forRank($role)->value]);
+                    ->syncRoles([OrganizationRole::forRank($rank)->value]);
 
                 $this->audit->handle($membership->organization_id, AuditAction::MemberRankChanged, $membership, [
                     'user_id' => $membership->user_id,
                     'from' => $previous->value,
-                    'to' => $role->value,
+                    'to' => $rank->value,
                 ]);
 
                 return $membership->refresh();
@@ -63,9 +63,9 @@ final readonly class ChangeOrganizationMemberRole
      *
      * @throws OwnerCannotBeDemoted|LastAdministrator
      */
-    private function assertTheDemotionIsSafe(Membership $membership, MembershipRole $role): void
+    private function assertTheDemotionIsSafe(Membership $membership, MembershipRank $rank): void
     {
-        if ($role === MembershipRole::Admin) {
+        if ($rank === MembershipRank::Admin) {
             return;
         }
 
@@ -76,7 +76,7 @@ final readonly class ChangeOrganizationMemberRole
             OwnerCannotBeDemoted::of($organization),
         );
 
-        if ($membership->role !== MembershipRole::Admin) {
+        if ($membership->role !== MembershipRank::Admin) {
             return;
         }
 

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Project;
@@ -21,11 +21,11 @@ function projectPayload(string $organization, string $token = 'request-one'): ar
     ];
 }
 
-it('allows owners administrators and members to create projects', function (MembershipRole|string $actor): void {
+it('allows owners administrators and members to create projects', function (MembershipRank|string $actor): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     $user = $owner;
 
-    if ($actor instanceof MembershipRole) {
+    if ($actor instanceof MembershipRank) {
         $user = User::factory()->create();
         resolve(AddOrganizationMember::class)->handle($organization, $user, $actor);
     }
@@ -38,8 +38,8 @@ it('allows owners administrators and members to create projects', function (Memb
     expect(resolve(TenantContext::class)->runFor($organization, fn (): int => Project::query()->count()))->toBe(1);
 })->with([
     'owner' => ['owner'],
-    'administrator' => [MembershipRole::Admin],
-    'member' => [MembershipRole::Member],
+    'administrator' => [MembershipRank::Admin],
+    'member' => [MembershipRank::Member],
 ]);
 
 it('refuses a stale project form after the active organization changes', function (): void {
@@ -61,7 +61,7 @@ it('refuses suspended members and outsiders', function (string $actor): void {
     $user = User::factory()->create();
 
     if ($actor === 'suspended') {
-        $membership = resolve(AddOrganizationMember::class)->handle($organization, $user, MembershipRole::Admin);
+        $membership = resolve(AddOrganizationMember::class)->handle($organization, $user, MembershipRank::Admin);
         $membership->forceFill(['status' => MembershipStatus::Suspended])->save();
     }
 

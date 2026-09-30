@@ -7,7 +7,7 @@ use App\Actions\RecordAuditEvent;
 use App\Actions\RevokeOrganizationInvitation;
 use App\Audit\AuditActor;
 use App\Enums\AuditAction;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\WebhookOutcome;
 use App\Models\Impersonation;
 use App\Models\Organization;
@@ -22,7 +22,7 @@ use Tests\Support\StripeWebhook;
 it('lists members with the owner marked', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     $bob = User::factory()->create(['name' => 'Bob']);
-    resolve(AddOrganizationMember::class)->handle($organization, $bob, MembershipRole::Member);
+    resolve(AddOrganizationMember::class)->handle($organization, $bob, MembershipRank::Member);
 
     $members = resolve(OrganizationActivity::class)->members($organization);
 

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Models\Invitation;
 use App\Models\Organization;
@@ -36,7 +36,7 @@ it('lets the owner manage invitations', function (): void {
 it('lets an administrator manage invitations', function (): void {
     [$organization] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
-    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
 
     expect(mayManageInvitations($admin, $organization))->toBeTrue();
 });
@@ -53,7 +53,7 @@ it('lets a plain member see invitations but not manage them', function (): void 
 it('refuses a suspended administrator, whose rank still says Admin', function (): void {
     [$organization] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
 
     $membership->forceFill(['status' => MembershipStatus::Suspended])->save();
 
@@ -72,7 +72,7 @@ it('still lets the owner invite when their role assignment has gone missing', fu
 it('fails closed for an administrator who is not the owner and has no assignment', function (): void {
     [$organization] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
-    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
 
     DB::table('model_has_roles')
         ->where('organization_id', $organization->id)

@@ -6,7 +6,7 @@ namespace App\Models;
 
 use App\Concerns\BelongsToOrganization;
 use App\Contracts\TenantOwned;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
@@ -22,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $organization_id
  * @property int $user_id
- * @property MembershipRole $role
+ * @property MembershipRank $role
  * @property MembershipStatus $status
  * @property CarbonImmutable|null $joined_at
  * @property CarbonImmutable|null $created_at
@@ -55,7 +55,7 @@ final class Membership extends Model implements TenantOwned
 
     public function isActiveAdministrator(): bool
     {
-        return $this->role === MembershipRole::Admin
+        return $this->role === MembershipRank::Admin
             && $this->status === MembershipStatus::Active;
     }
 
@@ -100,7 +100,7 @@ final class Membership extends Model implements TenantOwned
     #[Scope]
     protected function administrators(Builder $query): void
     {
-        $query->where('role', MembershipRole::Admin)
+        $query->where('role', MembershipRank::Admin)
             ->where('status', MembershipStatus::Active);
     }
 
@@ -110,7 +110,7 @@ final class Membership extends Model implements TenantOwned
     protected function casts(): array
     {
         return [
-            'role' => MembershipRole::class,
+            'role' => MembershipRank::class,
             'status' => MembershipStatus::class,
             'joined_at' => 'datetime',
         ];

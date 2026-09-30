@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Models\Membership;
 use App\Models\Organization;
@@ -24,7 +24,7 @@ final class MembershipFactory extends Factory
         return [
             'organization_id' => Organization::factory(),
             'user_id' => User::factory(),
-            'role' => MembershipRole::Member,
+            'role' => MembershipRank::Member,
             'status' => MembershipStatus::Active,
             'joined_at' => now(),
         ];
@@ -33,7 +33,7 @@ final class MembershipFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'role' => MembershipRole::Admin,
+            'role' => MembershipRank::Admin,
         ]);
     }
 

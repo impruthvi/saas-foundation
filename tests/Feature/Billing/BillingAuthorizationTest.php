@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Organization;
@@ -33,7 +33,7 @@ it('lets the owner view and manage billing', function (): void {
 it('lets an administrator view and manage billing', function (): void {
     [$organization] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
-    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
 
     expect(billingPermissions($admin, $organization))->toBe([
         'view' => true,
@@ -55,7 +55,7 @@ it('lets a plain member view billing without managing it', function (): void {
 it('refuses a suspended administrator', function (): void {
     [$organization] = organizationOwnedBySomeone();
     $admin = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
     $membership->forceFill(['status' => MembershipStatus::Suspended])->save();
 
     expect(billingPermissions($admin, $organization))->toBe([

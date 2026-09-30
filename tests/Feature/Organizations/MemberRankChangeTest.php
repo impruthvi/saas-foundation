@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
-use App\Actions\ChangeOrganizationMemberRole;
+use App\Actions\ChangeOrganizationMemberRank;
 use App\Actions\CreateOrganization;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Enums\Permission;
 use App\Exceptions\Memberships\LastAdministrator;
@@ -32,9 +32,9 @@ it('promotes a member, and the promotion is what lets them invite', function ():
 
     expect(mayWithin($member, $organization->id, Permission::InviteMembers))->toBeFalse();
 
-    $membership = resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Admin);
+    $membership = resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Admin);
 
-    expect($membership->role)->toBe(MembershipRole::Admin)
+    expect($membership->role)->toBe(MembershipRank::Admin)
         ->and(mayWithin($member, $organization->id, Permission::InviteMembers))->toBeTrue();
 });
 
@@ -45,7 +45,7 @@ it('leaves a promoted member holding one role and not two', function (): void {
     $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
     $membership = resolve(AddOrganizationMember::class)->handle($organization, $member);
 
-    resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Admin);
+    resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Admin);
 
     $roles = resolve(TenantContext::class)->runForId(
         $organization->id,
@@ -60,11 +60,11 @@ it('demotes an administrator while another one remains', function (): void {
     $second = User::factory()->create();
 
     $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $second, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $second, MembershipRank::Admin);
 
-    $membership = resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Member);
+    $membership = resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Member);
 
-    expect($membership->role)->toBe(MembershipRole::Member)
+    expect($membership->role)->toBe(MembershipRank::Member)
         ->and(mayWithin($second, $organization->id, Permission::InviteMembers))->toBeFalse()
         ->and(mayWithin($second, $organization->id, Permission::ViewMembers))->toBeTrue();
 });
@@ -72,12 +72,12 @@ it('demotes an administrator while another one remains', function (): void {
 it('refuses to demote the owner, whatever the administrator count says', function (): void {
     $owner = User::factory()->create();
     $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
-    resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create(), MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, User::factory()->create(), MembershipRank::Admin);
 
     $membership = membershipOf($owner, $organization);
 
     try {
-        resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Member);
+        resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Member);
         $this->fail('Demoting the owner should have been refused.');
     } catch (OwnerCannotBeDemoted $ownerCannotBeDemoted) {
         expect($ownerCannotBeDemoted->getMessage())->toContain('Acme')
@@ -89,7 +89,7 @@ it('refuses to demote the last administrator who is not the owner', function ():
     $owner = User::factory()->create();
     $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
     $admin = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $admin, MembershipRank::Admin);
 
     // The suspended owner holds the rank and grants nothing, so the other administrator
     // is the only one running the organization.
@@ -97,7 +97,7 @@ it('refuses to demote the last administrator who is not the owner', function ():
         ->forceFill(['status' => MembershipStatus::Suspended])->save();
 
     try {
-        resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Member);
+        resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Member);
         $this->fail('Demoting the last active administrator should have been refused.');
     } catch (LastAdministrator $lastAdministrator) {
         expect($lastAdministrator->getMessage())->toContain('Acme')
@@ -109,13 +109,13 @@ it('demotes a suspended administrator while an active one remains', function ():
     $owner = User::factory()->create();
     $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
     $suspended = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $suspended, MembershipRole::Admin);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $suspended, MembershipRank::Admin);
 
     $membership->forceFill(['status' => MembershipStatus::Suspended])->save();
 
-    $demoted = resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Member);
+    $demoted = resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Member);
 
-    expect($demoted->role)->toBe(MembershipRole::Member);
+    expect($demoted->role)->toBe(MembershipRank::Member);
 });
 
 it('does nothing when the rank is already the one asked for', function (): void {
@@ -124,9 +124,9 @@ it('does nothing when the rank is already the one asked for', function (): void 
 
     $membership = membershipOf($owner, $organization);
 
-    $unchanged = resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Admin);
+    $unchanged = resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Admin);
 
-    expect($unchanged->role)->toBe(MembershipRole::Admin)
+    expect($unchanged->role)->toBe(MembershipRank::Admin)
         ->and(mayWithin($owner, $organization->id, Permission::ManageBilling))->toBeTrue();
 });
 
@@ -137,16 +137,16 @@ it('changes nothing in another organization', function (): void {
     $other = resolve(CreateOrganization::class)->handle(User::factory()->create(), 'Other');
 
     $membership = resolve(AddOrganizationMember::class)->handle($acme, $person);
-    resolve(AddOrganizationMember::class)->handle($other, $person, MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($other, $person, MembershipRank::Admin);
 
-    resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Admin);
+    resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Admin);
 
     expect(mayWithin($person, $acme->id, Permission::ManageBilling))->toBeTrue()
         ->and(mayWithin($person, $other->id, Permission::ManageBilling))->toBeTrue();
 
-    $back = resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Member);
+    $back = resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Member);
 
-    expect($back->role)->toBe(MembershipRole::Member)
+    expect($back->role)->toBe(MembershipRank::Member)
         ->and(mayWithin($person, $acme->id, Permission::ManageBilling))->toBeFalse()
         ->and(mayWithin($person, $other->id, Permission::ManageBilling))->toBeTrue();
 });

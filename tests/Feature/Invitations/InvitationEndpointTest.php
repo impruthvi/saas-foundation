@@ -6,7 +6,7 @@ use App\Actions\AddOrganizationMember;
 use App\Actions\ConsumePendingInvitation;
 use App\Actions\CreatePersonalOrganization;
 use App\Enums\InvitationStatus;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Mail\OrganizationInvitation;
 use App\Models\Invitation;
@@ -77,7 +77,7 @@ describe('issuing an invitation', function (): void {
         $this->actingAs($owner)
             ->post(route('organizations.invitations.store'), [
                 'email' => 'new@example.com',
-                'role' => MembershipRole::Member->value,
+                'role' => MembershipRank::Member->value,
             ])
             ->assertRedirect();
 
@@ -110,7 +110,7 @@ describe('issuing an invitation', function (): void {
         $this->actingAs($member)
             ->post(route('organizations.invitations.store'), [
                 'email' => 'nope@example.com',
-                'role' => MembershipRole::Member->value,
+                'role' => MembershipRank::Member->value,
             ])
             ->assertForbidden();
 
@@ -123,7 +123,7 @@ describe('issuing an invitation', function (): void {
         $this->actingAs($owner)
             ->post(route('organizations.invitations.store'), [
                 'email' => 'not-an-address',
-                'role' => MembershipRole::Member->value,
+                'role' => MembershipRank::Member->value,
             ])
             ->assertSessionHasErrors('email');
     });
@@ -145,7 +145,7 @@ describe('issuing an invitation', function (): void {
         $this->actingAs($owner)
             ->post(route('organizations.invitations.store'), [
                 'email' => 'twice@example.com',
-                'role' => MembershipRole::Member->value,
+                'role' => MembershipRank::Member->value,
             ])
             ->assertSessionHasErrors('email');
     });

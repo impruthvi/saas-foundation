@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
-use App\Actions\ChangeOrganizationMemberRole;
+use App\Actions\ChangeOrganizationMemberRank;
 use App\Actions\CreateOrganization;
 use App\Actions\RemoveOrganizationMember;
 use App\Actions\TransferOrganizationOwnership;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
@@ -163,7 +163,7 @@ it('never lets one person hold two roles in one organization', function (): void
     $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
     $membership = resolve(AddOrganizationMember::class)->handle($organization, $member);
 
-    resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Admin);
+    resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Admin);
 
     expect(doubledAssignments())->toBeEmpty()
         ->and(projectionMismatches())->toBeEmpty();

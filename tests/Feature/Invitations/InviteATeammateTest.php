@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\ConsumePendingInvitation;
 use App\Actions\CreatePersonalOrganization;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Mail\OrganizationInvitation;
 use App\Models\Invitation;
 use App\Models\Organization;
@@ -33,7 +33,7 @@ it('takes a stranger from an invitation link to membership of two organizations'
     $this->actingAs($ada)
         ->post(route('organizations.invitations.store'), [
             'email' => 'grace@example.com',
-            'role' => MembershipRole::Member->value,
+            'role' => MembershipRank::Member->value,
         ])
         ->assertRedirect();
 

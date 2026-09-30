@@ -6,7 +6,7 @@ use App\Actions\SeedDemoJourney;
 use App\Billing\PlanCatalog;
 use App\Enums\AuditAction;
 use App\Enums\AuditSource;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Models\AuditEvent;
 use App\Models\Membership;
@@ -56,7 +56,7 @@ it('seeds the journey up to the Free plan limit', function (): void {
     ]);
 
     expect($membership->status)->toBe(MembershipStatus::Active)
-        ->and($membership->role)->toBe(MembershipRole::Member)
+        ->and($membership->role)->toBe(MembershipRank::Member)
         ->and($projects)->toBe(['Launch checklist', 'Pricing page'])
         ->and(User::query()->whereNull('email_verified_at')->count())->toBe(0);
 });
