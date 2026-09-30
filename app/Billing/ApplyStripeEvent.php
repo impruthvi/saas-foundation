@@ -92,9 +92,7 @@ final readonly class ApplyStripeEvent
         try {
             return $this->tenantContext->runFor(
                 $organization,
-                fn (): mixed => $this->hasBeenSuperseded($payload)
-                    ? $this->discard($payload)
-                    : $this->applying($payload, $apply),
+                fn (): mixed => $this->applyingInOrder($payload, $apply),
             );
         } catch (TenantContextMissing|CrossTenantAccess $exception) {
             return $this->retain(
@@ -102,6 +100,50 @@ final readonly class ApplyStripeEvent
                 class_basename($exception),
                 $exception->getMessage(),
             );
+        }
+    }
+
+    /**
+     * The watermark row stays locked until the write commits, so a newer delivery for the
+     * same subscription waits for this one instead of landing underneath it. A failure
+     * rolls the watermark back with the write, and is recorded after the rollback so the
+     * outcome survives it.
+     *
+     * @template TApplied
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  Closure(): TApplied  $apply
+     * @return TApplied|WebhookOutcome
+     */
+    private function applyingInOrder(array $payload, Closure $apply): mixed
+    {
+        $subscriptionId = data_get($payload, 'data.object.id');
+        $createdAt = $payload['created'] ?? null;
+
+        if (! in_array($payload['type'] ?? null, self::SUBSCRIPTION_SUBJECT_EVENTS, true)
+            || ! is_string($subscriptionId)
+            || ! is_int($createdAt)) {
+            return $this->applying($payload, $apply);
+        }
+
+        try {
+            return DB::transaction(function () use ($payload, $apply, $subscriptionId, $createdAt): mixed {
+                if ($this->claimed($subscriptionId, $createdAt) === false) {
+                    return $this->discard($payload);
+                }
+
+                $applied = $apply();
+
+                $this->record($payload, WebhookOutcome::Applied);
+
+                return $applied;
+            });
+        } catch (TenantContextMissing|CrossTenantAccess $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            $this->record($payload, WebhookOutcome::Errored, class_basename($exception), $exception->getMessage());
+
+            throw $exception;
         }
     }
 
@@ -153,48 +195,33 @@ final readonly class ApplyStripeEvent
     }
 
     /**
-     * Compare and claim under one lock so concurrent deliveries cannot both apply.
-     * Equal and missing timestamps apply: Stripe emits several events per second, and
-     * dropping a legitimate update is worse than applying one late.
-     *
-     * @param  array<string, mixed>  $payload
+     * Compares and advances the watermark under a row lock the caller's transaction
+     * holds. Equal timestamps apply: Stripe emits several events per second, and dropping
+     * a legitimate update is worse than applying one late.
      */
-    private function hasBeenSuperseded(array $payload): bool
+    private function claimed(string $subscriptionId, int $createdAt): bool
     {
-        if (! in_array($payload['type'] ?? null, self::SUBSCRIPTION_SUBJECT_EVENTS, true)) {
+        $watermark = SubscriptionEventWatermark::query()
+            ->where('stripe_id', $subscriptionId)
+            ->lockForUpdate()
+            ->first();
+
+        if ($watermark === null) {
+            SubscriptionEventWatermark::query()->create([
+                'stripe_id' => $subscriptionId,
+                'event_created_at' => $createdAt,
+            ]);
+
+            return true;
+        }
+
+        if ($watermark->event_created_at > $createdAt) {
             return false;
         }
 
-        $subscriptionId = data_get($payload, 'data.object.id');
-        $createdAt = $payload['created'] ?? null;
+        $watermark->update(['event_created_at' => $createdAt]);
 
-        if (! is_string($subscriptionId) || ! is_int($createdAt)) {
-            return false;
-        }
-
-        return DB::transaction(function () use ($subscriptionId, $createdAt): bool {
-            $watermark = SubscriptionEventWatermark::query()
-                ->where('stripe_id', $subscriptionId)
-                ->lockForUpdate()
-                ->first();
-
-            if ($watermark === null) {
-                SubscriptionEventWatermark::query()->create([
-                    'stripe_id' => $subscriptionId,
-                    'event_created_at' => $createdAt,
-                ]);
-
-                return false;
-            }
-
-            if ($watermark->event_created_at > $createdAt) {
-                return true;
-            }
-
-            $watermark->update(['event_created_at' => $createdAt]);
-
-            return false;
-        });
+        return true;
     }
 
     /**
