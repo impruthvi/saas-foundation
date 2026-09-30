@@ -81,6 +81,29 @@ it('reuses a price it finds by lookup key instead of creating another', function
         ->and(file_get_contents($setup['env']))->toContain('STRIPE_PRICE_PRO_MONTHLY="price_existing"');
 });
 
+it('replaces a price that no longer matches the catalog instead of reusing it', function (int $amount, string $currency, string $interval): void {
+    $setup = stripeSetup();
+    $setup['stripe']->withPrice('pro_month', 'price_stale', $amount, $currency, $interval);
+    Process::fake(['*stripe*listen*' => 'whsec_demo123']);
+
+    Artisan::call('saas:stripe', ['key' => 'sk_test_demo']);
+
+    expect($setup['stripe']->createdProducts)->toBeEmpty()
+        ->and($setup['stripe']->createdPrices)->toBe([[
+            'product' => 'prod_existing',
+            'unit_amount' => 2000,
+            'currency' => 'usd',
+            'recurring' => ['interval' => 'month'],
+            'lookup_key' => 'pro_month',
+            'transfer_lookup_key' => true,
+        ]])
+        ->and(file_get_contents($setup['env']))->toContain('STRIPE_PRICE_PRO_MONTHLY="price_created_1"');
+})->with([
+    'a different amount' => [1500, 'usd', 'month'],
+    'a different currency' => [2000, 'eur', 'month'],
+    'a different interval' => [2000, 'usd', 'year'],
+]);
+
 it('reports setup as incomplete when the Stripe CLI gives no webhook secret', function (): void {
     $setup = stripeSetup();
     Process::fake(['*stripe*listen*' => Process::result(errorOutput: 'stripe: command not found', exitCode: 127)]);

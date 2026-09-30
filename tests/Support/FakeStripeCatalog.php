@@ -22,7 +22,7 @@ final class FakeStripeCatalog extends StripeClient
     /** @var list<array<string, mixed>> */
     public array $createdPrices = [];
 
-    /** @var array<string, string> lookup key => price id */
+    /** @var array<string, array{id: string, product: string, unit_amount: int, currency: string, recurring: array{interval: string}}> */
     public array $pricesByLookupKey = [];
 
     public ?ApiErrorException $failure = null;
@@ -32,9 +32,21 @@ final class FakeStripeCatalog extends StripeClient
         parent::__construct('sk_test_inert');
     }
 
-    public function withPrice(string $lookupKey, string $priceId): self
-    {
-        $this->pricesByLookupKey[$lookupKey] = $priceId;
+    /** Defaults to what the catalog declares for Pro, so an unqualified price matches it. */
+    public function withPrice(
+        string $lookupKey,
+        string $priceId,
+        int $amount = 2000,
+        string $currency = 'usd',
+        string $interval = 'month',
+    ): self {
+        $this->pricesByLookupKey[$lookupKey] = [
+            'id' => $priceId,
+            'product' => 'prod_existing',
+            'unit_amount' => $amount,
+            'currency' => $currency,
+            'recurring' => ['interval' => $interval],
+        ];
 
         return $this;
     }
@@ -69,7 +81,7 @@ final readonly class FakeStripePriceService
 
         foreach ($parameters['lookup_keys'] ?? [] as $lookupKey) {
             if (isset($this->stripe->pricesByLookupKey[$lookupKey])) {
-                $data[] = ['id' => $this->stripe->pricesByLookupKey[$lookupKey], 'object' => 'price', 'lookup_key' => $lookupKey];
+                $data[] = [...$this->stripe->pricesByLookupKey[$lookupKey], 'object' => 'price', 'lookup_key' => $lookupKey];
             }
         }
 
