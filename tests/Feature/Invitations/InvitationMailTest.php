@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\InviteOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Exceptions\CrossTenantAccess;
 use App\Mail\OrganizationInvitation;
 use App\Models\Invitation;
@@ -20,7 +20,7 @@ function inviteAndMail(Organization $organization, string $email): array
 {
     return resolve(TenantContext::class)->runFor($organization, function () use ($organization, $email): array {
         $issued = resolve(InviteOrganizationMember::class)
-            ->handle($organization, $email, MembershipRole::Member);
+            ->handle($organization, $email, MembershipRank::Member);
 
         Mail::to($email)->queue(new OrganizationInvitation(
             $issued['invitation'],

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\OrganizationRole;
 use App\Enums\Permission;
 use Illuminate\Support\Facades\Artisan;
@@ -58,9 +58,9 @@ it('gives every role something to do', function (OrganizationRole $role): void {
     expect($role->permissions())->not->toBeEmpty();
 })->with(OrganizationRole::cases());
 
-it('names a role for every rank a membership can carry', function (MembershipRole $rank): void {
+it('names a role for every rank a membership can carry', function (MembershipRank $rank): void {
     expect(OrganizationRole::forRank($rank))->toBeInstanceOf(OrganizationRole::class);
-})->with(MembershipRole::cases());
+})->with(MembershipRank::cases());
 
 it('adds and removes the projects permission with its own migration', function (): void {
     // Named rather than counted, so a later migration cannot turn the rollback into a

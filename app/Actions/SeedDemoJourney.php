@@ -8,7 +8,7 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Audit\AuditActor;
 use App\Entitlements\ResolveAllowance;
 use App\Enums\AuditSource;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Exceptions\DemoRefused;
 use App\Models\Invitation;
 use App\Models\Organization;
@@ -89,7 +89,7 @@ final readonly class SeedDemoJourney
         /** @var Invitation $invitation */
         $invitation = $this->tenant->runFor(
             $organization,
-            fn (): Invitation => $this->invitations->handle($organization, self::TEAMMATE_EMAIL, MembershipRole::Member, $owner)['invitation'],
+            fn (): Invitation => $this->invitations->handle($organization, self::TEAMMATE_EMAIL, MembershipRank::Member, $owner)['invitation'],
         );
 
         $this->acceptances->handle($invitation, $teammate);

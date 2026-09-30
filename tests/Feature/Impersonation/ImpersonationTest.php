@@ -7,7 +7,7 @@ use App\Actions\StartImpersonation;
 use App\Contracts\Operators;
 use App\Enums\AuditAction;
 use App\Enums\ImpersonationEnd;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Exceptions\ImpersonationRefused;
 use App\Http\Middleware\EnsureImpersonationIsLive;
 use App\Http\Middleware\ResolveTenantContext;
@@ -230,7 +230,7 @@ it('credits an act taken while impersonating to the impersonation', function ():
     [$operator] = signedInOperator($this->operators);
     [$organization, $alice] = organizationOwnedBySomeone('Alice');
     $bob = User::factory()->create();
-    $membership = resolve(AddOrganizationMember::class)->handle($organization, $bob, MembershipRole::Member);
+    $membership = resolve(AddOrganizationMember::class)->handle($organization, $bob, MembershipRank::Member);
     $impersonation = startImpersonating($operator, $alice);
 
     $this->delete(route('organizations.members.destroy', $membership))->assertRedirect();

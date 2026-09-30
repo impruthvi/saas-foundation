@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Models\Membership;
 use App\Models\Organization;
@@ -37,7 +37,7 @@ it('gives a newly registered user exactly one personal organization', function (
     );
 
     expect($membership->organization_id)->toBe($organization->id)
-        ->and($membership->role)->toBe(MembershipRole::Admin)
+        ->and($membership->role)->toBe(MembershipRank::Admin)
         ->and($membership->status)->toBe(MembershipStatus::Active);
 });
 

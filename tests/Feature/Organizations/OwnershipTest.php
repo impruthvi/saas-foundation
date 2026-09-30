@@ -6,7 +6,7 @@ use App\Actions\AddOrganizationMember;
 use App\Actions\CreateOrganization;
 use App\Actions\DeleteUser;
 use App\Actions\TransferOrganizationOwnership;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Exceptions\OwnershipTransferRequired;
 use App\Models\Membership;
 use App\Models\Organization;
@@ -26,7 +26,7 @@ it('makes the creating user the owner and a member', function (): void {
 
     expect($organization->owner_id)->toBe($user->id)
         ->and($organization->personal)->toBeFalse()
-        ->and($membership->role)->toBe(MembershipRole::Admin);
+        ->and($membership->role)->toBe(MembershipRank::Admin);
 });
 
 it('moves ownership to an existing member and keeps the outgoing owner on', function (): void {
@@ -44,8 +44,8 @@ it('moves ownership to an existing member and keeps the outgoing owner on', func
     );
 
     expect($organization->owner_id)->toBe($successor->id)
-        ->and($roles[$successor->id])->toBe(MembershipRole::Admin)
-        ->and($roles[$owner->id])->toBe(MembershipRole::Admin);
+        ->and($roles[$successor->id])->toBe(MembershipRank::Admin)
+        ->and($roles[$owner->id])->toBe(MembershipRank::Admin);
 });
 
 it('refuses to transfer to someone who is not a member', function (): void {

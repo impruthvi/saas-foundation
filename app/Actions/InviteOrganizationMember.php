@@ -6,7 +6,7 @@ namespace App\Actions;
 
 use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Exceptions\Invitations\AlreadyInvited;
 use App\Exceptions\Invitations\AlreadyMember;
@@ -33,14 +33,14 @@ final readonly class InviteOrganizationMember
     public function handle(
         Organization $organization,
         string $email,
-        MembershipRole $role = MembershipRole::Member,
+        MembershipRank $rank = MembershipRank::Member,
         ?User $invitedBy = null,
     ): array {
         $email = Str::lower(mb_trim($email));
 
         $this->refuseExistingMember($email);
 
-        return DB::transaction(function () use ($organization, $email, $role, $invitedBy): array {
+        return DB::transaction(function () use ($organization, $email, $rank, $invitedBy): array {
             $invitation = Invitation::query()->where('email', $email)->first();
 
             if ($invitation instanceof Invitation && $invitation->isAcceptable()) {
@@ -54,7 +54,7 @@ final readonly class InviteOrganizationMember
             $invitation->fill([
                 'organization_id' => $organization->id,
                 'email' => $email,
-                'role' => $role,
+                'role' => $rank,
                 'status' => InvitationStatus::Pending,
                 'expires_at' => now()->addDays(config()->integer('organizations.invitations.expires_after_days')),
                 'invited_by_user_id' => $invitedBy?->id,
@@ -66,7 +66,7 @@ final readonly class InviteOrganizationMember
 
             $this->audit->handle($organization->id, AuditAction::InvitationSent, $invitation, [
                 'email' => $email,
-                'rank' => $role->value,
+                'rank' => $rank->value,
             ]);
 
             return ['invitation' => $invitation, 'token' => $token];

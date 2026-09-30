@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
 use App\Actions\CreateOrganization;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\Permission;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Invitation;
@@ -24,8 +24,8 @@ function someoneRankedDifferentlyInTwoOrganizations(): array
     $acme = resolve(CreateOrganization::class)->handle(User::factory()->create(), 'Acme');
     $other = resolve(CreateOrganization::class)->handle(User::factory()->create(), 'Other');
 
-    resolve(AddOrganizationMember::class)->handle($acme, $person, MembershipRole::Admin);
-    resolve(AddOrganizationMember::class)->handle($other, $person, MembershipRole::Member);
+    resolve(AddOrganizationMember::class)->handle($acme, $person, MembershipRank::Admin);
+    resolve(AddOrganizationMember::class)->handle($other, $person, MembershipRank::Member);
 
     return [$person, $acme, $other];
 }
@@ -74,7 +74,7 @@ it('refuses over HTTP in the organization the session switched to', function ():
         ->withSession([ResolveTenantContext::SESSION_KEY => $acme->id])
         ->post(route('organizations.invitations.store'), [
             'email' => 'someone@example.com',
-            'role' => MembershipRole::Member->value,
+            'role' => MembershipRank::Member->value,
         ])
         ->assertRedirect()
         ->assertSessionHasNoErrors();
@@ -83,7 +83,7 @@ it('refuses over HTTP in the organization the session switched to', function ():
         ->withSession([ResolveTenantContext::SESSION_KEY => $other->id])
         ->post(route('organizations.invitations.store'), [
             'email' => 'someone@example.com',
-            'role' => MembershipRole::Member->value,
+            'role' => MembershipRank::Member->value,
         ])
         ->assertForbidden();
 });
@@ -101,7 +101,7 @@ it('refuses over HTTP after the switch endpoint moves the session', function ():
     $this->actingAs($person)
         ->post(route('organizations.invitations.store'), [
             'email' => 'someone@example.com',
-            'role' => MembershipRole::Member->value,
+            'role' => MembershipRank::Member->value,
         ])
         ->assertForbidden();
 });

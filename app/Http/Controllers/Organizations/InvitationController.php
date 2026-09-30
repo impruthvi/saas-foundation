@@ -34,7 +34,7 @@ final class InvitationController extends Controller
             $issued = $invite->handle(
                 $organization,
                 $request->string('email')->value(),
-                $request->role(),
+                $request->rank(),
                 $request->user(),
             );
         } catch (InvitationRefused $invitationRefused) {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Enums\OrganizationRole;
 use App\Models\Membership;
@@ -23,20 +23,20 @@ final readonly class AddOrganizationMember
     public function handle(
         Organization $organization,
         User $user,
-        MembershipRole $role = MembershipRole::Member,
+        MembershipRank $rank = MembershipRank::Member,
     ): Membership {
         return DB::transaction(fn (): Membership => $this->tenant->runForId(
             $organization->id,
-            function () use ($organization, $user, $role): Membership {
+            function () use ($organization, $user, $rank): Membership {
                 $membership = Membership::query()->create([
                     'organization_id' => $organization->id,
                     'user_id' => $user->id,
-                    'role' => $role,
+                    'role' => $rank,
                     'status' => MembershipStatus::Active,
                     'joined_at' => now(),
                 ]);
 
-                $user->syncRoles([OrganizationRole::forRank($role)->value]);
+                $user->syncRoles([OrganizationRole::forRank($rank)->value]);
 
                 return $membership;
             },

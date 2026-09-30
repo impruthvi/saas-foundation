@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\User;
 
@@ -33,7 +33,7 @@ it('shows removal to an administrator and not to a plain member', function (): v
 it('removes a member through the confirmation', function (): void {
     [$organization, $owner] = organizationOwnedBySomeone();
     $member = User::factory()->create();
-    resolve(AddOrganizationMember::class)->handle($organization, $member, MembershipRole::Admin);
+    resolve(AddOrganizationMember::class)->handle($organization, $member, MembershipRank::Admin);
 
     $this->actingAs($owner)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id]);

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\AddOrganizationMember;
 use App\Actions\RemoveOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\MembershipStatus;
 use App\Exceptions\Memberships\LastAdministrator;
 use App\Models\Membership;
@@ -56,9 +56,9 @@ it('never lets two simultaneous removals strand an organization', function (): v
     });
 
     $first = resolve(AddOrganizationMember::class)
-        ->handle($organization, User::factory()->create(), MembershipRole::Admin);
+        ->handle($organization, User::factory()->create(), MembershipRank::Admin);
     $second = resolve(AddOrganizationMember::class)
-        ->handle($organization, User::factory()->create(), MembershipRole::Admin);
+        ->handle($organization, User::factory()->create(), MembershipRank::Admin);
 
     expect(activeAdministratorCount($organization))->toBe(2);
 

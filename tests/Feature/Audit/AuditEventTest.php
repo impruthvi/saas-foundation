@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Actions\AcceptOrganizationInvitation;
 use App\Actions\AddOrganizationMember;
 use App\Actions\CancelSubscription;
-use App\Actions\ChangeOrganizationMemberRole;
+use App\Actions\ChangeOrganizationMemberRank;
 use App\Actions\ConsumePendingInvitation;
 use App\Actions\CreateOrganization;
 use App\Actions\DeclineOrganizationInvitation;
@@ -20,7 +20,7 @@ use App\Billing\PlanCatalog;
 use App\Billing\Price;
 use App\Enums\AuditAction;
 use App\Enums\AuditSource;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\AuditEvent;
 use App\Models\Invitation;
@@ -105,7 +105,7 @@ it('records who removed a member over HTTP', function (): void {
         ->source->toBe(AuditSource::Web)
         ->subject_type->toBe($membership->getMorphClass())
         ->subject_id->toBe($membership->id)
-        ->context->toBe(['user_id' => $member->id, 'rank' => MembershipRole::Member->value]);
+        ->context->toBe(['user_id' => $member->id, 'rank' => MembershipRank::Member->value]);
 });
 
 it('records each invitation act with the address it concerned', function (Closure $act, AuditAction $expected): void {
@@ -136,7 +136,7 @@ it('records an accepted invitation under the inviting organization', function ()
     expect(auditTrailOf($organization)->last())
         ->action->toBe(AuditAction::InvitationAccepted)
         ->actor_id->toBe($bob->id)
-        ->context->toBe(['email' => 'bob@example.com', 'user_id' => $bob->id, 'rank' => MembershipRole::Member->value]);
+        ->context->toBe(['email' => 'bob@example.com', 'user_id' => $bob->id, 'rank' => MembershipRank::Member->value]);
 });
 
 it('names the new account as the actor when sign-up accepts a parked invitation', function (): void {
@@ -165,7 +165,7 @@ it('records a rank change with where it moved from and to', function (): void {
     $member = User::factory()->create();
     $membership = resolve(AddOrganizationMember::class)->handle($organization, $member);
 
-    AuditActor::runAs(AuditActor::user($owner), fn () => resolve(ChangeOrganizationMemberRole::class)->handle($membership, MembershipRole::Admin));
+    AuditActor::runAs(AuditActor::user($owner), fn () => resolve(ChangeOrganizationMemberRank::class)->handle($membership, MembershipRank::Admin));
 
     expect(auditTrailOf($organization)->sole())
         ->action->toBe(AuditAction::MemberRankChanged)

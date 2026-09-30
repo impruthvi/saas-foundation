@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Organizations;
 
-use App\Actions\ChangeOrganizationMemberRole;
+use App\Actions\ChangeOrganizationMemberRank;
 use App\Actions\RemoveOrganizationMember;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Exceptions\Memberships\MembershipRefused;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Organizations\ChangeMemberRoleRequest;
+use App\Http\Requests\Organizations\ChangeMemberRankRequest;
 use App\Models\Invitation;
 use App\Models\Membership;
 use App\Models\Organization;
@@ -77,19 +77,19 @@ final class MemberController extends Controller
                 ]),
             'canInvite' => $user?->can('create', Invitation::class) ?? false,
             'ranks' => array_map(
-                fn (MembershipRole $rank): array => ['value' => $rank->value, 'label' => $rank->label()],
-                MembershipRole::cases(),
+                fn (MembershipRank $rank): array => ['value' => $rank->value, 'label' => $rank->label()],
+                MembershipRank::cases(),
             ),
         ]);
     }
 
     public function update(
-        ChangeMemberRoleRequest $request,
+        ChangeMemberRankRequest $request,
         Membership $membership,
-        ChangeOrganizationMemberRole $change,
+        ChangeOrganizationMemberRank $change,
     ): RedirectResponse {
         try {
-            $change->handle($membership, $request->role());
+            $change->handle($membership, $request->rank());
         } catch (MembershipRefused $membershipRefused) {
             Inertia::flash('toast', ['type' => 'error', 'message' => $membershipRefused->getMessage()]);
 

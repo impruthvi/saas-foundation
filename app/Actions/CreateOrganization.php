@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\OrganizationStatus;
 use App\Models\Organization;
 use App\Models\User;
@@ -37,7 +37,7 @@ final readonly class CreateOrganization
                         'status' => OrganizationStatus::Active,
                     ]);
 
-                    $this->members->handle($organization, $owner, MembershipRole::Admin);
+                    $this->members->handle($organization, $owner, MembershipRank::Admin);
 
                     return $organization;
                 });

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Enums\InvitationStatus;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Models\Invitation;
 use App\Models\Organization;
 use App\Models\User;
@@ -25,7 +25,7 @@ final class InvitationFactory extends Factory
         return [
             'organization_id' => Organization::factory(),
             'email' => Str::lower(fake()->unique()->safeEmail()),
-            'role' => MembershipRole::Member,
+            'role' => MembershipRank::Member,
             'token_hash' => Invitation::hashToken(Str::random(48)),
             'status' => InvitationStatus::Pending,
             'expires_at' => now()->addDays(7),
@@ -57,7 +57,7 @@ final class InvitationFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'role' => MembershipRole::Admin,
+            'role' => MembershipRank::Admin,
         ]);
     }
 

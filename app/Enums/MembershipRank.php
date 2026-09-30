@@ -7,7 +7,7 @@ namespace App\Enums;
 /**
  * Ownership lives only in organizations.owner_id.
  */
-enum MembershipRole: string
+enum MembershipRank: string
 {
     case Admin = 'admin';
     case Member = 'member';

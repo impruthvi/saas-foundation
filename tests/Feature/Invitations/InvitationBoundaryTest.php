@@ -9,7 +9,7 @@ use App\Actions\ResendOrganizationInvitation;
 use App\Actions\RevokeOrganizationInvitation;
 use App\Enums\AuditAction;
 use App\Enums\InvitationStatus;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Enums\OrganizationStatus;
 use App\Exceptions\CrossTenantAccess;
 use App\Exceptions\Invitations\AlreadyInvited;
@@ -63,7 +63,7 @@ it('accepts an invitation and makes the invitee a member of the inviting organiz
 
     expect($membership->organization_id)->toBe($organization->id)
         ->and($membership->user_id)->toBe($invitee->id)
-        ->and($membership->role)->toBe(MembershipRole::Member)
+        ->and($membership->role)->toBe(MembershipRank::Member)
         ->and($invitation->fresh()->status)->toBe(InvitationStatus::Accepted)
         ->and($invitation->fresh()->accepted_by_user_id)->toBe($invitee->id);
 });

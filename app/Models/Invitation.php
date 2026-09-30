@@ -7,7 +7,7 @@ namespace App\Models;
 use App\Concerns\BelongsToOrganization;
 use App\Contracts\TenantOwned;
 use App\Enums\InvitationStatus;
-use App\Enums\MembershipRole;
+use App\Enums\MembershipRank;
 use App\Exceptions\Invitations\InvitationAlreadyAccepted;
 use App\Exceptions\Invitations\InvitationDeclined;
 use App\Exceptions\Invitations\InvitationRefused;
@@ -29,7 +29,7 @@ use Illuminate\Support\Str;
  * @property int $id
  * @property int $organization_id
  * @property string $email
- * @property MembershipRole $role
+ * @property MembershipRank $role
  * @property string $token_hash
  * @property InvitationStatus $status
  * @property CarbonImmutable $expires_at
@@ -197,7 +197,7 @@ final class Invitation extends Model implements TenantOwned
     protected function casts(): array
     {
         return [
-            'role' => MembershipRole::class,
+            'role' => MembershipRank::class,
             'status' => InvitationStatus::class,
             'expires_at' => 'datetime',
             'accepted_at' => 'datetime',
