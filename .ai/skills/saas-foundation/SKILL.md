@@ -11,7 +11,7 @@ metadata:
 ## Install and demo
 
 ```bash
-laravel new my-app --using=https://github.com/impruthvi/saas-foundation#v0.1.0
+laravel new my-app --using=https://github.com/impruthvi/saas-foundation#v0.2.0
 cd my-app
 php artisan saas:demo                       # local only; prints two one-time passwords
 php artisan saas:stripe sk_test_YOUR_KEY    # Pro price, keys and webhook secret into .env

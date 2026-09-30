@@ -3,7 +3,7 @@
 ## Supported versions
 
 Fixes land on `main` and in the next release. Only the latest release is supported, currently
-`v0.1.0`; older releases do not receive fixes.
+`v0.2.0`; older releases do not receive fixes.
 
 ## Reporting a vulnerability
 

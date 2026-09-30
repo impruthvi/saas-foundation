@@ -10,6 +10,71 @@ be listed here under **Changed** or **Removed**.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-30
+
+### Changed
+
+- **The rank enum is named for rank.** `App\Enums\MembershipRole` is now `MembershipRank`,
+  `ChangeOrganizationMemberRole` is `ChangeOrganizationMemberRank`, and
+  `ChangeMemberRoleRequest` is `ChangeMemberRankRequest`, whose `role()` accessor, like
+  `InviteMemberRequest`'s, is now `rank()`. The `role` columns and request field keep
+  their names. Update any code that imports the old classes.
+- **Entitlements follow the Stripe key's mode.** `cashier-entitlements.live_mode` was
+  hard-coded to `false`, so a live key charged customers and never granted their plan. It
+  is now derived from `STRIPE_SECRET`.
+- **`composer dev` runs the scheduler.** The scheduled sweep renews a paid allowance
+  between webhooks; without it a paid plan fell to the Free limit an hour after the last
+  one. Production needs the scheduler too.
+- **Account deletion is refused while an owned organization has other members,** personal
+  organizations included. Every organization the app creates is personal, so the refusal
+  never fired and deleting an owner silently deleted the organization their teammates
+  were in. The refusal now says to remove the other members first.
+- **A subscription webhook is applied under the lock that claimed it.** The ordering check,
+  Cashier's write and the recorded outcome share one transaction, so a newer delivery
+  waits for an older one instead of being overwritten by it. A failure after the write now
+  rolls the write back too, and Stripe retries.
+- **An unpaid or incomplete subscription reads as `inactive`,** not as no subscription.
+  The billing screen stopped offering a checkout that was then refused, and it offers
+  Cancel for every open subscription that is not already ending, past due included.
+- **The members screen reports refusals as an error toast.** A refused rank change,
+  resend, removal or withdrawal used to do nothing visible.
+- **The members screen's props:** a pending invitation sends its label as `roleLabel`, so
+  `role` always means the stored value; both rank selects take a new `ranks` prop; and the
+  unused `userId` is gone.
+- **The entitlement inspector shows the resolved plan,** labelled so, rather than the plan
+  billing reports, and calls an answer stale at the same second resolution does.
+- **`saas:demo` seeds up to the resolved Free limit** and prints the number it seeded.
+- **`saas:stripe` replaces a Stripe price that no longer matches the catalog** instead of
+  reusing it, so Checkout charges what the billing screen shows.
+- **The public page is the product's,** not the framework's landing page.
+- **The admin console's entitlement health widget no longer polls** every five seconds.
+- **Organization lookup lives in `LookupOrganizations::matching()`,** all four rules, so it
+  survives removing the admin console.
+- `DatabaseSeeder` seeds nothing and points to `saas:demo`: a factory user had no
+  organization and was refused on every tenant-scoped screen.
+
+### Fixed
+
+- Declining an invitation returned a 500 for anyone who already had an organization,
+  which is every registered user, and for an invitation that had already been accepted.
+- An invitation opened while signed out was dropped if the person signed in rather than
+  registered. It is now accepted on sign-in, by the same checks registration uses.
+- Replaying a `customer.deleted` webhook event left no audit event.
+- Every invitation action refuses the same closed invitations, checked on the locked row:
+  a revoked invitation can no longer be declined, revoking twice no longer audits twice,
+  and an acceptance a revocation overtook no longer becomes a membership.
+- Expired impersonations were shown as live, and revoking their operator stamped them as
+  revoked.
+- The members screen caught every `RuntimeException`, showing database errors to the
+  administrator as a form error; it now catches only membership refusals.
+
+### Removed
+
+- `MembershipStatus::grantsAccess()`, `Invitation::acceptedBy()` and `revokedBy()`,
+  `OrganizationRole::label()`, `Permission::label()`, `MembershipRepository::defaultFor()`,
+  `GrantOperator`'s `$grantedBy` parameter, and ten factory states, none of which had a
+  caller. `PlanCatalog::features()` is now a private type check.
+
 ## [0.1.0] - 2026-09-27
 
 ### Added
@@ -131,5 +196,6 @@ be listed here under **Changed** or **Removed**.
 - The generated `_ide_helper.php` is no longer tracked. Regenerate it locally with
   `php artisan ide-helper:generate`.
 
-[Unreleased]: https://github.com/impruthvi/saas-foundation/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/impruthvi/saas-foundation/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/impruthvi/saas-foundation/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/impruthvi/saas-foundation/releases/tag/v0.1.0
