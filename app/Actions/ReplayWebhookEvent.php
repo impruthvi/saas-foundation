@@ -43,12 +43,13 @@ final readonly class ReplayWebhookEvent
         private RefreshManager $refreshes,
         private RecordAuditEvent $audit,
         private TenantContext $tenant,
+        private CashierEventHandlers $handlers,
     ) {}
 
     public function handle(WebhookEvent $event): WebhookOutcome
     {
         throw_unless(
-            in_array($event->outcome, [WebhookOutcome::Unplaceable, WebhookOutcome::Errored], true),
+            $event->outcome->isReplayable(),
             InvalidArgumentException::class,
             'Only an event that was never applied can be replayed.',
         );
@@ -65,9 +66,11 @@ final readonly class ReplayWebhookEvent
         try {
             $result = $this->apply->handle(
                 $payload,
-                fn (): Response => resolve(CashierEventHandlers::class)->apply($payload),
+                fn (): Response => $this->handlers->apply($payload),
             );
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            report($throwable);
+
             return $this->finish($event, $organization, WebhookOutcome::Errored);
         }
 

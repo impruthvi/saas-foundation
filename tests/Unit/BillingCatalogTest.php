@@ -44,8 +44,7 @@ it('builds plans and prices from configuration', function (): void {
         ->and($catalog->priceIds())->toBe(['price_free', 'price_pro'])
         ->and($catalog->findPrice('price_pro'))->toBeInstanceOf(Price::class)->planKey->toBe('pro')->interval->toBe('month')->currency->toBe('usd')->amount->toBe(2000)->allowances->toBe(['projects' => 10, 'exports' => true])
         ->and($catalog->findPrice('price_unknown'))->toBeNull()
-        ->and($catalog->findPlan('pro')?->name)->toBe('Pro')
-        ->and($catalog->features())->toBe(['exports' => true, 'projects' => 10]);
+        ->and($catalog->findPlan('pro')?->name)->toBe('Pro');
 });
 
 it('is registered once from application configuration', function (): void {

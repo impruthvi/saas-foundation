@@ -78,9 +78,7 @@ defineOptions({
             <!-- The token is parked in the session, so registering or signing in
                  finishes the job without returning here. -->
             <Button as-child class="w-full">
-                <a :href="register.url({ query: { email } })">
-                    Join {{ organization }}
-                </a>
+                <a :href="register.url()"> Join {{ organization }} </a>
             </Button>
 
             <p class="text-center text-sm text-muted-foreground">

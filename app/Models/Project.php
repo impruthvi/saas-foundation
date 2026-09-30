@@ -36,4 +36,7 @@ final class Project extends Model implements TenantOwned
 
     /** @use HasFactory<ProjectFactory> */
     use HasFactory;
+
+    /** The entitlement feature a project counts against. */
+    public const string FEATURE = 'projects';
 }

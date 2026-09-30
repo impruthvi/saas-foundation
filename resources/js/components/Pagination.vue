@@ -21,8 +21,8 @@ function text(label: string): string {
         :aria-label="label"
     >
         <Link
-            v-for="link in links"
-            :key="link.label"
+            v-for="(link, index) in links"
+            :key="index"
             :href="link.url ?? '#'"
             :aria-current="link.active ? 'page' : undefined"
             :aria-disabled="link.url === null"

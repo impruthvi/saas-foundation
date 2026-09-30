@@ -11,9 +11,4 @@ enum MembershipStatus: string
 {
     case Active = 'active';
     case Suspended = 'suspended';
-
-    public function grantsAccess(): bool
-    {
-        return $this === self::Active;
-    }
 }

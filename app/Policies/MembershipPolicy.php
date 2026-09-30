@@ -38,17 +38,19 @@ final readonly class MembershipPolicy
 
     public function delete(User $user, Membership $membership): bool
     {
-        $organization = $this->tenant->current();
-
-        if (! $organization instanceof Organization) {
-            return false;
-        }
-
-        return $this->allows($user, Permission::ManageMembers)
-            && $membership->mayBeRemovedFrom($organization, $this->otherActiveAdministrators($membership));
+        return $this->mayManage($user, $membership);
     }
 
+    /**
+     * A rank change is refused for exactly the rows a removal is: the owner, and the
+     * last active administrator.
+     */
     public function update(User $user, Membership $membership): bool
+    {
+        return $this->mayManage($user, $membership);
+    }
+
+    private function mayManage(User $user, Membership $membership): bool
     {
         $organization = $this->tenant->current();
 

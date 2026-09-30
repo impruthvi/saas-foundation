@@ -13,6 +13,12 @@ enum WebhookOutcome: string
     case Replayed = 'replayed';
     case Refused = 'refused';
 
+    /** Only an event that never applied can be replayed. */
+    public function isReplayable(): bool
+    {
+        return $this === self::Unplaceable || $this === self::Errored;
+    }
+
     /**
      * Unrecovered events are kept twice as long; replayed and refused keep the window
      * of the problem they came from.

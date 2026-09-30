@@ -12,6 +12,7 @@ use App\Enums\MembershipRank;
 use App\Exceptions\DemoRefused;
 use App\Models\Invitation;
 use App\Models\Organization;
+use App\Models\Project;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Date;
@@ -95,7 +96,7 @@ final readonly class SeedDemoJourney
         $this->acceptances->handle($invitation, $teammate);
 
         $projects = $this->tenant->runFor($organization, function () use ($organization): int {
-            $limit = $this->allowances->limit($this->owners->reference($organization), 'projects', Date::now()->toDateTimeImmutable())
+            $limit = $this->allowances->limit($this->owners->reference($organization), Project::FEATURE, Date::now()->toDateTimeImmutable())
                 ?? throw new LogicException('The demo seeds up to the Free plan limit, so the Free plan must limit projects.');
 
             for ($number = 1; $number <= $limit; $number++) {

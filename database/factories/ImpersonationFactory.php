@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Actions\StartImpersonation;
 use App\Models\Impersonation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,7 +24,7 @@ final class ImpersonationFactory extends Factory
             'user_id' => User::factory(),
             'reason' => fake()->sentence(),
             'started_at' => now(),
-            'expires_at' => now()->addMinutes(30),
+            'expires_at' => now()->addMinutes(StartImpersonation::MINUTES),
         ];
     }
 }

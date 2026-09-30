@@ -107,9 +107,7 @@ final class ProjectController extends Controller
                 ], HttpResponse::HTTP_UNPROCESSABLE_ENTITY);
             }
 
-            return back()
-                ->withErrors(['project' => $message])
-                ->with('projectLimit', $details);
+            return back()->withErrors(['project' => $message]);
         } catch (ReadFailure|FeatureTypeMismatch|UnknownFeature $configurationFailure) {
             report($configurationFailure);
 
@@ -136,8 +134,8 @@ final class ProjectController extends Controller
     ): array {
         $owner = $owners->reference($organization);
         $at = Date::now()->toDateTimeImmutable();
-        $limit = $allowances->limit($owner, 'projects', $at);
-        $usage = $resolver->usageStore()->usage($owner, 'projects', $at);
+        $limit = $allowances->limit($owner, Project::FEATURE, $at);
+        $usage = $resolver->usageStore()->usage($owner, Project::FEATURE, $at);
 
         return [
             'limit' => $limit,
@@ -164,11 +162,11 @@ final class ProjectController extends Controller
 
         foreach ($catalog->plans() as $plan) {
             foreach ($plan->prices as $price) {
-                if (! array_key_exists('projects', $price->allowances)) {
+                if (! array_key_exists(Project::FEATURE, $price->allowances)) {
                     continue;
                 }
 
-                $allowance = $price->allowances['projects'];
+                $allowance = $price->allowances[Project::FEATURE];
 
                 if (! is_bool($allowance) && ($allowance === null || $allowance > $usage)) {
                     $candidates[] = ['amount' => $price->amount, 'name' => $plan->name];

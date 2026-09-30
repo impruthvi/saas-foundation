@@ -55,7 +55,7 @@ final class SubscriptionEvents extends TableWidget
                     ->icon(Heroicon::OutlinedArrowPath)
                     ->requiresConfirmation()
                     ->modalDescription('Applies this event as if Stripe had just delivered it. The replay is audited.')
-                    ->visible(fn (array $record): bool => in_array($record['outcome'], [WebhookOutcome::Unplaceable->value, WebhookOutcome::Errored->value], true))
+                    ->visible(fn (array $record): bool => WebhookOutcome::from($record['outcome'])->isReplayable())
                     ->action(function (array $record): void {
                         $outcome = resolve(ReplayWebhookEvent::class)->handle(WebhookEvent::query()->whereKey($record['id'])->firstOrFail());
 

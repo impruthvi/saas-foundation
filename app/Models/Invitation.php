@@ -42,8 +42,6 @@ use Illuminate\Support\Str;
  * @property CarbonImmutable|null $updated_at
  * @property-read Organization $organization
  * @property-read User|null $invitedBy
- * @property-read User|null $acceptedBy
- * @property-read User|null $revokedBy
  *
  * @method static InvitationFactory factory($count = null, $state = [])
  * @method static Builder<static>|Invitation newModelQuery()
@@ -163,22 +161,6 @@ final class Invitation extends Model implements TenantOwned
     public function invitedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'invited_by_user_id');
-    }
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function acceptedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'accepted_by_user_id');
-    }
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function revokedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'revoked_by_user_id');
     }
 
     /**

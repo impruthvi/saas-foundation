@@ -17,6 +17,7 @@ use Impruthvi\CashierEntitlements\Billing\PriceCatalog;
 use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
 use Impruthvi\CashierEntitlements\Reconciliation\OwnerLocator;
 use Impruthvi\CashierEntitlements\Reconciliation\ReadFailure;
+use Impruthvi\CashierEntitlements\Resolution\FreshnessPolicy;
 use Impruthvi\CashierEntitlements\Resolution\LocalResolver;
 
 /**
@@ -34,6 +35,7 @@ final readonly class InspectEntitlements
         private RefreshReceipts $receipts,
         private PriceCatalog $catalog,
         private PlanCatalog $plans,
+        private FreshnessPolicy $freshness,
     ) {}
 
     /**
@@ -121,7 +123,7 @@ final readonly class InspectEntitlements
         }
 
         $observedAt = $this->timestamp($state['observed_at'] ?? null);
-        $maxStaleAge = config()->integer('cashier-entitlements.freshness.max_stale_age', 0);
+        $maxStaleAge = $this->freshness->maxStaleAgeSeconds;
         $lastError = $state['last_error'] ?? null;
 
         return [
@@ -133,7 +135,7 @@ final readonly class InspectEntitlements
             'observed_at' => $observedAt === null ? null : Date::createFromTimestamp($observedAt)->toIso8601String(),
             'last_success_at' => ($success = $this->timestamp($state['last_success_at'] ?? null)) === null ? null : Date::createFromTimestamp($success)->toIso8601String(),
             'last_error' => is_string($lastError) ? $lastError : null,
-            'stale' => $observedAt !== null && $maxStaleAge > 0 && $at->getTimestamp() - $observedAt > $maxStaleAge,
+            'stale' => $observedAt !== null && $maxStaleAge !== null && $at->getTimestamp() - $observedAt >= $maxStaleAge,
             'catalog_matches' => ($state['catalog_version'] ?? null) === $this->catalog->version,
         ];
     }

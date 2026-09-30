@@ -44,9 +44,17 @@ final readonly class MembershipRepository
             ->first());
     }
 
-    public function defaultFor(User $user): ?Organization
+    /**
+     * The organizations a user can work in now: the ones tenant resolution may pick and
+     * the switcher may offer.
+     *
+     * @return Collection<int, Organization>
+     */
+    public function usableOrganizationsFor(User $user): Collection
     {
-        return $this->organizationsFor($user)->first();
+        return $this->organizationsFor($user)
+            ->filter(fn (Organization $organization): bool => $organization->status->isUsable())
+            ->values();
     }
 
     /**

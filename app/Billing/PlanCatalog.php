@@ -87,7 +87,7 @@ final readonly class PlanCatalog
         }
 
         $catalog = new self($plans, $prices);
-        $catalog->features();
+        $catalog->assertFeatureTypesAgree();
 
         return $catalog;
     }
@@ -112,27 +112,6 @@ final readonly class PlanCatalog
     public function findPrice(string $id): ?Price
     {
         return $this->prices[$id] ?? null;
-    }
-
-    /**
-     * @return array<string, bool|int|null>
-     */
-    public function features(): array
-    {
-        $features = [];
-
-        foreach ($this->prices as $price) {
-            foreach ($price->allowances as $feature => $allowance) {
-                throw_if(array_key_exists($feature, $features)
-                    && $this->allowanceType($features[$feature]) !== $this->allowanceType($allowance), InvalidArgumentException::class, "Billing feature [{$feature}] changes type between prices.");
-
-                $features[$feature] = $allowance;
-            }
-        }
-
-        ksort($features);
-
-        return $features;
     }
 
     /** @return array<array-key, mixed> */
@@ -162,6 +141,24 @@ final readonly class PlanCatalog
             throw new InvalidArgumentException(
                 "Billing configuration [{$path}] contains unexpected keys: ".implode(', ', $unexpected).'.',
             );
+        }
+    }
+
+    /**
+     * A feature is boolean or numeric everywhere; the entitlement package resolves it the
+     * same way on every plan.
+     */
+    private function assertFeatureTypesAgree(): void
+    {
+        $types = [];
+
+        foreach ($this->prices as $price) {
+            foreach ($price->allowances as $feature => $allowance) {
+                throw_if(array_key_exists($feature, $types)
+                    && $types[$feature] !== $this->allowanceType($allowance), InvalidArgumentException::class, "Billing feature [{$feature}] changes type between prices.");
+
+                $types[$feature] = $this->allowanceType($allowance);
+            }
         }
     }
 

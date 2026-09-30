@@ -64,8 +64,7 @@ final class HandleInertiaRequests extends Middleware
             return [];
         }
 
-        return $this->memberships->organizationsFor($user)
-            ->filter(fn (Organization $organization): bool => $organization->status->isUsable())
+        return $this->memberships->usableOrganizationsFor($user)
             ->map(fn (Organization $organization): array => $this->present($organization))
             ->values()
             ->all();

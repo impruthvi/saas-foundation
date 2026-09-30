@@ -14,7 +14,8 @@ use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The only membership writer, so rank and its RBAC role change in one transaction.
+ * The only place a membership is created, so rank and its RBAC role start together in
+ * one transaction.
  */
 final readonly class AddOrganizationMember
 {
