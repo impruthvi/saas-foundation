@@ -61,6 +61,15 @@ jobs:
             - name: Setup Bun
               uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
+            # The build downloads its web font from fonts.bunny.net and caches it here;
+            # restoring the cache keeps a slow or unreachable font host from failing the
+            # build. The key follows vite.config.ts, where the font is declared.
+            - name: Cache Build Fonts
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: node_modules/.cache/laravel-vite-plugin/fonts
+                  key: build-fonts-${{ hashFiles('vite.config.ts') }}
+
             - name: Setup Application
               run: composer setup
 
@@ -114,6 +123,12 @@ jobs:
 
             - name: Setup Bun
               uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+            - name: Cache Build Fonts
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: node_modules/.cache/laravel-vite-plugin/fonts
+                  key: build-fonts-${{ hashFiles('vite.config.ts') }}
 
             - name: Setup Application
               run: composer setup
@@ -206,6 +221,12 @@ jobs:
 
             - name: Setup Bun
               uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+            - name: Cache Build Fonts
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: node_modules/.cache/laravel-vite-plugin/fonts
+                  key: build-fonts-${{ hashFiles('vite.config.ts') }}
 
             - name: Setup Application
               run: composer setup
