@@ -41,7 +41,7 @@ final readonly class CreateProject
 
         $receipt = $this->resolver->usageStore()->admit(
             $owner,
-            'projects',
+            Project::FEATURE,
             1,
             'project:create:'.hash('sha256', $idempotencyToken),
             $this->allowances,

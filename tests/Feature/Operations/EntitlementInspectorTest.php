@@ -97,6 +97,20 @@ it('names the plan resolution answered with, not the one billing reports', funct
     'a paid answer too old to trust' => [7_200, 'Free'],
 ]);
 
+it('calls an answer stale the moment resolution stops trusting it', function (): void {
+    $organization = Organization::factory()->create();
+    applyAllowanceDecision(
+        organizationEntitlementOwner($organization),
+        BillingDecision::allowed('mapped', allowances: ['projects' => 10], planKey: 'pro'),
+        Date::now()->subSeconds(config()->integer('cashier-entitlements.freshness.max_stale_age'))->toDateTimeImmutable(),
+    );
+
+    $inspection = resolve(InspectEntitlements::class)->for($organization);
+
+    expect(projectsRow($inspection))->source->toBe('floor')
+        ->and($inspection['refresh']['stale'])->toBeTrue();
+});
+
 it('reports a refresh still waiting to run', function (): void {
     $organization = Organization::factory()->create();
     resolve(NativeStateStore::class)->request(organizationEntitlementOwner($organization), Date::now()->toDateTimeImmutable());

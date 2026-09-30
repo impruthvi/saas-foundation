@@ -30,13 +30,6 @@ final class MembershipFactory extends Factory
         ];
     }
 
-    public function admin(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'role' => MembershipRank::Admin,
-        ]);
-    }
-
     public function suspended(): static
     {
         return $this->state(fn (array $attributes): array => [

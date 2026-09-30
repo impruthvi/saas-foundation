@@ -46,8 +46,7 @@ final readonly class ResolveTenantContext
 
     private function resolve(Request $request, User $user): ?Organization
     {
-        $available = $this->memberships->organizationsFor($user)
-            ->filter(fn (Organization $organization): bool => $organization->status->isUsable());
+        $available = $this->memberships->usableOrganizationsFor($user);
 
         $chosen = $request->hasSession()
             ? $request->session()->get(self::SESSION_KEY)

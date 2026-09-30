@@ -37,18 +37,4 @@ final class OrganizationFactory extends Factory
             'personal' => true,
         ]);
     }
-
-    public function suspended(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'status' => OrganizationStatus::Suspended,
-        ]);
-    }
-
-    public function archived(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'status' => OrganizationStatus::Archived,
-        ]);
-    }
 }

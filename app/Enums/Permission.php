@@ -20,15 +20,4 @@ enum Permission: string
     {
         return array_map(static fn (self $permission): string => $permission->value, self::cases());
     }
-
-    public function label(): string
-    {
-        return match ($this) {
-            self::ViewMembers => __('See members'),
-            self::InviteMembers => __('Invite people'),
-            self::ManageMembers => __('Manage members'),
-            self::ManageBilling => __('Manage billing'),
-            self::ManageProjects => __('Create and manage projects'),
-        };
-    }
 }

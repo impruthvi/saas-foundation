@@ -30,7 +30,7 @@ final class ViewUser extends ViewRecord
                 ->icon(Heroicon::OutlinedUserCircle)
                 ->color('warning')
                 ->visible(fn (User $record): bool => ! $record->is(Auth::user()))
-                ->modalDescription('You will use the product as this person for up to 30 minutes. Credential, billing and invitation changes stay refused, and everything you do is recorded against this impersonation.')
+                ->modalDescription('You will use the product as this person for up to '.StartImpersonation::MINUTES.' minutes. Credential, billing and invitation changes stay refused, and everything you do is recorded against this impersonation.')
                 ->schema([
                     Textarea::make('reason')
                         ->label('Why')

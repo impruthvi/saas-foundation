@@ -11,7 +11,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -29,11 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(
             append: [
                 HandleAppearance::class,
-                // Before bindings so bound models are scoped, and before Inertia so
-                // shared props see the resolved tenant.
                 // Before the tenant, because ending an impersonation changes who is
                 // signed in.
                 EnsureImpersonationIsLive::class,
+                // Before bindings so bound models are scoped, and before Inertia so
+                // shared props see the resolved tenant.
                 ResolveTenantContext::class,
                 IdentifyAuditActor::class,
                 SubstituteBindings::class,
@@ -44,7 +43,5 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(
-            fn (Request $request): bool => $request->is('api/*') || $request->expectsJson(),
-        );
+        //
     })->create();

@@ -67,26 +67,7 @@ trait BelongsToOrganization
         static::saving($guardAgainstOtherTenants);
         static::deleting($guardAgainstOtherTenants);
 
-        static::retrieved(function (Model&TenantOwned $model): void {
-            $tenant = resolve(TenantContext::class);
-
-            if (! $tenant->hasTenant()) {
-                return;
-            }
-
-            $column = $model->tenantColumn();
-            $attributes = $model->getAttributes();
-
-            if (! array_key_exists($column, $attributes)) {
-                return;
-            }
-
-            $organizationId = $attributes[$column] === null ? null : (int) $attributes[$column];
-
-            if ($organizationId !== $tenant->idOrFail()) {
-                throw CrossTenantAccess::forModel($model::class, $organizationId, $tenant->idOrFail());
-            }
-        });
+        static::retrieved($guardAgainstOtherTenants);
     }
 
     public function tenantColumn(): string

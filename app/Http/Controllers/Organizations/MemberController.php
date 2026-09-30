@@ -31,7 +31,7 @@ final class MemberController extends Controller
 
     public function index(Request $request, TenantContext $tenant): Response
     {
-        Gate::authorize('viewAny', Invitation::class);
+        Gate::authorize('viewAny', Membership::class);
 
         $organization = $tenant->current();
         $user = $request->user();

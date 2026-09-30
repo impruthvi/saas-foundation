@@ -16,19 +16,18 @@ use InvalidArgumentException;
  */
 final readonly class GrantOperator
 {
-    public function handle(User $user, string $reason, ?User $grantedBy = null): Operator
+    public function handle(User $user, string $reason): Operator
     {
         throw_if(mb_trim($reason) === '', InvalidArgumentException::class, 'Say why this person needs the console.');
         throw_if(Operator::query()->where('user_id', $user->id)->exists(), InvalidArgumentException::class, "{$user->email} is already an operator.");
 
         $operator = Operator::query()->create([
             'user_id' => $user->id,
-            'granted_by' => $grantedBy?->id,
             'reason' => mb_trim($reason),
             'granted_at' => now(),
         ]);
 
-        Log::notice('Granted admin console access.', ['user_id' => $user->id, 'granted_by' => $grantedBy?->id, 'reason' => $operator->reason]);
+        Log::notice('Granted admin console access.', ['user_id' => $user->id, 'reason' => $operator->reason]);
 
         return $operator;
     }

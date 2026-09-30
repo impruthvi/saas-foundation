@@ -43,12 +43,4 @@ enum OrganizationRole: string
             ],
         };
     }
-
-    public function label(): string
-    {
-        return match ($this) {
-            self::Admin => __('Admin'),
-            self::Member => __('Member'),
-        };
-    }
 }
