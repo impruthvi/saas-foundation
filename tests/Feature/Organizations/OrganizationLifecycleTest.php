@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use App\Actions\ChangeOrganizationStatus;
+use App\Contracts\Operators;
 use App\Enums\AuditAction;
 use App\Enums\OrganizationStatus;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\AuditEvent;
-use App\Models\Operator;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Tenancy\TenantContext;
@@ -17,7 +17,20 @@ use Inertia\Testing\AssertableInertia;
 function lifecycleOperator(): User
 {
     $operator = User::factory()->create();
-    Operator::factory()->create(['user_id' => $operator->id]);
+    app()->instance(Operators::class, new readonly class($operator->id) implements Operators
+    {
+        public function __construct(private int $operatorId) {}
+
+        public function isOperator(User $user): bool
+        {
+            return $user->id === $this->operatorId;
+        }
+
+        public function returnUrl(): string
+        {
+            return '/admin';
+        }
+    });
     test()->actingAs($operator);
 
     return $operator;
