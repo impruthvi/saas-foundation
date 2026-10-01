@@ -11,6 +11,7 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Operations\InspectEntitlements;
 use App\Tenancy\TenantContext;
+use Illuminate\Auth\Access\AuthorizationException;
 use Impruthvi\CashierEntitlements\Overrides\NativeOverrides;
 
 it('grants a time-bound project allowance and audits the operator', function (): void {
@@ -42,7 +43,7 @@ it('grants a time-bound project allowance and audits the operator', function ():
 
     $afterExpiry = resolve(InspectEntitlements::class)->for($organization);
     expect(collect($afterExpiry['features'])->firstWhere('feature', 'projects'))->toMatchArray(['allowance' => 2, 'source' => 'floor'])
-        ->and($afterExpiry['overrides'])->toBe([]);
+        ->and($afterExpiry['overrides'])->toBeEmpty();
 });
 
 it('revokes a grant with an append-only entry and restores the underlying allowance', function (): void {
@@ -77,7 +78,7 @@ it('refuses a grant from a user who is not an operator', function (): void {
     resolve(GrantEntitlementOverride::class)->handle(
         $organization, $user, 'projects', 5, 'Unauthorized', now()->addDay()->toDateTimeImmutable(),
     );
-})->throws(Illuminate\Auth\Access\AuthorizationException::class);
+})->throws(AuthorizationException::class);
 
 it('refuses a revocation from a user who is not an operator', function (): void {
     $organization = Organization::factory()->create();
@@ -88,7 +89,7 @@ it('refuses a revocation from a user who is not an operator', function (): void 
     );
 
     resolve(RevokeEntitlementOverride::class)->handle($organization, User::factory()->create(), $grantId, 'Unauthorized');
-})->throws(Illuminate\Auth\Access\AuthorizationException::class);
+})->throws(AuthorizationException::class);
 
 it('refuses to revoke a grant belonging to another organization', function (): void {
     $first = Organization::factory()->create();

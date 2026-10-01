@@ -166,7 +166,7 @@ it('grants and revokes a project allowance from the organization page', function
         ->callAction('revokeOverride', data: ['grant_id' => $grantId, 'reason' => 'Launch ended'])
         ->assertNotified('Override revoked');
 
-    expect(resolve(InspectEntitlements::class)->for($customer)['overrides'])->toBe([]);
+    expect(resolve(InspectEntitlements::class)->for($customer)['overrides'])->toBeEmpty();
 });
 
 it('requires a reason and a future expiry for an allowance override', function (): void {
@@ -182,7 +182,7 @@ it('requires a reason and a future expiry for an allowance override', function (
         ])
         ->assertHasActionErrors(['expires_at' => 'after', 'reason' => 'required']);
 
-    expect(resolve(InspectEntitlements::class)->for($customer)['overrides'])->toBe([]);
+    expect(resolve(InspectEntitlements::class)->for($customer)['overrides'])->toBeEmpty();
 });
 
 it('names the Stripe event that set the plan after an operator refresh', function (): void {
