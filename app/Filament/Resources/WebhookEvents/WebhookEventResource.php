@@ -44,7 +44,7 @@ final class WebhookEventResource extends Resource
             ->icon(Heroicon::OutlinedArrowPath)
             ->requiresConfirmation()
             ->modalDescription('Applies this event as if Stripe had just delivered it. The replay is audited under the organization it names; an event naming none leaves no audit event.')
-            ->visible(fn (WebhookEvent $record): bool => $record->outcome->isReplayable())
+            ->visible(fn (WebhookEvent $record): bool => $record->canBeReplayed())
             ->action(function (WebhookEvent $record): void {
                 $outcome = resolve(ReplayWebhookEvent::class)->handle($record);
 
@@ -77,7 +77,9 @@ final class WebhookEventResource extends Resource
                     TextEntry::make('payload')
                         ->hiddenLabel()
                         ->fontFamily(FontFamily::Mono)
-                        ->state(fn (WebhookEvent $record): string => (string) json_encode($record->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))
+                        ->state(fn (WebhookEvent $record): string => $record->canBeReplayed()
+                            ? (string) json_encode($record->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+                            : 'Redacted after processing.')
                         ->copyable(),
                 ]),
         ]);

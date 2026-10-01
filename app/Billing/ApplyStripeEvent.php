@@ -292,6 +292,10 @@ final readonly class ApplyStripeEvent
             $event->applied_at = $now;
         }
 
+        if (! $event->canBeReplayed()) {
+            $event->payload = [];
+        }
+
         $event->save();
     }
 }
