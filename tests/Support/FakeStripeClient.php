@@ -17,6 +17,9 @@ final class FakeStripeClient extends StripeClient
     /** @var list<array{parameters: array<string, mixed>, options: array<string, mixed>}> */
     public array $customerRequests = [];
 
+    /** @var list<array{id: string, parameters: array<string, mixed>}> */
+    public array $customerUpdateRequests = [];
+
     /** @var list<array{parameters: array<string, mixed>, options: array<string, mixed>}> */
     public array $checkoutRequests = [];
 
@@ -88,6 +91,18 @@ final class FakeStripeClient extends StripeClient
             'id' => 'cus_test_'.(count($this->customers) + 1),
             'object' => 'customer',
         ]);
+    }
+
+    /** @param array<string, mixed> $parameters */
+    public function updateCustomer(string $id, array $parameters): Customer
+    {
+        $this->customerUpdateRequests[] = ['id' => $id, 'parameters' => $parameters];
+
+        if ($this->customerFailure instanceof ApiErrorException) {
+            throw $this->customerFailure;
+        }
+
+        return Customer::constructFrom(['id' => $id, 'object' => 'customer', ...$parameters]);
     }
 
     /**
@@ -175,6 +190,12 @@ final readonly class FakeStripeCustomerService
     public function create(array $parameters, array $options): Customer
     {
         return $this->stripe->createCustomer($parameters, $options);
+    }
+
+    /** @param array<string, mixed> $parameters */
+    public function update(string $id, array $parameters): Customer
+    {
+        return $this->stripe->updateCustomer($id, $parameters);
     }
 }
 
