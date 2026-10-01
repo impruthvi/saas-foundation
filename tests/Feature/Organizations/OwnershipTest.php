@@ -8,10 +8,15 @@ use App\Actions\DeleteUser;
 use App\Actions\TransferOrganizationOwnership;
 use App\Enums\MembershipRank;
 use App\Exceptions\OwnershipTransferRequired;
+use App\Jobs\SyncStripeCustomerContact;
 use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
 use App\Tenancy\TenantContext;
+use Illuminate\Support\Facades\Queue;
+use Stripe\Exception\ApiConnectionException;
+use Stripe\StripeClient;
+use Tests\Support\FakeStripeClient;
 use Tests\Support\TenantQueryGuard;
 
 it('makes the creating user the owner and a member', function (): void {
@@ -46,6 +51,83 @@ it('moves ownership to an existing member and keeps the outgoing owner on', func
     expect($organization->owner_id)->toBe($successor->id)
         ->and($roles[$successor->id])->toBe(MembershipRank::Admin)
         ->and($roles[$owner->id])->toBe(MembershipRank::Admin);
+});
+
+it('queues a Stripe contact update after transferring an organization with a customer', function (): void {
+    $owner = User::factory()->create();
+    $successor = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    resolve(AddOrganizationMember::class)->handle($organization, $successor);
+    $organization->forceFill(['stripe_id' => 'cus_acme'])->save();
+    Queue::fake([SyncStripeCustomerContact::class]);
+
+    resolve(TransferOrganizationOwnership::class)->handle($organization, $successor);
+
+    Queue::assertPushed(SyncStripeCustomerContact::class, fn (SyncStripeCustomerContact $job): bool => $job->organizationId === $organization->id);
+    expect($organization->fresh()?->owner_id)->toBe($successor->id);
+});
+
+it('does not queue a Stripe update when the organization has no customer', function (): void {
+    $owner = User::factory()->create();
+    $successor = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    resolve(AddOrganizationMember::class)->handle($organization, $successor);
+    Queue::fake([SyncStripeCustomerContact::class]);
+
+    resolve(TransferOrganizationOwnership::class)->handle($organization, $successor);
+
+    Queue::assertNotPushed(SyncStripeCustomerContact::class);
+});
+
+it('syncs the current owner and organization name when the queued update runs', function (): void {
+    $owner = User::factory()->create();
+    $successor = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    resolve(AddOrganizationMember::class)->handle($organization, $successor);
+    $organization->forceFill(['stripe_id' => 'cus_acme'])->save();
+    Queue::fake([SyncStripeCustomerContact::class]);
+    resolve(TransferOrganizationOwnership::class)->handle($organization, $successor);
+    $stripe = new FakeStripeClient();
+    app()->bind(StripeClient::class, fn (): StripeClient => $stripe);
+
+    (new SyncStripeCustomerContact($organization->id))->handle();
+
+    expect($stripe->customerUpdateRequests)->toBe([[
+        'id' => 'cus_acme',
+        'parameters' => ['name' => 'Acme', 'email' => $successor->email],
+    ]]);
+});
+
+it('skips a queued contact update after its organization is deleted', function (): void {
+    $organization = Organization::factory()->create(['stripe_id' => 'cus_acme']);
+    $organizationId = $organization->id;
+    $organization->delete();
+    $stripe = new FakeStripeClient();
+    app()->bind(StripeClient::class, fn (): StripeClient => $stripe);
+
+    (new SyncStripeCustomerContact($organizationId))->handle();
+
+    expect($stripe->customerUpdateRequests)->toBeEmpty();
+});
+
+it('keeps the ownership transfer committed when Stripe cannot update the customer', function (): void {
+    $owner = User::factory()->create();
+    $successor = User::factory()->create();
+    $organization = resolve(CreateOrganization::class)->handle($owner, 'Acme');
+    resolve(AddOrganizationMember::class)->handle($organization, $successor);
+    $organization->forceFill(['stripe_id' => 'cus_acme'])->save();
+    Queue::fake([SyncStripeCustomerContact::class]);
+    resolve(TransferOrganizationOwnership::class)->handle($organization, $successor);
+    $stripe = new FakeStripeClient();
+    $stripe->customerFailure = ApiConnectionException::factory('Network unavailable.');
+    app()->bind(StripeClient::class, fn (): StripeClient => $stripe);
+
+    try {
+        (new SyncStripeCustomerContact($organization->id))->handle();
+        $this->fail('A Stripe failure should release the job for a retry.');
+    } catch (ApiConnectionException) {
+        expect($organization->fresh()?->owner_id)->toBe($successor->id);
+    }
 });
 
 it('refuses to transfer to someone who is not a member', function (): void {
