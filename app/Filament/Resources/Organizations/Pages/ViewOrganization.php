@@ -4,15 +4,20 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Organizations\Pages;
 
+use App\Actions\ChangeOrganizationStatus;
 use App\Actions\RequestEntitlementRefresh;
+use App\Enums\OrganizationStatus;
 use App\Filament\Resources\Organizations\OrganizationResource;
 use App\Filament\Resources\Organizations\Widgets\OrganizationAuditLog;
 use App\Filament\Resources\Organizations\Widgets\SubscriptionEvents;
 use App\Models\Organization;
+use App\Models\User;
 use App\Operations\InspectEntitlements;
 use App\Operations\OrganizationActivity;
 use App\Operations\SubscriptionTimeline;
+use DomainException;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -22,6 +27,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Nothing here queries a tenant-owned model directly; every value comes from a read
@@ -153,6 +159,9 @@ final class ViewOrganization extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            $this->statusAction('suspend', OrganizationStatus::Suspended, 'Suspend organization', 'warning'),
+            $this->statusAction('archive', OrganizationStatus::Archived, 'Archive organization', 'danger'),
+            $this->statusAction('restore', OrganizationStatus::Active, 'Restore organization', 'success'),
             Action::make('requestRefresh')
                 ->label('Request entitlement refresh')
                 ->icon(Heroicon::OutlinedArrowPath)
@@ -172,6 +181,42 @@ final class ViewOrganization extends ViewRecord
             SubscriptionEvents::class,
             OrganizationAuditLog::class,
         ];
+    }
+
+    private function statusAction(string $name, OrganizationStatus $target, string $label, string $color): Action
+    {
+        return Action::make($name)
+            ->label($label)
+            ->color($color)
+            ->visible(fn (Organization $record): bool => match ($target) {
+                OrganizationStatus::Suspended => $record->status === OrganizationStatus::Active,
+                OrganizationStatus::Archived => $record->status !== OrganizationStatus::Archived,
+                OrganizationStatus::Active => $record->status !== OrganizationStatus::Active,
+            })
+            ->modalDescription($target === OrganizationStatus::Active
+                ? 'Restore access to this organization.'
+                : 'This blocks access to the organization. Its subscription must have ended first.')
+            ->schema([
+                Textarea::make('reason')->required()->maxLength(1000),
+            ])
+            ->action(function (array $data, Organization $record) use ($target): void {
+                $operator = Auth::user();
+
+                if (! $operator instanceof User) {
+                    return;
+                }
+
+                try {
+                    resolve(ChangeOrganizationStatus::class)->handle($record, $operator, $target, (string) $data['reason']);
+                } catch (DomainException $domainException) {
+                    Notification::make()->title($domainException->getMessage())->danger()->send();
+
+                    return;
+                }
+
+                $record->refresh();
+                Notification::make()->title('Organization '.$target->value)->success()->send();
+            });
     }
 
     /**
