@@ -7,13 +7,16 @@ namespace App\Operations;
 use App\Billing\PlanCatalog;
 use App\Entitlements\RefreshReceipts;
 use App\Entitlements\ResolveAllowance;
+use App\Enums\AllowanceSource;
 use App\Models\Organization;
 use App\Models\WebhookEvent;
 use App\Tenancy\TenantContext;
 use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Support\Facades\Date;
 use Impruthvi\CashierEntitlements\Billing\OwnerReference;
 use Impruthvi\CashierEntitlements\Billing\PriceCatalog;
+use Impruthvi\CashierEntitlements\Overrides\NativeOverrides;
 use Impruthvi\CashierEntitlements\Persistence\NativeStateStore;
 use Impruthvi\CashierEntitlements\Reconciliation\OwnerLocator;
 use Impruthvi\CashierEntitlements\Reconciliation\ReadFailure;
@@ -36,12 +39,14 @@ final readonly class InspectEntitlements
         private PriceCatalog $catalog,
         private PlanCatalog $plans,
         private FreshnessPolicy $freshness,
+        private NativeOverrides $overrides,
     ) {}
 
     /**
      * @return array{
      *     plan: string|null,
      *     features: list<array{feature: string, allowance: bool|int|null, source: string, usage: int|null}>,
+     *     overrides: list<array{id: int, feature: string, allowance: bool|int|null, reason: string, actor: string, expires_at: string}>,
      *     refresh: array{status: string, observed_at: string|null, last_success_at: string|null, last_error: string|null, stale: bool, catalog_matches: bool},
      *     trigger: array{kind: string, events: list<array{stripe_event_id: string, type: string|null, outcome: string|null, applied_at: string|null, primary: bool}>}
      * }
@@ -56,6 +61,7 @@ final readonly class InspectEntitlements
             return [
                 'plan' => $this->resolvedPlan($owner, $state, $at),
                 'features' => $this->features($owner, $at),
+                'overrides' => $this->activeOverrides($owner, $at),
                 'refresh' => $this->refresh($state, $at),
                 'trigger' => $this->trigger($owner, $state),
             ];
@@ -84,14 +90,18 @@ final readonly class InspectEntitlements
     private function features(OwnerReference $owner, DateTimeImmutable $at): array
     {
         $features = [];
+        $overridden = $this->overrides->values($owner, $at);
 
         foreach ($this->resolver->catalogFeatures() as $feature) {
             $answer = $this->allowances->explain($owner, $feature, $at);
+            $source = array_key_exists($feature, $overridden) && $answer['source'] === AllowanceSource::Package
+                ? AllowanceSource::Override
+                : $answer['source'];
 
             $features[] = [
                 'feature' => $feature,
                 'allowance' => $answer['value'],
-                'source' => $answer['source']->value,
+                'source' => $source->value,
                 'usage' => $this->usage($owner, $feature, $at),
             ];
         }
@@ -110,6 +120,52 @@ final readonly class InspectEntitlements
         } catch (ReadFailure) {
             return null;
         }
+    }
+
+    /**
+     * @return list<array{id: int, feature: string, allowance: bool|int|null, reason: string, actor: string, expires_at: string}>
+     */
+    private function activeOverrides(OwnerReference $owner, DateTimeImmutable $at): array
+    {
+        $history = [];
+        $afterId = 0;
+
+        do {
+            $page = $this->overrides->history($owner, $afterId, 1000);
+            array_push($history, ...$page);
+            $afterId = $page === [] ? $afterId : $page[array_key_last($page)]['id'];
+        } while (count($page) === 1000);
+
+        $time = $at->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+        $revoked = [];
+
+        foreach ($history as $event) {
+            if ($event['kind'] === 'revoke' && $event['effective_at'] <= $time) {
+                $revoked[$event['target_id']] = true;
+            }
+        }
+
+        $active = [];
+
+        foreach ($history as $event) {
+            if ($event['kind'] !== 'grant'
+                || $event['effective_at'] > $time
+                || $event['expires_at'] <= $time
+                || isset($revoked[$event['id']])) {
+                continue;
+            }
+
+            $active[] = [
+                'id' => $event['id'],
+                'feature' => $event['feature'],
+                'allowance' => $event['allowance'],
+                'reason' => $event['reason'],
+                'actor' => $event['actor'],
+                'expires_at' => $event['expires_at'],
+            ];
+        }
+
+        return array_reverse($active);
     }
 
     /**

@@ -8,4 +8,5 @@ enum AllowanceSource: string
 {
     case Package = 'package';
     case Floor = 'floor';
+    case Override = 'override';
 }

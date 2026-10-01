@@ -19,6 +19,7 @@ use App\Models\Operator;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\WebhookEvent;
+use App\Operations\InspectEntitlements;
 use App\Tenancy\TenantContext;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
@@ -141,6 +142,47 @@ it('requests an entitlement refresh from the organization page', function (): vo
         ->assertNotified('Refresh requested');
 
     Bus::assertDispatched(RefreshOwner::class);
+});
+
+it('grants and revokes a project allowance from the organization page', function (): void {
+    operatorWithAnOrganizationOfTheirOwn();
+    [$customer] = organizationOwnedBySomeone('Customer');
+
+    Livewire::test(ViewOrganization::class, ['record' => $customer->getRouteKey()])
+        ->callAction('grantOverride', data: [
+            'feature' => 'projects',
+            'allowance' => 5,
+            'expires_at' => now()->addMonth()->format('Y-m-d H:i:s'),
+            'reason' => 'Support launch',
+        ])
+        ->assertNotified('Override granted');
+
+    $inspection = resolve(InspectEntitlements::class)->for($customer);
+    $grantId = $inspection['overrides'][0]['id'];
+    expect($inspection['overrides'][0])->toMatchArray(['feature' => 'projects', 'allowance' => 5, 'reason' => 'Support launch']);
+
+    Livewire::test(ViewOrganization::class, ['record' => $customer->getRouteKey()])
+        ->assertSee('Support launch')
+        ->callAction('revokeOverride', data: ['grant_id' => $grantId, 'reason' => 'Launch ended'])
+        ->assertNotified('Override revoked');
+
+    expect(resolve(InspectEntitlements::class)->for($customer)['overrides'])->toBe([]);
+});
+
+it('requires a reason and a future expiry for an allowance override', function (): void {
+    operatorWithAnOrganizationOfTheirOwn();
+    [$customer] = organizationOwnedBySomeone('Customer');
+
+    Livewire::test(ViewOrganization::class, ['record' => $customer->getRouteKey()])
+        ->callAction('grantOverride', data: [
+            'feature' => 'projects',
+            'allowance' => 5,
+            'expires_at' => now()->subDay()->format('Y-m-d H:i:s'),
+            'reason' => '',
+        ])
+        ->assertHasActionErrors(['expires_at' => 'after', 'reason' => 'required']);
+
+    expect(resolve(InspectEntitlements::class)->for($customer)['overrides'])->toBe([]);
 });
 
 it('names the Stripe event that set the plan after an operator refresh', function (): void {
