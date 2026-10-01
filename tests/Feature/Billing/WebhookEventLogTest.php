@@ -48,7 +48,7 @@ it('retains a replayable payload and redacts it after a later successful deliver
     Organization::factory()->create(['stripe_id' => 'cus_late']);
     StripeWebhook::post($payload)->assertOk();
 
-    expect(WebhookEvent::query()->sole()->payload)->toBe([]);
+    expect(WebhookEvent::query()->sole()->payload)->toBeEmpty();
 });
 
 it('does not restore a payload or replay access after an applied event becomes unplaceable', function (): void {
@@ -63,7 +63,7 @@ it('does not restore a payload or replay access after an applied event becomes u
     $event = WebhookEvent::query()->sole();
     expect($event->outcome)->toBe(WebhookOutcome::Unplaceable)
         ->and($event->applied_at)->not->toBeNull()
-        ->and($event->payload)->toBe([])
+        ->and($event->payload)->toBeEmpty()
         ->and($event->canBeReplayed())->toBeFalse();
 });
 
