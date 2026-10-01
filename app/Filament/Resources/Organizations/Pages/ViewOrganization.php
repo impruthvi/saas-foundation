@@ -4,15 +4,22 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Organizations\Pages;
 
+use App\Actions\GrantEntitlementOverride;
 use App\Actions\RequestEntitlementRefresh;
+use App\Actions\RevokeEntitlementOverride;
 use App\Filament\Resources\Organizations\OrganizationResource;
 use App\Filament\Resources\Organizations\Widgets\OrganizationAuditLog;
 use App\Filament\Resources\Organizations\Widgets\SubscriptionEvents;
 use App\Models\Organization;
+use App\Models\User;
 use App\Operations\InspectEntitlements;
 use App\Operations\OrganizationActivity;
 use App\Operations\SubscriptionTimeline;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -22,6 +29,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Date;
 
 /**
  * Nothing here queries a tenant-owned model directly; every value comes from a read
@@ -83,6 +91,17 @@ final class ViewOrganization extends ViewRecord
                             }),
                             TextEntry::make('source')->badge(),
                             TextEntry::make('usage')->placeholder('Not metered'),
+                        ]),
+                    RepeatableEntry::make('overrides')
+                        ->label('Active overrides')
+                        ->state(fn (): array => $this->inspection()['overrides'])
+                        ->columns(5)
+                        ->schema([
+                            TextEntry::make('id')->label('Grant'),
+                            TextEntry::make('feature'),
+                            TextEntry::make('allowance'),
+                            TextEntry::make('expires_at')->label('Expires')->dateTime(),
+                            TextEntry::make('reason'),
                         ]),
                     TextEntry::make('plan_set_by')
                         ->label('Plan set by')
@@ -163,6 +182,53 @@ final class ViewOrganization extends ViewRecord
 
                     Notification::make()->title('Refresh requested')->success()->send();
                 }),
+            Action::make('grantOverride')
+                ->label('Grant allowance override')
+                ->schema([
+                    Select::make('feature')
+                        ->options(fn (): array => $this->numericFeatureOptions())
+                        ->required(),
+                    TextInput::make('allowance')->integer()->minValue(0)->required(),
+                    DateTimePicker::make('expires_at')->label('Expires')->after('now')->required(),
+                    Textarea::make('reason')->required()->maxLength(500),
+                ])
+                ->action(function (Organization $record, array $data): void {
+                    $operator = auth()->user();
+                    abort_unless($operator instanceof User, 403);
+
+                    resolve(GrantEntitlementOverride::class)->handle(
+                        $record,
+                        $operator,
+                        (string) $data['feature'],
+                        (int) $data['allowance'],
+                        (string) $data['reason'],
+                        Date::parse((string) $data['expires_at'])->toDateTimeImmutable(),
+                    );
+
+                    $this->inspection = null;
+                    Notification::make()->title('Override granted')->success()->send();
+                }),
+            Action::make('revokeOverride')
+                ->label('Revoke allowance override')
+                ->visible(fn (): bool => $this->inspection()['overrides'] !== [])
+                ->schema([
+                    Select::make('grant_id')->label('Grant')->options(fn (): array => $this->activeOverrideOptions())->required(),
+                    Textarea::make('reason')->required()->maxLength(500),
+                ])
+                ->action(function (Organization $record, array $data): void {
+                    $operator = auth()->user();
+                    abort_unless($operator instanceof User, 403);
+
+                    resolve(RevokeEntitlementOverride::class)->handle(
+                        $record,
+                        $operator,
+                        (int) $data['grant_id'],
+                        (string) $data['reason'],
+                    );
+
+                    $this->inspection = null;
+                    Notification::make()->title('Override revoked')->success()->send();
+                }),
         ];
     }
 
@@ -180,6 +246,32 @@ final class ViewOrganization extends ViewRecord
     private function inspection(): array
     {
         return $this->inspection ??= resolve(InspectEntitlements::class)->for($this->record);
+    }
+
+    /** @return array<int, string> */
+    private function activeOverrideOptions(): array
+    {
+        $options = [];
+
+        foreach ($this->inspection()['overrides'] as $override) {
+            $options[$override['id']] = "#{$override['id']} {$override['feature']}: {$override['allowance']} until {$override['expires_at']}";
+        }
+
+        return $options;
+    }
+
+    /** @return array<string, string> */
+    private function numericFeatureOptions(): array
+    {
+        $options = [];
+
+        foreach ($this->inspection()['features'] as $feature) {
+            if ($feature['usage'] !== null) {
+                $options[$feature['feature']] = $feature['feature'];
+            }
+        }
+
+        return $options;
     }
 
     /**
