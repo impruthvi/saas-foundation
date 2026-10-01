@@ -15,11 +15,11 @@ use Impruthvi\CashierEntitlements\Billing\PriceCatalog;
 use Tests\Support\Contenders;
 use Tests\Support\Outcome;
 
-function attemptSeatAcceptance(int $invitationId, int $userId): Outcome
+function attemptSeatAcceptance(int $organizationId, int $invitationId, int $userId): Outcome
 {
     try {
         resolve(AcceptOrganizationInvitation::class)->handle(
-            Invitation::query()->findOrFail($invitationId),
+            resolve(TenantContext::class)->runForId($organizationId, fn (): Invitation => Invitation::query()->findOrFail($invitationId)),
             User::query()->findOrFail($userId),
         );
 
@@ -51,19 +51,21 @@ it('admits exactly one simultaneous acceptance when one seat remains', function 
     $secondInvitationId = findInvitation(issueInvitation($organization, $second->email, $owner))->id;
 
     $outcomes = Contenders::race([
-        fn (): Outcome => attemptSeatAcceptance($firstInvitationId, $first->id),
-        fn (): Outcome => attemptSeatAcceptance($secondInvitationId, $second->id),
+        fn (): Outcome => attemptSeatAcceptance($organization->id, $firstInvitationId, $first->id),
+        fn (): Outcome => attemptSeatAcceptance($organization->id, $secondInvitationId, $second->id),
     ]);
 
     $outcomeNames = array_map(fn (Outcome $outcome): string => $outcome->name, $outcomes);
     sort($outcomeNames);
 
-    $membershipCount = resolve(TenantContext::class)->runFor($organization, fn (): int => Membership::query()
-        ->where('status', MembershipStatus::Active)
-        ->count());
+    [$membershipCount, $acceptedCount, $pendingCount] = resolve(TenantContext::class)->runFor($organization, fn (): array => [
+        Membership::query()->where('status', MembershipStatus::Active)->count(),
+        Invitation::query()->where('status', InvitationStatus::Accepted)->count(),
+        Invitation::query()->where('status', InvitationStatus::Pending)->count(),
+    ]);
 
     expect($outcomeNames)->toBe([Outcome::Refused->name, Outcome::Succeeded->name])
         ->and($membershipCount)->toBe(2)
-        ->and(Invitation::query()->where('organization_id', $organization->id)->where('status', InvitationStatus::Accepted)->count())->toBe(1)
-        ->and(Invitation::query()->where('organization_id', $organization->id)->where('status', InvitationStatus::Pending)->count())->toBe(1);
+        ->and($acceptedCount)->toBe(1)
+        ->and($pendingCount)->toBe(1);
 });
