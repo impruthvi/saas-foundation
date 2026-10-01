@@ -90,7 +90,7 @@ it('syncs the current owner and organization name when the queued update runs', 
     $stripe = new FakeStripeClient();
     app()->bind(StripeClient::class, fn (): StripeClient => $stripe);
 
-    (new SyncStripeCustomerContact($organization->id))->handle();
+    new SyncStripeCustomerContact($organization->id)->handle();
 
     expect($stripe->customerUpdateRequests)->toBe([[
         'id' => 'cus_acme',
@@ -105,7 +105,7 @@ it('skips a queued contact update after its organization is deleted', function (
     $stripe = new FakeStripeClient();
     app()->bind(StripeClient::class, fn (): StripeClient => $stripe);
 
-    (new SyncStripeCustomerContact($organizationId))->handle();
+    new SyncStripeCustomerContact($organizationId)->handle();
 
     expect($stripe->customerUpdateRequests)->toBeEmpty();
 });
@@ -120,10 +120,11 @@ it('keeps the ownership transfer committed when Stripe cannot update the custome
     resolve(TransferOrganizationOwnership::class)->handle($organization, $successor);
     $stripe = new FakeStripeClient();
     $stripe->customerFailure = ApiConnectionException::factory('Network unavailable.');
+
     app()->bind(StripeClient::class, fn (): StripeClient => $stripe);
 
     try {
-        (new SyncStripeCustomerContact($organization->id))->handle();
+        new SyncStripeCustomerContact($organization->id)->handle();
         $this->fail('A Stripe failure should release the job for a retry.');
     } catch (ApiConnectionException) {
         expect($organization->fresh()?->owner_id)->toBe($successor->id);

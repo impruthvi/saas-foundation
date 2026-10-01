@@ -7,15 +7,14 @@ namespace App\Jobs;
 use App\Models\Organization;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\Backoff;
+use Illuminate\Queue\Attributes\Tries;
 
+#[Backoff([60, 300, 900])]
+#[Tries(4)]
 final class SyncStripeCustomerContact implements ShouldQueue
 {
     use Queueable;
-
-    public int $tries = 4;
-
-    /** @var list<int> */
-    public array $backoff = [60, 300, 900];
 
     public function __construct(public int $organizationId)
     {

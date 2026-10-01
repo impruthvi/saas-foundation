@@ -50,7 +50,7 @@ final readonly class TransferOrganizationOwnership
             ]);
 
             if ($organization->hasStripeId()) {
-                SyncStripeCustomerContact::dispatch($organization->id)->afterCommit();
+                dispatch(new SyncStripeCustomerContact($organization->id))->afterCommit();
             }
 
             return $organization->refresh();
