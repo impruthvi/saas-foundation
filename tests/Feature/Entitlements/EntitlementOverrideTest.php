@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use App\Actions\GrantEntitlementOverride;
 use App\Actions\RevokeEntitlementOverride;
+use App\Contracts\Operators;
 use App\Enums\AuditAction;
 use App\Models\AuditEvent;
-use App\Models\Operator;
 use App\Models\Organization;
 use App\Models\User;
 use App\Operations\InspectEntitlements;
@@ -14,11 +14,29 @@ use App\Tenancy\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Impruthvi\CashierEntitlements\Overrides\NativeOverrides;
 
+function allowOverrideOperator(User $operator): void
+{
+    app()->instance(Operators::class, new readonly class($operator->id) implements Operators
+    {
+        public function __construct(private int $operatorId) {}
+
+        public function isOperator(User $user): bool
+        {
+            return $user->id === $this->operatorId;
+        }
+
+        public function returnUrl(): string
+        {
+            return '/admin';
+        }
+    });
+}
+
 it('grants a time-bound project allowance and audits the operator', function (): void {
     $this->freezeTime();
     $organization = Organization::factory()->create();
     $operator = User::factory()->create();
-    Operator::factory()->create(['user_id' => $operator->id]);
+    allowOverrideOperator($operator);
 
     $grantId = resolve(GrantEntitlementOverride::class)->handle(
         $organization,
@@ -50,7 +68,7 @@ it('revokes a grant with an append-only entry and restores the underlying allowa
     $this->freezeTime();
     $organization = Organization::factory()->create();
     $operator = User::factory()->create();
-    Operator::factory()->create(['user_id' => $operator->id]);
+    allowOverrideOperator($operator);
     $grantId = resolve(GrantEntitlementOverride::class)->handle(
         $organization, $operator, 'projects', 5, 'Temporary support', now()->addMonth()->toDateTimeImmutable(),
     );
@@ -83,7 +101,7 @@ it('refuses a grant from a user who is not an operator', function (): void {
 it('refuses a revocation from a user who is not an operator', function (): void {
     $organization = Organization::factory()->create();
     $operator = User::factory()->create();
-    Operator::factory()->create(['user_id' => $operator->id]);
+    allowOverrideOperator($operator);
     $grantId = resolve(GrantEntitlementOverride::class)->handle(
         $organization, $operator, 'projects', 5, 'Temporary support', now()->addDay()->toDateTimeImmutable(),
     );
@@ -95,7 +113,7 @@ it('refuses to revoke a grant belonging to another organization', function (): v
     $first = Organization::factory()->create();
     $second = Organization::factory()->create();
     $operator = User::factory()->create();
-    Operator::factory()->create(['user_id' => $operator->id]);
+    allowOverrideOperator($operator);
     $grantId = resolve(GrantEntitlementOverride::class)->handle(
         $first, $operator, 'projects', 5, 'For first organization', now()->addDay()->toDateTimeImmutable(),
     );
