@@ -73,6 +73,7 @@ it('refuses over HTTP in the organization the session switched to', function ():
     $this->actingAs($person)
         ->withSession([ResolveTenantContext::SESSION_KEY => $acme->id])
         ->post(route('organizations.invitations.store'), [
+            'organization' => $acme->slug,
             'email' => 'someone@example.com',
             'role' => MembershipRank::Member->value,
         ])

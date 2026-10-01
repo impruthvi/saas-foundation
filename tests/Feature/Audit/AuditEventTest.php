@@ -96,7 +96,7 @@ it('records who removed a member over HTTP', function (): void {
 
     $this->actingAs($owner)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
-        ->delete(route('organizations.members.destroy', $membership))
+        ->delete(route('organizations.members.destroy', $membership), ['organization' => $organization->slug])
         ->assertRedirect();
 
     expect(auditTrailOf($organization)->sole())
