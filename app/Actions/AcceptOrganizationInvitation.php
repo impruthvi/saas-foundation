@@ -65,6 +65,8 @@ final readonly class AcceptOrganizationInvitation
         if (! $organization->status->isUsable()) {
             throw OrganizationNotAcceptingMembers::for($organization);
         }
+
+        $this->members->assertSeatAvailable($organization);
     }
 
     /**
