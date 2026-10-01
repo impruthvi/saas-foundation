@@ -6,6 +6,7 @@ import InvitationDeliveryController from '@/actions/App/Http/Controllers/Organiz
 import MemberController from '@/actions/App/Http/Controllers/Organizations/MemberController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import OrganizationField from '@/components/OrganizationField.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ const removing = ref<OrganizationMember | null>(null);
                 class="flex flex-col gap-3 sm:flex-row sm:items-end"
                 v-slot="{ errors, processing }"
             >
+                <OrganizationField />
                 <div class="grid flex-1 gap-2">
                     <Label for="email">Email address</Label>
                     <Input
@@ -146,6 +148,7 @@ const removing = ref<OrganizationMember | null>(null);
                             v-bind="MemberController.update.form(member.id)"
                             v-slot="{ submit }"
                         >
+                            <OrganizationField />
                             <Select
                                 :model-value="member.role"
                                 :name="'role'"
@@ -241,6 +244,7 @@ const removing = ref<OrganizationMember | null>(null);
                             "
                             v-slot="{ processing }"
                         >
+                            <OrganizationField />
                             <Button
                                 type="submit"
                                 variant="outline"
@@ -306,6 +310,7 @@ const removing = ref<OrganizationMember | null>(null);
                     @success="removing = null"
                     v-slot="{ processing }"
                 >
+                    <OrganizationField />
                     <Button
                         type="submit"
                         variant="destructive"
@@ -350,6 +355,7 @@ const removing = ref<OrganizationMember | null>(null);
                     @success="withdrawing = null"
                     v-slot="{ processing }"
                 >
+                    <OrganizationField />
                     <Button
                         type="submit"
                         variant="destructive"

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from '@inertiajs/vue3';
+import { Form, Head } from '@inertiajs/vue3';
 import { Clock3 } from '@lucide/vue';
 import { ref } from 'vue';
 import ProjectController from '@/actions/App/Http/Controllers/Projects/ProjectController';
 import Heading from '@/components/Heading.vue';
+import OrganizationField from '@/components/OrganizationField.vue';
 import InputError from '@/components/InputError.vue';
 import Pagination from '@/components/Pagination.vue';
 import ProjectLimitPrompt from '@/components/ProjectLimitPrompt.vue';
@@ -27,8 +28,6 @@ const props = defineProps<{
     canCreate: boolean;
     accessEndsAt: string | null;
 }>();
-
-const organization = usePage().props.organization;
 
 // A create that is retried — a double submit, a refresh, a flaky connection —
 // must return the project the first attempt made rather than spend a second
@@ -91,11 +90,7 @@ function allowanceLabel(allowance: ProjectAllowance): string {
                 v-slot="{ errors, processing }"
                 @success="renewIdempotencyToken"
             >
-                <input
-                    type="hidden"
-                    name="organization"
-                    :value="organization?.slug"
-                />
+                <OrganizationField />
                 <input
                     type="hidden"
                     name="idempotency_token"

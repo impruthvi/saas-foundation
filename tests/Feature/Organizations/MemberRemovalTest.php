@@ -179,7 +179,7 @@ it('removes a member over HTTP and reports it', function (): void {
 
     $this->actingAs($owner)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
-        ->delete(route('organizations.members.destroy', $membership))
+        ->delete(route('organizations.members.destroy', $membership), ['organization' => $organization->slug])
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 
@@ -231,7 +231,7 @@ it('changes a rank over HTTP', function (): void {
 
     $this->actingAs($owner)
         ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
-        ->patch(route('organizations.members.update', $membership), ['role' => MembershipRank::Admin->value])
+        ->patch(route('organizations.members.update', $membership), ['organization' => $organization->slug, 'role' => MembershipRank::Admin->value])
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 

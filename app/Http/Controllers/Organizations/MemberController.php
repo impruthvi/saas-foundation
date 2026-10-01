@@ -10,6 +10,7 @@ use App\Enums\MembershipRank;
 use App\Exceptions\Memberships\MembershipRefused;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organizations\ChangeMemberRankRequest;
+use App\Http\Requests\Organizations\RemoveMemberRequest;
 use App\Models\Invitation;
 use App\Models\Membership;
 use App\Models\Organization;
@@ -103,12 +104,10 @@ final class MemberController extends Controller
 
     /** Removing yourself requires redirecting through tenant resolution again. */
     public function destroy(
-        Request $request,
+        RemoveMemberRequest $request,
         Membership $membership,
         RemoveOrganizationMember $remove,
     ): RedirectResponse {
-        Gate::authorize('delete', $membership);
-
         $removingSelf = $membership->user_id === $request->user()?->id;
 
         try {

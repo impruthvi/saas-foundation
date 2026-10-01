@@ -10,11 +10,11 @@ use App\Actions\RevokeOrganizationInvitation;
 use App\Exceptions\Invitations\InvitationRefused;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organizations\InviteMemberRequest;
+use App\Http\Requests\Organizations\RevokeInvitationRequest;
 use App\Models\Invitation;
 use App\Models\Organization;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
@@ -49,13 +49,12 @@ final class InvitationController extends Controller
     }
 
     public function destroy(
+        RevokeInvitationRequest $request,
         Invitation $invitation,
         RevokeOrganizationInvitation $revoke,
     ): RedirectResponse {
-        Gate::authorize('delete', $invitation);
-
         try {
-            $revoke->handle($invitation, request()->user());
+            $revoke->handle($invitation, $request->user());
         } catch (InvitationRefused $invitationRefused) {
             Inertia::flash('toast', ['type' => 'error', 'message' => $invitationRefused->getMessage()]);
 

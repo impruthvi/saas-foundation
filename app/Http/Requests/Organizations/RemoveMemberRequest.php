@@ -5,22 +5,20 @@ declare(strict_types=1);
 namespace App\Http\Requests\Organizations;
 
 use App\Concerns\NamesItsOrganization;
-use App\Concerns\RankValidationRules;
 use App\Models\Membership;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-final class ChangeMemberRankRequest extends FormRequest
+final class RemoveMemberRequest extends FormRequest
 {
     use NamesItsOrganization;
-    use RankValidationRules;
 
     public function authorize(): bool
     {
         $membership = $this->route('membership');
 
         return $membership instanceof Membership
-            && ($this->user()?->can('update', $membership) ?? false);
+            && ($this->user()?->can('delete', $membership) ?? false);
     }
 
     /**
@@ -30,7 +28,6 @@ final class ChangeMemberRankRequest extends FormRequest
     {
         return [
             'organization' => $this->organizationRules(),
-            'role' => $this->rankRules(),
         ];
     }
 }

@@ -233,7 +233,7 @@ it('credits an act taken while impersonating to the impersonation', function ():
     $membership = resolve(AddOrganizationMember::class)->handle($organization, $bob, MembershipRank::Member);
     $impersonation = startImpersonating($operator, $alice);
 
-    $this->delete(route('organizations.members.destroy', $membership))->assertRedirect();
+    $this->delete(route('organizations.members.destroy', $membership), ['organization' => $organization->slug])->assertRedirect();
 
     $event = resolve(TenantContext::class)->runFor($organization, fn (): AuditEvent => AuditEvent::query()->sole());
     expect($event->action)->toBe(AuditAction::MemberRemoved)

@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureImpersonationIsLive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\IdentifyAuditActor;
+use App\Http\Middleware\RejectStaleOrganizationMutation;
 use App\Http\Middleware\ResolveTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -34,6 +35,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 // Before bindings so bound models are scoped, and before Inertia so
                 // shared props see the resolved tenant.
                 ResolveTenantContext::class,
+                // After the tenant, which it compares against, and before bindings, so a
+                // stale page is refused with a reason rather than a 404.
+                RejectStaleOrganizationMutation::class,
                 IdentifyAuditActor::class,
                 SubstituteBindings::class,
                 HandleInertiaRequests::class,
