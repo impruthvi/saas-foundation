@@ -15,6 +15,7 @@ function configuredBillingCatalog(): array
                 'name' => 'Free',
                 'prices' => [
                     'price_free' => [
+                        'key' => 'free_monthly',
                         'interval' => 'month',
                         'currency' => 'usd',
                         'amount' => 0,
@@ -26,6 +27,7 @@ function configuredBillingCatalog(): array
                 'name' => 'Pro',
                 'prices' => [
                     'price_pro' => [
+                        'key' => 'pro_monthly',
                         'interval' => 'month',
                         'currency' => 'usd',
                         'amount' => 2000,
@@ -42,7 +44,8 @@ it('builds plans and prices from configuration', function (): void {
 
     expect($catalog->plans())->toHaveCount(2)->toContainOnlyInstancesOf(Plan::class)
         ->and($catalog->priceIds())->toBe(['price_free', 'price_pro'])
-        ->and($catalog->findPrice('price_pro'))->toBeInstanceOf(Price::class)->planKey->toBe('pro')->interval->toBe('month')->currency->toBe('usd')->amount->toBe(2000)->allowances->toBe(['projects' => 10, 'exports' => true])
+        ->and($catalog->findPrice('price_pro'))->toBeInstanceOf(Price::class)->key->toBe('pro_monthly')->planKey->toBe('pro')->interval->toBe('month')->currency->toBe('usd')->amount->toBe(2000)->allowances->toBe(['projects' => 10, 'exports' => true])
+        ->and($catalog->findPrice('price_pro')?->environmentVariable())->toBe('STRIPE_PRICE_PRO_MONTHLY')
         ->and($catalog->findPrice('price_unknown'))->toBeNull()
         ->and($catalog->findPlan('pro')?->name)->toBe('Pro');
 });
@@ -61,6 +64,23 @@ it('rejects a price assigned to more than one plan', function (): void {
 
     PlanCatalog::fromConfig($configuration);
 })->throws(InvalidArgumentException::class, 'belongs to more than one plan');
+
+it('rejects repeated application or Stripe lookup keys', function (string $field, string $message): void {
+    $configuration = configuredBillingCatalog();
+    $configuration['plans']['pro']['prices']['price_pro_yearly'] = [
+        ...$configuration['plans']['pro']['prices']['price_pro'],
+        'key' => 'pro_yearly',
+        'lookup_key' => 'pro_yearly',
+        'interval' => 'year',
+    ];
+    $configuration['plans']['pro']['prices']['price_pro_yearly'][$field] = 'pro_monthly';
+    $configuration['plans']['pro']['prices']['price_pro']['lookup_key'] = 'pro_monthly';
+
+    expect(fn (): PlanCatalog => PlanCatalog::fromConfig($configuration))->toThrow(InvalidArgumentException::class, $message);
+})->with([
+    'application key' => ['key', 'Billing price key'],
+    'Stripe lookup key' => ['lookup_key', 'Stripe lookup key'],
+]);
 
 it('rejects a feature whose allowance changes type between prices', function (): void {
     $configuration = configuredBillingCatalog();

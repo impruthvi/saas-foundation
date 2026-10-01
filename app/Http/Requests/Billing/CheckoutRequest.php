@@ -7,7 +7,6 @@ namespace App\Http\Requests\Billing;
 use App\Billing\PlanCatalog;
 use App\Billing\Price;
 use App\Concerns\AuthorizesBillingMutation;
-use App\Tenancy\TenantContext;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -20,10 +19,10 @@ final class CheckoutRequest extends FormRequest
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
-    public function rules(PlanCatalog $catalog, TenantContext $tenant): array
+    public function rules(PlanCatalog $catalog): array
     {
         return [
-            'organization' => $this->organizationRules($tenant),
+            'organization' => $this->organizationRules(),
             'price' => ['required', 'string', Rule::in($catalog->priceIds())],
         ];
     }

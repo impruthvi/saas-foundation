@@ -32,6 +32,7 @@ it('takes a stranger from an invitation link to membership of two organizations'
 
     $this->actingAs($ada)
         ->post(route('organizations.invitations.store'), [
+            'organization' => $acme->slug,
             'email' => 'grace@example.com',
             'role' => MembershipRank::Member->value,
         ])

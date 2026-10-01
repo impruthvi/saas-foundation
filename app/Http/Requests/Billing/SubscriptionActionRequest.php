@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Requests\Billing;
 
 use App\Concerns\AuthorizesBillingMutation;
-use App\Tenancy\TenantContext;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -14,10 +13,10 @@ final class SubscriptionActionRequest extends FormRequest
     use AuthorizesBillingMutation;
 
     /** @return array<string, ValidationRule|array<mixed>|string> */
-    public function rules(TenantContext $tenant): array
+    public function rules(): array
     {
         return [
-            'organization' => $this->organizationRules($tenant),
+            'organization' => $this->organizationRules(),
         ];
     }
 

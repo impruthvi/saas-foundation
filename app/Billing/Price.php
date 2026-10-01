@@ -18,6 +18,8 @@ final readonly class Price
      */
     public function __construct(
         public string $id,
+        public string $key,
+        public string $lookupKey,
         public string $planKey,
         public string $interval,
         public string $currency,
@@ -25,6 +27,10 @@ final readonly class Price
         array $allowances,
     ) {
         throw_unless(str_starts_with($id, 'price_'), InvalidArgumentException::class, "Billing price [{$id}] must be a Stripe price id.");
+
+        throw_if(preg_match('/^[a-z][a-z0-9_]*$/', $key) !== 1, InvalidArgumentException::class, "Billing price key [{$key}] is malformed.");
+
+        throw_if(preg_match('/^[a-z][a-z0-9_]*$/', $lookupKey) !== 1, InvalidArgumentException::class, "Stripe lookup key [{$lookupKey}] is malformed.");
 
         throw_if(preg_match('/^[a-z][a-z0-9_-]*$/', $planKey) !== 1, InvalidArgumentException::class, "Billing plan key [{$planKey}] is malformed.");
 
@@ -49,5 +55,10 @@ final readonly class Price
         throw_if($validatedAllowances === [], InvalidArgumentException::class, "Billing price [{$id}] must declare at least one allowance.");
 
         $this->allowances = $validatedAllowances;
+    }
+
+    public function environmentVariable(): string
+    {
+        return 'STRIPE_PRICE_'.mb_strtoupper($this->key);
     }
 }

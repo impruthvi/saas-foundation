@@ -76,6 +76,7 @@ describe('issuing an invitation', function (): void {
 
         $this->actingAs($owner)
             ->post(route('organizations.invitations.store'), [
+                'organization' => $organization->slug,
                 'email' => 'new@example.com',
                 'role' => MembershipRank::Member->value,
             ])
@@ -144,6 +145,7 @@ describe('issuing an invitation', function (): void {
 
         $this->actingAs($owner)
             ->post(route('organizations.invitations.store'), [
+                'organization' => $organization->slug,
                 'email' => 'twice@example.com',
                 'role' => MembershipRank::Member->value,
             ])
@@ -162,7 +164,7 @@ describe('withdrawing an invitation', function (): void {
         );
 
         $this->actingAs($owner)
-            ->delete(route('organizations.invitations.destroy', $invitation))
+            ->delete(route('organizations.invitations.destroy', $invitation), ['organization' => $organization->slug])
             ->assertRedirect();
 
         expect($invitation->fresh()->status)->toBe(InvitationStatus::Revoked);
@@ -201,7 +203,7 @@ describe('refusing a closed invitation', function (): void {
 
         $this->actingAs($owner)
             ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
-            ->delete(route('organizations.invitations.destroy', $invitation))
+            ->delete(route('organizations.invitations.destroy', $invitation), ['organization' => $organization->slug])
             ->assertRedirect();
 
         expect(Inertia::getFlashed()['toast'] ?? null)->toBe(['type' => 'error', 'message' => 'This invitation has already been accepted.'])
@@ -219,7 +221,7 @@ describe('refusing a closed invitation', function (): void {
 
         $this->actingAs($owner)
             ->withSession([ResolveTenantContext::SESSION_KEY => $organization->id])
-            ->post(route('organizations.invitations.deliveries.store', $invitation))
+            ->post(route('organizations.invitations.deliveries.store', $invitation), ['organization' => $organization->slug])
             ->assertRedirect();
 
         expect(Inertia::getFlashed()['toast'] ?? null)->toBe(['type' => 'error', 'message' => 'This invitation has already been accepted.']);

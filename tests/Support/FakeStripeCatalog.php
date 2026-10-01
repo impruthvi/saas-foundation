@@ -6,6 +6,7 @@ namespace Tests\Support;
 
 use LogicException;
 use Stripe\Collection;
+use Stripe\Exception\ApiConnectionException;
 use Stripe\Exception\ApiErrorException;
 use Stripe\Price;
 use Stripe\Product;
@@ -26,6 +27,8 @@ final class FakeStripeCatalog extends StripeClient
     public array $pricesByLookupKey = [];
 
     public ?ApiErrorException $failure = null;
+
+    public ?string $failOnLookupKey = null;
 
     public function __construct()
     {
@@ -80,6 +83,10 @@ final readonly class FakeStripePriceService
         $data = [];
 
         foreach ($parameters['lookup_keys'] ?? [] as $lookupKey) {
+            if ($lookupKey === $this->stripe->failOnLookupKey) {
+                throw ApiConnectionException::factory('Network unavailable.');
+            }
+
             if (isset($this->stripe->pricesByLookupKey[$lookupKey])) {
                 $data[] = [...$this->stripe->pricesByLookupKey[$lookupKey], 'object' => 'price', 'lookup_key' => $lookupKey];
             }

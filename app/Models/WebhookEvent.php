@@ -50,8 +50,13 @@ final class WebhookEvent extends Model
 
     use MassPrunable;
 
+    public function canBeReplayed(): bool
+    {
+        return $this->applied_at === null && $this->outcome->isReplayable();
+    }
+
     /**
-     * Payloads are unredacted Stripe objects, so nothing is kept forever.
+     * Replayable events retain their Stripe payloads, so nothing is kept forever.
      *
      * @return Builder<static>
      */

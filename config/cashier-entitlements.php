@@ -20,7 +20,7 @@ return [
     // Usage period per numeric feature: 'lifetime', 'calendar_day', 'calendar_month' or 'billing:<price_id>'.
     'meters' => ['projects' => 'lifetime'],
     // Consult the audited override ledger during local resolution. Costs one extra query per resolve.
-    'overrides' => false,
+    'overrides' => true,
     // Where applied entitlements are projected: 'native' only, or also 'masterix'.
     'driver' => 'native',
     // Application plan key => Masterix plan key. Required for every plan the catalog can resolve.

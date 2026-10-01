@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from '@inertiajs/vue3';
+import { Form, Head } from '@inertiajs/vue3';
 import { CircleAlert, Clock3 } from '@lucide/vue';
 import { ref } from 'vue';
 import CheckoutController from '@/actions/App/Http/Controllers/Billing/CheckoutController';
 import SubscriptionController from '@/actions/App/Http/Controllers/Billing/SubscriptionController';
 import Heading from '@/components/Heading.vue';
+import OrganizationField from '@/components/OrganizationField.vue';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +49,6 @@ defineProps<{
     stripe: StripeSetup;
 }>();
 
-const organization = usePage().props.organization;
 const confirmingCancellation = ref(false);
 
 const stateLabels: Record<BillingState, string> = {
@@ -172,11 +172,7 @@ function formatAmount(price: BillingPrice): string {
                         v-slot="{ errors, processing }"
                         class="flex flex-col gap-2"
                     >
-                        <input
-                            type="hidden"
-                            name="organization"
-                            :value="organization?.slug"
-                        />
+                        <OrganizationField />
                         <Button type="submit" :disabled="processing">
                             {{
                                 processing ? 'Resuming…' : 'Resume subscription'
@@ -247,11 +243,7 @@ function formatAmount(price: BillingPrice): string {
                                 v-slot="{ errors, processing }"
                                 class="flex flex-col gap-2"
                             >
-                                <input
-                                    type="hidden"
-                                    name="organization"
-                                    :value="organization?.slug"
-                                />
+                                <OrganizationField />
                                 <input
                                     type="hidden"
                                     name="price"
@@ -298,11 +290,7 @@ function formatAmount(price: BillingPrice): string {
                         v-slot="{ errors, processing }"
                         class="flex flex-col gap-2"
                     >
-                        <input
-                            type="hidden"
-                            name="organization"
-                            :value="organization?.slug"
-                        />
+                        <OrganizationField />
                         <Button
                             type="submit"
                             variant="destructive"

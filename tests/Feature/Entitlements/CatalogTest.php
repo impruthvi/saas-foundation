@@ -18,6 +18,7 @@ function entitlementCatalogConfiguration(): array
                 'name' => 'Free',
                 'prices' => [
                     'price_free' => [
+                        'key' => 'free_monthly',
                         'interval' => 'month',
                         'currency' => 'usd',
                         'amount' => 0,
@@ -29,6 +30,7 @@ function entitlementCatalogConfiguration(): array
                 'name' => 'Pro',
                 'prices' => [
                     'price_pro' => [
+                        'key' => 'pro_monthly',
                         'interval' => 'month',
                         'currency' => 'usd',
                         'amount' => 2000,

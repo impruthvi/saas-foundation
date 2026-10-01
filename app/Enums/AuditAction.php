@@ -19,5 +19,7 @@ enum AuditAction: string
     case SubscriptionCancelled = 'billing.subscription_cancelled';
     case SubscriptionResumed = 'billing.subscription_resumed';
     case EntitlementRefreshRequested = 'entitlements.refresh_requested';
+    case EntitlementOverrideGranted = 'entitlements.override_granted';
+    case EntitlementOverrideRevoked = 'entitlements.override_revoked';
     case WebhookReplayed = 'billing.webhook_replayed';
 }

@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Enums\AuditAction;
 use App\Enums\MembershipRank;
 use App\Enums\OrganizationRole;
+use App\Jobs\SyncStripeCustomerContact;
 use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
@@ -47,6 +48,10 @@ final readonly class TransferOrganizationOwnership
                 'from_user_id' => $previousOwnerId,
                 'to_user_id' => $newOwner->id,
             ]);
+
+            if ($organization->hasStripeId()) {
+                dispatch(new SyncStripeCustomerContact($organization->id))->afterCommit();
+            }
 
             return $organization->refresh();
         }));
