@@ -17,6 +17,7 @@ use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Impersonation;
 use App\Models\Operator;
 use App\Models\Organization;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WebhookEvent;
 use App\Operations\InspectEntitlements;
@@ -142,6 +143,37 @@ it('requests an entitlement refresh from the organization page', function (): vo
         ->assertNotified('Refresh requested');
 
     Bus::assertDispatched(RefreshOwner::class);
+});
+
+it('changes organization status from the console and shows a billing refusal', function (): void {
+    operatorWithAnOrganizationOfTheirOwn();
+    [$customer] = organizationOwnedBySomeone('Customer');
+
+    $screen = Livewire::test(ViewOrganization::class, ['record' => $customer->getRouteKey()])
+        ->assertActionVisible('suspend')
+        ->assertActionHidden('restore')
+        ->callAction('suspend', data: ['reason' => 'Abuse report'])
+        ->assertNotified('Organization suspended')
+        ->assertActionVisible('restore')
+        ->callAction('archive', data: ['reason' => 'Long-term closure'])
+        ->assertNotified('Organization archived')
+        ->callAction('restore', data: ['reason' => 'Review completed'])
+        ->assertNotified('Organization active');
+
+    expect($customer->fresh()?->status->value)->toBe('active');
+
+    resolve(TenantContext::class)->runFor($customer, fn (): Subscription => Subscription::query()->create([
+        'type' => 'default',
+        'stripe_id' => 'sub_console_'.$customer->id,
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_pro_monthly',
+        'quantity' => 1,
+    ]));
+
+    $screen->callAction('suspend', data: ['reason' => 'Review'])
+        ->assertNotified('End the organization subscription before suspending or archiving it.');
+
+    expect($customer->fresh()?->status->value)->toBe('active');
 });
 
 it('grants and revokes a project allowance from the organization page', function (): void {

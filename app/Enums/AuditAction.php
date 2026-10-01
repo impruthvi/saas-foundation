@@ -14,6 +14,7 @@ enum AuditAction: string
     case MemberRemoved = 'member.removed';
     case MemberRankChanged = 'member.rank_changed';
     case OwnershipTransferred = 'ownership.transferred';
+    case OrganizationStatusChanged = 'organization.status_changed';
     case CheckoutStarted = 'billing.checkout_started';
     case SubscriptionCancelled = 'billing.subscription_cancelled';
     case SubscriptionResumed = 'billing.subscription_resumed';
