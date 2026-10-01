@@ -49,7 +49,7 @@ final readonly class ReplayWebhookEvent
     public function handle(WebhookEvent $event): WebhookOutcome
     {
         throw_unless(
-            $event->outcome->isReplayable(),
+            $event->canBeReplayed(),
             InvalidArgumentException::class,
             'Only an event that was never applied can be replayed.',
         );
@@ -103,7 +103,9 @@ final readonly class ReplayWebhookEvent
         $event->refresh();
 
         if ($outcome === WebhookOutcome::Replayed || $outcome === WebhookOutcome::Refused) {
-            $event->forceFill(['outcome' => $outcome, 'outcome_reason' => $reason, 'outcome_message' => $message])->save();
+            $event->forceFill(['outcome' => $outcome, 'outcome_reason' => $reason, 'outcome_message' => $message]);
+            $event->payload = [];
+            $event->save();
         }
 
         if ($organization instanceof Organization) {

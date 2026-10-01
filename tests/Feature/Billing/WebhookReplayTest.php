@@ -54,7 +54,7 @@ it('applies an event once its organization exists and asks for a refresh itself'
     $outcome = AuditActor::runAs(AuditActor::user($operator), fn (): WebhookOutcome => resolve(ReplayWebhookEvent::class)->handle($event));
 
     expect($outcome)->toBe(WebhookOutcome::Replayed)
-        ->and($event->fresh())->outcome->toBe(WebhookOutcome::Replayed)->applied_at->not->toBeNull()
+        ->and($event->fresh())->outcome->toBe(WebhookOutcome::Replayed)->applied_at->not->toBeNull()->payload->toBe([])
         ->and(resolve(TenantContext::class)->runFor($organization, fn (): bool => Subscription::query()->where('stripe_id', 'sub_pro')->exists()))->toBeTrue();
     Bus::assertDispatched(RefreshOwner::class);
     Event::assertNotDispatched(WebhookHandled::class);
@@ -131,7 +131,7 @@ it('refuses an event from another Stripe mode without applying it', function ():
     $organization = Organization::factory()->create(['stripe_id' => 'cus_late']);
 
     expect(resolve(ReplayWebhookEvent::class)->handle($event))->toBe(WebhookOutcome::Refused)
-        ->and($event->fresh())->outcome->toBe(WebhookOutcome::Refused)->outcome_reason->toBe('ContextMismatch')
+        ->and($event->fresh())->outcome->toBe(WebhookOutcome::Refused)->outcome_reason->toBe('ContextMismatch')->payload->toBe([])
         ->and(resolve(TenantContext::class)->runFor($organization, fn (): bool => Subscription::query()->exists()))->toBeFalse();
 });
 

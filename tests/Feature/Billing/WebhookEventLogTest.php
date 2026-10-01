@@ -20,8 +20,10 @@ beforeEach(function (): void {
 it('records an applied subscription event with what it was about', function (): void {
     Organization::factory()->create(['stripe_id' => 'cus_acme']);
     $this->travelTo('2026-09-25 10:00:00');
+    $payload = StripeWebhook::subscriptionPayload(created: 1_000);
+    $payload['data']['object']['metadata']['email'] = 'owner@example.com';
 
-    StripeWebhook::post(StripeWebhook::subscriptionPayload(created: 1_000))->assertOk();
+    StripeWebhook::post($payload)->assertOk();
 
     expect(WebhookEvent::query()->sole())
         ->stripe_event_id->toBe('evt_subscription_created')
@@ -31,7 +33,54 @@ it('records an applied subscription event with what it was about', function (): 
         ->stripe_created_at->toBe(1_000)
         ->outcome->toBe(WebhookOutcome::Applied)
         ->applied_at->toDateTimeString()->toBe('2026-09-25 10:00:00')
-        ->deliveries->toBe(1);
+        ->deliveries->toBe(1)
+        ->payload->toBe([]);
+});
+
+it('retains a replayable payload and redacts it after a later successful delivery', function (): void {
+    $payload = StripeWebhook::subscriptionPayload(customerId: 'cus_late');
+    $payload['data']['object']['metadata']['email'] = 'owner@example.com';
+
+    StripeWebhook::post($payload)->assertOk();
+
+    expect(WebhookEvent::query()->sole()->payload)->toBe($payload);
+
+    Organization::factory()->create(['stripe_id' => 'cus_late']);
+    StripeWebhook::post($payload)->assertOk();
+
+    expect(WebhookEvent::query()->sole()->payload)->toBe([]);
+});
+
+it('does not restore a payload or replay access after an applied event becomes unplaceable', function (): void {
+    $organization = Organization::factory()->create(['stripe_id' => 'cus_acme']);
+    $payload = StripeWebhook::subscriptionPayload();
+    $payload['data']['object']['metadata']['email'] = 'owner@example.com';
+    StripeWebhook::post($payload)->assertOk();
+    $organization->forceFill(['stripe_id' => null])->save();
+
+    StripeWebhook::post($payload)->assertOk();
+
+    $event = WebhookEvent::query()->sole();
+    expect($event->outcome)->toBe(WebhookOutcome::Unplaceable)
+        ->and($event->applied_at)->not->toBeNull()
+        ->and($event->payload)->toBe([])
+        ->and($event->canBeReplayed())->toBeFalse();
+});
+
+it('redacts retained terminal payloads when the data migration runs', function (): void {
+    $terminal = WebhookEvent::factory()->create(['payload' => ['email' => 'owner@example.com']]);
+    $replayable = WebhookEvent::factory()->unplaceable()->create(['payload' => ['email' => 'pending@example.com']]);
+    $previouslyApplied = WebhookEvent::factory()->create([
+        'outcome' => WebhookOutcome::Errored,
+        'payload' => ['email' => 'old@example.com'],
+    ]);
+    $migration = require base_path('database/migrations/2026_10_01_014444_redact_terminal_webhook_payloads.php');
+
+    $migration->up();
+
+    expect($terminal->fresh()?->payload)->toBe([])
+        ->and($replayable->fresh()?->payload)->toBe(['email' => 'pending@example.com'])
+        ->and($previouslyApplied->fresh()?->payload)->toBe([]);
 });
 
 it('counts a redelivery on the same row instead of adding one', function (): void {
@@ -46,7 +95,8 @@ it('counts a redelivery on the same row instead of adding one', function (): voi
         ->deliveries->toBe(2)
         ->first_received_at->toDateTimeString()->toBe('2026-09-25 10:00:00')
         ->last_received_at->toDateTimeString()->toBe('2026-09-25 10:05:00')
-        ->applied_at->toDateTimeString()->toBe('2026-09-25 10:00:00');
+        ->applied_at->toDateTimeString()->toBe('2026-09-25 10:00:00')
+        ->payload->toBe([]);
 });
 
 it('moves an errored event to applied when Stripe redelivers it successfully', function (): void {
@@ -84,7 +134,8 @@ it('keeps the time an event applied when a later redelivery is superseded', func
 
     expect(WebhookEvent::query()->where('stripe_event_id', 'evt_subscription_created')->sole())
         ->outcome->toBe(WebhookOutcome::Superseded)
-        ->applied_at->toDateTimeString()->toBe('2026-09-25 10:00:00');
+        ->applied_at->toDateTimeString()->toBe('2026-09-25 10:00:00')
+        ->payload->toBe([]);
 });
 
 it('records each delivery of an event without an id on its own row', function (): void {
