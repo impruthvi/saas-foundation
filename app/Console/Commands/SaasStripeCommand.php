@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Actions\ProvisionStripeCatalog;
+use App\Billing\PlanCatalog;
 use App\Billing\StripeSecret;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -15,11 +16,11 @@ use Laravel\Cashier\Cashier;
 use RuntimeException;
 use Stripe\Exception\ApiErrorException;
 
-#[Description('Connect Stripe test mode: find or create the Pro price and write the keys to .env')]
+#[Description('Connect Stripe test mode: provision paid catalog prices and write the keys to .env')]
 #[Signature('saas:stripe {key : A Stripe test secret key (sk_test_...)}')]
 final class SaasStripeCommand extends Command
 {
-    public function handle(ProvisionStripeCatalog $catalog): int
+    public function handle(ProvisionStripeCatalog $provision, PlanCatalog $catalog): int
     {
         $key = (string) $this->argument('key');
 
@@ -29,15 +30,27 @@ final class SaasStripeCommand extends Command
             return self::FAILURE;
         }
 
-        try {
-            $priceId = $catalog->handle(Cashier::stripe(['api_key' => $key]));
-        } catch (ApiErrorException $apiErrorException) {
-            $this->components->error("Stripe refused the request: {$apiErrorException->getMessage()}");
+        $stripe = Cashier::stripe(['api_key' => $key]);
+        $variables = ['STRIPE_SECRET' => $key];
+        $priceCount = 0;
 
-            return self::FAILURE;
+        foreach ($catalog->plans() as $plan) {
+            foreach ($plan->prices as $price) {
+                if ($price->amount === 0) {
+                    continue;
+                }
+
+                try {
+                    $variables[$price->environmentVariable()] = $provision->handle($stripe, $plan, $price);
+                    $priceCount++;
+                } catch (ApiErrorException $apiErrorException) {
+                    $this->components->error("Stripe refused price [{$price->key}]: {$apiErrorException->getMessage()}");
+
+                    return self::FAILURE;
+                }
+            }
         }
 
-        $variables = ['STRIPE_SECRET' => $key, 'STRIPE_PRICE_PRO_MONTHLY' => $priceId];
         $webhookSecret = $this->webhookSecret($key);
 
         if ($webhookSecret !== null) {
@@ -52,7 +65,7 @@ final class SaasStripeCommand extends Command
             return self::FAILURE;
         }
 
-        $this->components->info("Stripe test mode is connected. Pro is {$priceId}.");
+        $this->components->info("Stripe test mode is connected. {$priceCount} paid prices are configured.");
 
         if ($webhookSecret === null) {
             $this->components->warn('Setup is incomplete: webhooks cannot reach this app yet. Install the Stripe CLI (https://docs.stripe.com/stripe-cli) and run this command again.');

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Billing\PlanCatalog;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Stripe\Exception\ApiConnectionException;
@@ -123,9 +124,91 @@ it('leaves .env untouched when Stripe refuses the request', function (): void {
     Process::fake();
 
     $this->artisan('saas:stripe', ['key' => 'sk_test_demo'])
-        ->expectsOutputToContain('Stripe refused the request')
+        ->expectsOutputToContain('Stripe refused price [pro_monthly]')
         ->assertFailed();
 
     expect(file_get_contents($setup['env']))->toBe("APP_NAME=Laravel\nSTRIPE_SECRET=\n");
+    Process::assertNothingRan();
+});
+
+it('provisions every paid catalog price and reuses matching prices on another run', function (): void {
+    config([
+        'billing.plans.pro.prices.price_pro_yearly' => [
+            'key' => 'pro_yearly',
+            'interval' => 'year',
+            'currency' => 'usd',
+            'amount' => 20000,
+            'allowances' => ['projects' => 10],
+        ],
+        'billing.plans.growth' => [
+            'name' => 'Growth',
+            'prices' => [
+                'price_growth_monthly' => [
+                    'key' => 'growth_monthly',
+                    'interval' => 'month',
+                    'currency' => 'usd',
+                    'amount' => 5000,
+                    'allowances' => ['projects' => 30],
+                ],
+            ],
+        ],
+    ]);
+    app()->forgetInstance(PlanCatalog::class);
+    $setup = stripeSetup();
+    $setup['stripe']->withPrice('growth_monthly', 'price_growth_existing', 5000);
+    Process::fake(['*stripe*listen*' => 'whsec_demo123']);
+
+    expect(Artisan::call('saas:stripe', ['key' => 'sk_test_demo']))->toBe(0);
+
+    $env = file_get_contents($setup['env']);
+
+    expect($setup['stripe']->createdPrices)->toHaveCount(2)
+        ->and($env)->toContain(
+            'STRIPE_PRICE_PRO_MONTHLY="price_created_1"',
+            'STRIPE_PRICE_PRO_YEARLY="price_created_2"',
+            'STRIPE_PRICE_GROWTH_MONTHLY="price_growth_existing"',
+        );
+
+    $setup['stripe']->withPrice('pro_month', 'price_created_1');
+    $setup['stripe']->withPrice('pro_yearly', 'price_created_2', 20000, 'usd', 'year');
+
+    expect(Artisan::call('saas:stripe', ['key' => 'sk_test_demo']))->toBe(0)
+        ->and($setup['stripe']->createdPrices)->toHaveCount(2);
+
+    $setup['stripe']->withPrice('pro_yearly', 'price_stale', 19000, 'usd', 'year');
+
+    expect(Artisan::call('saas:stripe', ['key' => 'sk_test_demo']))->toBe(0)
+        ->and($setup['stripe']->createdPrices)->toHaveCount(3)
+        ->and($setup['stripe']->createdPrices[2])->toMatchArray([
+            'product' => 'prod_existing',
+            'lookup_key' => 'pro_yearly',
+            'transfer_lookup_key' => true,
+        ])
+        ->and(file_get_contents($setup['env']))->toContain(
+            'STRIPE_PRICE_PRO_MONTHLY="price_created_1"',
+            'STRIPE_PRICE_PRO_YEARLY="price_created_3"',
+            'STRIPE_PRICE_GROWTH_MONTHLY="price_growth_existing"',
+        );
+});
+
+it('reports the failing price without writing a partially provisioned catalog', function (): void {
+    config(['billing.plans.pro.prices.price_pro_yearly' => [
+        'key' => 'pro_yearly',
+        'interval' => 'year',
+        'currency' => 'usd',
+        'amount' => 20000,
+        'allowances' => ['projects' => 10],
+    ]]);
+    app()->forgetInstance(PlanCatalog::class);
+    $setup = stripeSetup();
+    $setup['stripe']->failOnLookupKey = 'pro_yearly';
+    Process::fake();
+
+    $this->artisan('saas:stripe', ['key' => 'sk_test_demo'])
+        ->expectsOutputToContain('Stripe refused price [pro_yearly]')
+        ->assertFailed();
+
+    expect($setup['stripe']->createdPrices)->toHaveCount(1)
+        ->and(file_get_contents($setup['env']))->toBe("APP_NAME=Laravel\nSTRIPE_SECRET=\n");
     Process::assertNothingRan();
 });

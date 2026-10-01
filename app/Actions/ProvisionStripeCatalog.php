@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Billing\Plan;
-use App\Billing\PlanCatalog;
 use App\Billing\Price;
 use InvalidArgumentException;
 use Stripe\Price as StripePrice;
@@ -13,23 +12,18 @@ use Stripe\Product;
 use Stripe\StripeClient;
 
 /**
- * Finds the plan's price in a Stripe account by lookup key, creating the product and
+ * Finds a catalog price in a Stripe account by lookup key, creating the product and
  * price only when none exists, so running it twice never duplicates them. A price whose
  * amount, currency or interval no longer matches the catalog is replaced, not reused:
  * the screen shows the catalog while Checkout charges the Stripe price.
  */
 final readonly class ProvisionStripeCatalog
 {
-    public function __construct(private PlanCatalog $catalog) {}
-
-    public function handle(StripeClient $stripe, string $planKey = 'pro'): string
+    public function handle(StripeClient $stripe, Plan $plan, Price $price): string
     {
-        $plan = $this->catalog->findPlan($planKey);
-        $price = $plan?->prices[0] ?? null;
+        throw_unless($price->planKey === $plan->key && $price->amount > 0, InvalidArgumentException::class, "Price [{$price->key}] is not a paid price of plan [{$plan->key}].");
 
-        throw_unless($plan instanceof Plan && $price instanceof Price && $price->amount > 0, InvalidArgumentException::class, "Plan [{$planKey}] has no paid price to provision.");
-
-        $lookupKey = "{$planKey}_{$price->interval}";
+        $lookupKey = $price->lookupKey;
 
         $existing = $stripe->prices->all(['lookup_keys' => [$lookupKey], 'active' => true, 'limit' => 1])->data[0] ?? null;
 

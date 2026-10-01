@@ -28,6 +28,8 @@ final readonly class PlanCatalog
 
         $plans = [];
         $prices = [];
+        $priceKeys = [];
+        $lookupKeys = [];
 
         foreach ($configuredPlans as $planKey => $configuredPlan) {
             throw_unless(is_string($planKey), InvalidArgumentException::class, 'Billing plan keys must be strings.');
@@ -53,7 +55,7 @@ final readonly class PlanCatalog
                 );
                 self::assertOnlyKeys(
                     $configuredPrice,
-                    ['interval', 'currency', 'amount', 'allowances'],
+                    ['key', 'lookup_key', 'interval', 'currency', 'amount', 'allowances'],
                     "billing.plans.{$planKey}.prices.{$priceId}",
                 );
 
@@ -63,6 +65,8 @@ final readonly class PlanCatalog
 
                 $price = new Price(
                     id: $priceId,
+                    key: self::stringAt($configuredPrice['key'] ?? null, "billing.plans.{$planKey}.prices.{$priceId}.key"),
+                    lookupKey: self::stringAt($configuredPrice['lookup_key'] ?? $configuredPrice['key'] ?? null, "billing.plans.{$planKey}.prices.{$priceId}.lookup_key"),
                     planKey: $planKey,
                     interval: self::stringAt(
                         $configuredPrice['interval'] ?? null,
@@ -78,6 +82,12 @@ final readonly class PlanCatalog
                         "billing.plans.{$planKey}.prices.{$priceId}.allowances",
                     ),
                 );
+
+                throw_if(isset($priceKeys[$price->key]), InvalidArgumentException::class, "Billing price key [{$price->key}] is declared more than once.");
+                throw_if(isset($lookupKeys[$price->lookupKey]), InvalidArgumentException::class, "Stripe lookup key [{$price->lookupKey}] is declared more than once.");
+
+                $priceKeys[$price->key] = true;
+                $lookupKeys[$price->lookupKey] = true;
 
                 $prices[$priceId] = $price;
                 $planPrices[] = $price;
