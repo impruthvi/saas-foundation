@@ -44,7 +44,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup PHP
-              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
               with:
                   php-version: '8.4'
                   extensions: pcntl, pdo_pgsql, pgsql
@@ -54,7 +54,7 @@ jobs:
             # Pest Browser invokes Playwright's Node shebang directly, even though Bun
             # owns dependency installation and package scripts.
             - name: Setup Node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
               with:
                   node-version: '22'
 
@@ -108,7 +108,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup PHP
-              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
               with:
                   php-version: '8.4'
                   tools: composer:v2
@@ -117,7 +117,7 @@ jobs:
             # Pest Browser invokes Playwright's Node shebang directly, even though Bun
             # owns dependency installation and package scripts.
             - name: Setup Node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
               with:
                   node-version: '22'
 
@@ -151,7 +151,7 @@ jobs:
 
         steps:
             - name: Setup PHP
-              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
               with:
                   php-version: '8.4'
                   tools: composer:v2
@@ -160,7 +160,7 @@ jobs:
             # The installer downloads the repository with `npx tiged`, and builds the
             # frontend with Bun when asked to.
             - name: Setup Node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
               with:
                   node-version: '22'
 
@@ -208,14 +208,14 @@ jobs:
                   persist-credentials: false
 
             - name: Setup PHP
-              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
               with:
                   php-version: '8.4'
                   tools: composer:v2
                   coverage: none
 
             - name: Setup Node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
               with:
                   node-version: '22'
 
